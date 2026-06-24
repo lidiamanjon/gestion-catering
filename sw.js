@@ -1,4 +1,4 @@
-const CACHE = 'albaraba-v1';
+const CACHE = 'albaraba-v3';
 const FILES = ['./ALBARABA_GESTION.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -13,6 +13,7 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Siempre intenta la red primero, caché solo si no hay conexión
 self.addEventListener('fetch', e => {
   e.respondWith(
     fetch(e.request).catch(() => caches.match(e.request))

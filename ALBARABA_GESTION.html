@@ -21,10 +21,10 @@
 :root{--primary:#1a1a2e;--gold:#c9a227;--gold2:#f0c040;--green:#2d6a4f;--bg:#f4f5f7;--surface:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--sw:230px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
-.admin-only{display:none}
-body.role-admin .admin-only{display:flex}
-.nav-label.admin-only{display:none}
-body.role-admin .nav-label.admin-only{display:block}
+.admin-only{display:none!important}
+body.role-admin .admin-only{display:flex!important}
+.nav-label.admin-only{display:none!important}
+body.role-admin .nav-label.admin-only{display:block!important}
 /* LAYOUT */
 .layout{display:flex;min-height:100vh}
 .sidebar{width:var(--sw);background:var(--primary);color:#fff;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:200;flex-shrink:0}
@@ -139,6 +139,8 @@ textarea.fc{resize:vertical;min-height:70px}
   .mob-hide{display:none}
 }
 @media(min-width:769px){.mob-nav{display:none}}
+.btn-logout-mobile{display:none;position:fixed;top:10px;right:10px;z-index:999;background:#dc2626;color:#fff;border:none;border-radius:50px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+@media(max-width:768px){.btn-logout-mobile{display:block}}
 .mob-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190;display:none}
 .mob-overlay.open{display:block}
 /* SECTION */
@@ -233,9 +235,11 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="ni admin-only" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
-  <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.35);display:flex;align-items:center;justify-content:space-between">
-    <span><span id="sync-status">☁️</span> <span id="sync-label">Sincronizado</span></span>
-    <button onclick="cerrarSesion()" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:11px;padding:0" title="Cerrar sesión">🚪</button>
+  <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.35)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span><span id="sync-status">☁️</span> <span id="sync-label">Sincronizado</span></span>
+    </div>
+    <button onclick="cerrarSesion()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:rgba(255,255,255,.6);cursor:pointer;font-size:13px;padding:8px;display:flex;align-items:center;justify-content:center;gap:6px">🚪 Cerrar sesión</button>
   </div>
 </nav>
 
@@ -565,7 +569,7 @@ textarea.fc{resize:vertical;min-height:70px}
   <div class="topbar">
     <div><div class="pg-title">👥 Usuarios</div><div class="pg-sub">Gestión del equipo y accesos</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px;margin-bottom:16px">
     <!-- Crear usuario -->
     <div class="card">
       <div class="card-head"><h3>➕ Crear cuenta de trabajador</h3></div>
@@ -583,7 +587,10 @@ textarea.fc{resize:vertical;min-height:70px}
       <div class="card-head"><h3>🔑 Administradores</h3></div>
       <div style="padding:14px">
         <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Los admins ven todo. Los trabajadores ven: Catálogo, Operaciones, Hojas de Servicio, Mejoras y Tareas. No ven: Dashboard, Informes, Gastos, APPCC, Formularios ni Datos.</p>
+        <a href="https://console.firebase.google.com/project/albaraba-gestion/authentication/users" target="_blank" class="btn" style="width:100%;justify-content:center;margin-bottom:12px;text-decoration:none;font-size:12px">🔗 Borrar cuenta en Firebase Console</a>
         <div id="admins-list" style="margin-bottom:12px"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">Trabajadores registrados:</div>
+    <div id="workers-list" style="margin-top:4px"></div>
         <div style="display:flex;gap:8px">
           <input class="fc" id="new-admin-email" type="email" placeholder="email@ejemplo.com" style="flex:1">
           <button class="btn btn-gold" onclick="addAdmin()">Añadir</button>
@@ -670,13 +677,15 @@ textarea.fc{resize:vertical;min-height:70px}
 </main>
 </div>
 
+<button class="btn-logout-mobile" onclick="cerrarSesion()">🚪 Salir</button>
+
 <!-- MOBILE NAV -->
 <nav class="mob-nav">
-  <div class="mn-item active" id="mn-dashboard" onclick="nav('dashboard')"><div class="ic">📊</div>Inicio</div>
+  <div class="mn-item active admin-mob" id="mn-dashboard" onclick="nav('dashboard')"><div class="ic">📊</div>Inicio</div>
   <div class="mn-item" id="mn-productos" onclick="nav('productos')"><div class="ic">📦</div>Productos</div>
-  <div class="mn-item" id="mn-hojas" onclick="nav('hojas')"><div class="ic">📋</div>Servicios</div>
+  <div class="mn-item" id="mn-tareas" onclick="nav('tareas')"><div class="ic">📝</div>Tareas</div>
   <div class="mn-item" id="mn-pedidos" onclick="nav('pedidos')"><div class="ic">🛒</div>Pedido</div>
-  <div class="mn-item" id="mn-informes" onclick="nav('informes')"><div class="ic">📄</div>Informes</div>
+  <div class="mn-item" onclick="cerrarSesion()" style="color:rgba(255,100,100,.7)"><div class="ic">🚪</div>Salir</div>
 </nav>
 
 <!-- HAMBURGER for mobile -->
@@ -2570,26 +2579,52 @@ function exportarAppccExcel(){
 // ROLES Y USUARIOS
 // ═══════════════════════════════════════════════════
 let userRole='trabajador';
+const ADMIN_NAV_IDS=['ni-dashboard','ni-proveedores-lbl','ni-catalogo-lbl','ni-operaciones-lbl','ni-formularios-lbl','ni-documentos-lbl','ni-appcc-lbl','ni-datos-lbl','ni-informes','ni-gastos','ni-appcc','ni-usuarios','nav-backup'];
 function applyRole(email){
-  const admins=DB.admins||['contacto@alaboca.es'];
+  const admins=(DB.admins||['contacto@alaboca.es']).map(e=>e.toLowerCase().trim());
   userRole=admins.includes((email||'').toLowerCase().trim())?'admin':'trabajador';
-  if(userRole==='admin'){
-    document.body.classList.add('role-admin');
-  } else {
-    document.body.classList.remove('role-admin');
-  }
-  // Mostrar usuario actual en sidebar
+  // Aplicar visibilidad directo en DOM
+  document.querySelectorAll('.admin-only').forEach(el=>{
+    el.style.setProperty('display', userRole==='admin'?(el.classList.contains('nav-label')?'block':'flex'):'none','important');
+  });
+  // Indicador en sidebar
   const lb=document.getElementById('sync-label');
-  if(lb)lb.textContent=userRole==='admin'?'Admin':'Trabajador';
+  if(lb)lb.textContent=userRole==='admin'?'Admin · '+email.split('@')[0]:'Trabajador · '+email.split('@')[0];
 }
 function renderUsuarios(){
   const list=document.getElementById('admins-list');
   if(!list)return;
   const admins=DB.admins||[];
   list.innerHTML=admins.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
-    <span style="font-size:13px">👤 ${esc(e)}</span>
+    <span style="font-size:13px">🔑 ${esc(e)}</span>
     ${e!=='contacto@alaboca.es'?`<button class="btn btn-sm btn-del" onclick="removeAdmin('${esc(e)}')">🗑</button>`:'<span style="font-size:11px;color:var(--muted)">Principal</span>'}
   </div>`).join('');
+  // Lista de trabajadores
+  const wlist=document.getElementById('workers-list');
+  if(!wlist)return;
+  const workers=(DB.usuarios||[]).filter(u=>!admins.includes(u.email));
+  wlist.innerHTML=workers.length?workers.map(u=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-size:13px;font-weight:600">🧑‍🍳 ${esc(u.nombre||u.email)}</div>
+        <div style="font-size:11px;color:var(--muted)">${esc(u.email)} · Creado: ${u.fecha||'—'}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="hacerAdmin('${esc(u.email)}')" title="Hacer admin">🔑</button>
+        <button class="btn btn-sm btn-del" onclick="eliminarUsuario('${esc(u.email)}')" title="Eliminar">🗑</button>
+      </div>
+    </div>`).join(''):'<div style="font-size:13px;color:var(--muted);padding:8px 0">Sin trabajadores creados aún</div>';
+}
+function hacerAdmin(email){
+  if(!confirm('¿Dar permisos de admin a '+email+'?'))return;
+  if(!DB.admins)DB.admins=['contacto@alaboca.es'];
+  if(!DB.admins.includes(email))DB.admins.push(email);
+  saveDB();renderUsuarios();
+}
+function eliminarUsuario(email){
+  if(!confirm('¿Eliminar a '+email+' de la lista?\n\nNota: su cuenta de acceso seguirá activa en Firebase. Para borrarla completamente ve a Firebase Console.'))return;
+  DB.usuarios=(DB.usuarios||[]).filter(u=>u.email!==email);
+  saveDB();renderUsuarios();
 }
 function addAdmin(){
   const email=document.getElementById('new-admin-email').value.trim().toLowerCase();
@@ -2620,16 +2655,18 @@ async function crearUsuario(){
     const adminUser=fbAuth.currentUser;
     // Crear nuevo usuario (esto cambia la sesión activa)
     await fbAuth.createUserWithEmailAndPassword(email,pwd);
-    // Volver a iniciar sesión como admin
-    // El admin tendrá que reintroducir su contraseña
+    // Registrar en DB.usuarios
+    if(!DB.usuarios)DB.usuarios=[];
+    if(!DB.usuarios.find(u=>u.email===email.toLowerCase())){
+      DB.usuarios.push({email:email.toLowerCase(),nombre,fecha:new Date().toISOString().slice(0,10)});
+    }
+    saveDB();
     document.getElementById('usr-nombre').value='';
     document.getElementById('usr-email').value='';
     document.getElementById('usr-pwd').value='';
     msg.style.color='#16a34a';
-    msg.textContent='✅ Cuenta creada. Ahora debes volver a iniciar sesión como admin.';
-    setTimeout(()=>{
-      fbAuth.signOut();
-    },2500);
+    msg.textContent='✅ Cuenta creada. Vuelve a iniciar sesión como admin.';
+    setTimeout(()=>{ fbAuth.signOut(); },2500);
   }catch(e){
     msg.style.color='#dc2626';
     if(e.code==='auth/email-already-in-use')msg.textContent='Este email ya tiene cuenta';
