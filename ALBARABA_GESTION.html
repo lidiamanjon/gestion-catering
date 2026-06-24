@@ -1143,6 +1143,7 @@ function nav(s){
   else if(s==='mejoras')renderMejoras();
   else if(s==='tareas')renderTareas();
   else if(s==='usuarios'){renderUsuarios();}
+  _applyRoleDOM();
   closeSidebar();
   window.scrollTo(0,0);
 }
@@ -2579,17 +2580,26 @@ function exportarAppccExcel(){
 // ROLES Y USUARIOS
 // ═══════════════════════════════════════════════════
 let userRole='trabajador';
-const ADMIN_NAV_IDS=['ni-dashboard','ni-proveedores-lbl','ni-catalogo-lbl','ni-operaciones-lbl','ni-formularios-lbl','ni-documentos-lbl','ni-appcc-lbl','ni-datos-lbl','ni-informes','ni-gastos','ni-appcc','ni-usuarios','nav-backup'];
+let currentUserEmail='';
 function applyRole(email){
-  const admins=(DB.admins||['contacto@alaboca.es']).map(e=>e.toLowerCase().trim());
-  userRole=admins.includes((email||'').toLowerCase().trim())?'admin':'trabajador';
-  // Aplicar visibilidad directo en DOM
+  if(email)currentUserEmail=(email||'').toLowerCase().trim();
+  // contacto@alaboca.es es SIEMPRE admin - hardcoded
+  if(currentUserEmail==='contacto@alaboca.es'){
+    userRole='admin';
+  } else {
+    const admins=(DB.admins||[]).map(e=>e.toLowerCase().trim());
+    userRole=admins.includes(currentUserEmail)?'admin':'trabajador';
+  }
+  _applyRoleDOM();
+}
+function _applyRoleDOM(){
   document.querySelectorAll('.admin-only').forEach(el=>{
-    el.style.setProperty('display', userRole==='admin'?(el.classList.contains('nav-label')?'block':'flex'):'none','important');
+    const show=userRole==='admin';
+    el.style.cssText=el.style.cssText.replace(/display\s*:[^;]+;?/gi,'');
+    el.style.setProperty('display',show?(el.classList.contains('nav-label')?'block':'flex'):'none','important');
   });
-  // Indicador en sidebar
   const lb=document.getElementById('sync-label');
-  if(lb)lb.textContent=userRole==='admin'?'Admin · '+email.split('@')[0]:'Trabajador · '+email.split('@')[0];
+  if(lb)lb.textContent=userRole==='admin'?'Admin':'Trabajador';
 }
 function renderUsuarios(){
   const list=document.getElementById('admins-list');
