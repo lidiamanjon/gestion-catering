@@ -213,6 +213,8 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="ni" id="ni-gastos" onclick="nav('gastos')"><span class="ic">💰</span> Gastos</div>
     <div class="nav-label">APPCC / Sanidad</div>
     <div class="ni" id="ni-appcc" onclick="nav('appcc')"><span class="ic">🧹</span> APPCC</div>
+    <div class="ni" id="ni-mejoras" onclick="nav('mejoras')"><span class="ic">🔧</span> Mejoras</div>
+    <div class="ni" id="ni-tareas" onclick="nav('tareas')"><span class="ic">📝</span> Tareas</div>
     <div class="nav-label">Datos</div>
     <div class="ni" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
     <div class="ni" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
@@ -492,6 +494,129 @@ textarea.fc{resize:vertical;min-height:70px}
       <div class="card-head"><h3>📋 Registro de incidencias</h3></div>
       <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Acción</th><th>Responsable</th><th>Estado</th><th></th></tr></thead>
       <tbody id="incidencias-tbody"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- MEJORAS -->
+<div class="section" id="section-mejoras">
+  <div class="topbar">
+    <div><div class="pg-title">🔧 Mejoras</div><div class="pg-sub">Registro de mejoras pendientes y completadas</div></div>
+  </div>
+
+  <!-- FORM NUEVA MEJORA -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head"><h3>➕ Apuntar nueva mejora</h3></div>
+    <div style="padding:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        <div class="fg" style="margin:0;grid-column:span 2"><label class="fl">Título</label><input class="fc" id="mej-titulo" placeholder="Qué hay que mejorar..."></div>
+        <div class="fg" style="margin:0"><label class="fl">Zona / Área</label>
+          <select class="fc" id="mej-zona">
+            <option>Cocina</option><option>Almacén</option><option>Cámara frigorífica</option><option>Zona de servicio</option><option>Baños</option><option>Furgoneta / Transporte</option><option>Equipamiento</option><option>Proceso de trabajo</option><option>Otro</option>
+          </select>
+        </div>
+        <div class="fg" style="margin:0"><label class="fl">Prioridad</label>
+          <select class="fc" id="mej-prioridad">
+            <option value="alta">🔴 Alta</option><option value="media" selected>🟡 Media</option><option value="baja">🟢 Baja</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:10px;margin-bottom:0"><label class="fl">Descripción</label><textarea class="fc" id="mej-desc" rows="2" placeholder="Detalla qué problema hay o qué se quiere mejorar..."></textarea></div>
+      <div style="margin-top:10px">
+        <label class="fl">📸 Foto del problema (opcional)</label>
+        <input type="file" id="mej-foto-antes" accept="image/*" capture="environment" style="margin-top:4px;font-size:13px">
+      </div>
+      <button class="btn btn-gold" style="margin-top:12px" onclick="guardarMejora()">💾 Guardar mejora</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchMejorasTab(this,'mej-tab-pendientes')">⏳ Pendientes</div>
+    <div class="tab" onclick="switchMejorasTab(this,'mej-tab-completadas')">✅ Completadas</div>
+  </div>
+
+  <!-- PENDIENTES -->
+  <div id="mej-tab-pendientes">
+    <div id="mej-list-pendientes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:4px"></div>
+  </div>
+
+  <!-- COMPLETADAS -->
+  <div id="mej-tab-completadas" style="display:none">
+    <div id="mej-list-completadas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:4px"></div>
+  </div>
+</div>
+
+<!-- TAREAS -->
+<div class="section" id="section-tareas">
+  <div class="topbar">
+    <div><div class="pg-title">📝 Tareas</div><div class="pg-sub">Pendientes y realizadas por el equipo</div></div>
+    <button class="btn btn-gold" onclick="exportarTareasExcel()">📊 Exportar informe</button>
+  </div>
+
+  <!-- FORM NUEVA TAREA -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-head"><h3>➕ Nueva tarea</h3></div>
+    <div style="padding:14px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px">
+        <div class="fg" style="margin:0;grid-column:span 2"><label class="fl">Título de la tarea</label><input class="fc" id="tar-titulo" placeholder="Qué hay que hacer..."></div>
+        <div class="fg" style="margin:0"><label class="fl">Encargado (quien asigna)</label><input class="fc" id="tar-encargado" placeholder="Nombre encargado"></div>
+        <div class="fg" style="margin:0"><label class="fl">Trabajador asignado</label><input class="fc" id="tar-trabajador" placeholder="Nombre trabajador"></div>
+        <div class="fg" style="margin:0"><label class="fl">Fecha límite (opcional)</label><input class="fc" id="tar-fecha" type="date"></div>
+        <div class="fg" style="margin:0"><label class="fl">Prioridad</label>
+          <select class="fc" id="tar-prioridad">
+            <option value="alta">🔴 Alta</option><option value="media" selected>🟡 Media</option><option value="baja">🟢 Baja</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:10px;margin-bottom:0"><label class="fl">Descripción / instrucciones</label><textarea class="fc" id="tar-desc" rows="2" placeholder="Detalla qué hay que preparar, recoger o hacer..."></textarea></div>
+      <div style="margin-top:10px"><label class="fl">📸 Foto de referencia (opcional)</label><input type="file" id="tar-foto" accept="image/*" capture="environment" style="margin-top:4px;font-size:13px"></div>
+      <button class="btn btn-gold" style="margin-top:12px" onclick="guardarTarea()">💾 Crear tarea</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTareasTab(this,'tar-tab-pendientes')">⏳ Pendientes</div>
+    <div class="tab" onclick="switchTareasTab(this,'tar-tab-realizadas')">✅ Realizadas</div>
+  </div>
+
+  <div id="tar-tab-pendientes">
+    <div id="tar-list-pendientes" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-top:4px"></div>
+  </div>
+  <div id="tar-tab-realizadas" style="display:none">
+    <div id="tar-list-realizadas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-top:4px"></div>
+  </div>
+</div>
+
+<!-- MODAL MARCAR TAREA REALIZADA -->
+<div id="modal-tarea-ok" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:420px;margin:20px">
+    <h3 style="margin-bottom:16px">✅ Marcar tarea como realizada</h3>
+    <input type="hidden" id="modal-tar-id">
+    <div class="fg"><label class="fl">Nombre del trabajador que la realiza</label><input class="fc" id="modal-tar-quien" placeholder="Tu nombre..."></div>
+    <div class="fg"><label class="fl">Notas (opcional)</label><textarea class="fc" id="modal-tar-notas" rows="2" placeholder="Cómo quedó, si hay algo a tener en cuenta..."></textarea></div>
+    <div style="margin-top:10px"><label class="fl">📸 Foto de confirmación (opcional)</label><input type="file" id="modal-tar-foto" accept="image/*" capture="environment" style="margin-top:4px;font-size:13px"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-gold" style="flex:1;justify-content:center" onclick="confirmarTareaRealizada()">✅ Confirmar</button>
+      <button class="btn" style="flex:1;justify-content:center" onclick="document.getElementById('modal-tarea-ok').style.display='none'">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMPLETAR MEJORA -->
+<div id="modal-completar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:420px;margin:20px">
+    <h3 style="margin-bottom:16px">✅ Marcar como completada</h3>
+    <input type="hidden" id="modal-mej-id">
+    <div class="fg"><label class="fl">Notas de la solución</label><textarea class="fc" id="modal-mej-notas" rows="3" placeholder="Cómo se resolvió..."></textarea></div>
+    <div style="margin-top:10px">
+      <label class="fl">📸 Foto del resultado (opcional)</label>
+      <input type="file" id="modal-mej-foto" accept="image/*" capture="environment" style="margin-top:4px;font-size:13px">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-gold" style="flex:1;justify-content:center" onclick="confirmarCompletada()">✅ Confirmar</button>
+      <button class="btn" style="flex:1;justify-content:center" onclick="document.getElementById('modal-completar').style.display='none'">Cancelar</button>
     </div>
   </div>
 </div>
@@ -884,6 +1009,8 @@ function applyMigrations(){
   if(!DB.appcc.temperaturas)DB.appcc.temperaturas=[];
   if(!DB.appcc.limpiezas)DB.appcc.limpiezas=[];
   if(!DB.appcc.incidencias)DB.appcc.incidencias=[];
+  if(!DB.mejoras)DB.mejoras=[];
+  if(!DB.tareas)DB.tareas=[];
   if(DB.proveedores.length===0){
     DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
   }
@@ -900,7 +1027,7 @@ function loadDB(){
     if(!FB_READY){
       DB.elaboraciones=ELAB_INICIAL.map(e=>({id:uid(),nombre:e.n,categoria:e.c,raciones_base:10,ingredientes:[],proceso:'',notas:'',foto:''}));
       DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
-      DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};
+      DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};DB.mejoras=[];
       saveDB();
     }
   }
@@ -924,7 +1051,7 @@ function loadDB(){
         // Todo vacío → inicializar
         DB.elaboraciones=ELAB_INICIAL.map(e=>({id:uid(),nombre:e.n,categoria:e.c,raciones_base:10,ingredientes:[],proceso:'',notas:'',foto:''}));
         DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
-        DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};
+        DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};DB.mejoras=[];
         saveDB();
         setSyncStatus('ok');
       }
@@ -956,6 +1083,8 @@ function nav(s){
   else if(s==='informes')renderInformes();
   else if(s==='gastos')renderGastos();
   else if(s==='appcc')renderAppcc();
+  else if(s==='mejoras')renderMejoras();
+  else if(s==='tareas')renderTareas();
   closeSidebar();
   window.scrollTo(0,0);
 }
@@ -1075,9 +1204,13 @@ function renderDashboard(){
     </div>`;
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">✅ Sin eventos en los próximos 7 días</div>';
   const appccAlert=DB.appcc.incidencias.filter(i=>i.estado!=='cerrada').length>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('appcc')">⚠️ <strong>${DB.appcc.incidencias.filter(i=>i.estado!=='cerrada').length} incidencia(s) APPCC abiertas.</strong> <u>Ir a APPCC →</u></div>`:'';
+  const mejAlt=(DB.mejoras||[]).filter(m=>m.estado==='pendiente'&&m.prioridad==='alta').length;
+  const mejorasAlert=mejAlt>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('mejoras')">🔧 <strong>${mejAlt} mejora(s) pendiente(s) de alta prioridad.</strong> <u>Ver Mejoras →</u></div>`:`${(DB.mejoras||[]).filter(m=>m.estado==='pendiente').length>0?`<div class="notice" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('mejoras')">🔧 <strong>${DB.mejoras.filter(m=>m.estado==='pendiente').length} mejora(s) pendiente(s).</strong> <u>Ver Mejoras →</u></div>`:''}``;
   const sinPrecioCount=DB.productos.filter(p=>!p.precio||parseFloat(p.precio)===0).length;
   const sinPrecioAlert=sinPrecioCount>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('productos')">💰 <strong>${sinPrecioCount} productos sin precio.</strong> Añade precios para que funcione el cálculo de costes en Gastos. <u>Ir a Productos →</u></div>`:'';
-  document.getElementById('dash-grids').innerHTML=elabAlert+hojasAlert+sinPrecioAlert+appccAlert+pedAlertHTML+`
+  const tarPend=(DB.tareas||[]).filter(t=>t.estado==='pendiente');
+  const tarAlert=tarPend.length>0?`<div class="notice" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('tareas')">📝 <strong>${tarPend.length} tarea(s) pendiente(s)</strong>${tarPend.filter(t=>t.prioridad==='alta').length>0?` · ${tarPend.filter(t=>t.prioridad==='alta').length} de alta prioridad 🔴`:''} <u>Ver Tareas →</u></div>`:'';
+  document.getElementById('dash-grids').innerHTML=elabAlert+hojasAlert+sinPrecioAlert+appccAlert+mejorasAlert+tarAlert+pedAlertHTML+`
     <div class="card" style="grid-column:span 2"><div class="card-head"><h3>📅 Agenda — próximos 7 días</h3><button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver todos</button></div><div style="padding:0 16px 4px">${agendaHTML}</div></div>
     <div class="card"><div class="card-head"><h3>📊 Elaboraciones por categoría</h3></div><div style="padding:16px">${catHTML||'<div class="empty"><p>Sin elaboraciones</p></div>'}</div></div>
     <div class="card"><div class="card-head"><h3>📦 Últimos productos añadidos</h3><button class="btn btn-sm btn-gold" onclick="nav('productos')">Ver todos</button></div>
@@ -2381,6 +2514,253 @@ function exportarAppccExcel(){
   DB.appcc.incidencias.forEach(i=>rowsI.push([i.fecha,i.tipo,i.descripcion,i.accion,i.responsable,i.estado]));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rowsI),'Incidencias');
   XLSX.writeFile(wb,'APPCC_Albaraba_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+// ═══════════════════════════════════════════════════
+// TAREAS
+// ═══════════════════════════════════════════════════
+function switchTareasTab(el,tabId){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['tar-tab-pendientes','tar-tab-realizadas'].forEach(id=>{
+    const t=document.getElementById(id);if(t)t.style.display='none';
+  });
+  const target=document.getElementById(tabId);if(target)target.style.display='';
+}
+async function guardarTarea(){
+  const titulo=document.getElementById('tar-titulo').value.trim();
+  if(!titulo){alert('Escribe un título para la tarea');return;}
+  const fileInput=document.getElementById('tar-foto');
+  const foto=fileInput.files[0]?await fileToBase64(fileInput.files[0]):'';
+  const obj={
+    id:uid(),
+    titulo,
+    descripcion:document.getElementById('tar-desc').value.trim(),
+    encargado:document.getElementById('tar-encargado').value.trim(),
+    trabajador:document.getElementById('tar-trabajador').value.trim(),
+    fecha_limite:document.getElementById('tar-fecha').value,
+    prioridad:document.getElementById('tar-prioridad').value,
+    foto_tarea:foto,
+    fecha_creacion:new Date().toISOString().slice(0,10),
+    estado:'pendiente',
+    quien_realizo:'',
+    notas_realizacion:'',
+    foto_realizada:'',
+    fecha_realizada:''
+  };
+  DB.tareas.unshift(obj);saveDB();
+  ['tar-titulo','tar-desc','tar-encargado','tar-trabajador','tar-fecha'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  fileInput.value='';
+  renderTareas();
+}
+function renderTareas(){
+  const pendientes=(DB.tareas||[]).filter(t=>t.estado==='pendiente');
+  const realizadas=(DB.tareas||[]).filter(t=>t.estado==='realizada');
+  const prioBadge=p=>p==='alta'?'<span class="badge b-red">🔴 Alta</span>':p==='media'?'<span class="badge b-warn">🟡 Media</span>':'<span class="badge b-ok">🟢 Baja</span>';
+  const hoy=new Date().toISOString().slice(0,10);
+  const cardPend=t=>{
+    const vencida=t.fecha_limite&&t.fecha_limite<hoy;
+    return`<div class="card" style="border-left:4px solid ${t.prioridad==='alta'?'#dc2626':t.prioridad==='media'?'#f59e0b':'#16a34a'}">
+    <div style="padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px">${esc(t.titulo)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">
+            ${prioBadge(t.prioridad)}
+            ${t.encargado?`· 👤 ${esc(t.encargado)}`:''}
+            ${t.trabajador?`· 🧑‍🍳 <strong>${esc(t.trabajador)}</strong>`:''}
+          </div>
+          ${t.fecha_limite?`<div style="font-size:12px;color:${vencida?'#dc2626':'var(--muted)'};margin-bottom:4px">${vencida?'⚠️ Vencida: ':'📅 '}${t.fecha_limite}</div>`:''}
+          ${t.descripcion?`<div style="font-size:13px;margin-bottom:8px">${esc(t.descripcion)}</div>`:''}
+        </div>
+        <button class="btn btn-sm btn-del" onclick="deleteTarea('${t.id}')">🗑</button>
+      </div>
+      ${t.foto_tarea?`<img src="${t.foto_tarea}" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;margin-bottom:10px" alt="Foto tarea">`:''}
+      <button class="btn btn-gold" style="width:100%;justify-content:center" onclick="abrirModalTarea('${t.id}')">✅ Marcar como realizada</button>
+    </div>
+  </div>`;
+  };
+  const cardRealizada=t=>`<div class="card" style="border-left:4px solid #16a34a;opacity:.85">
+    <div style="padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px">✅ ${esc(t.titulo)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:4px">
+            ${t.encargado?`👤 ${esc(t.encargado)} · `:''}
+            🧑‍🍳 ${t.quien_realizo?esc(t.quien_realizo):(t.trabajador?esc(t.trabajador):'—')} · ${t.fecha_realizada}
+          </div>
+          ${t.notas_realizacion?`<div style="font-size:13px;margin-bottom:8px">💬 ${esc(t.notas_realizacion)}</div>`:''}
+        </div>
+        <button class="btn btn-sm btn-del" onclick="deleteTarea('${t.id}')">🗑</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${t.foto_tarea?`<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Tarea original</div><img src="${t.foto_tarea}" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px"></div>`:''}
+        ${t.foto_realizada?`<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Resultado</div><img src="${t.foto_realizada}" style="width:100%;max-height:130px;object-fit:cover;border-radius:8px"></div>`:''}
+      </div>
+    </div>
+  </div>`;
+  const lp=document.getElementById('tar-list-pendientes');
+  const lr=document.getElementById('tar-list-realizadas');
+  if(lp)lp.innerHTML=pendientes.length?pendientes.map(cardPend).join(''):'<div style="text-align:center;padding:30px;color:var(--muted)">✅ Sin tareas pendientes</div>';
+  if(lr)lr.innerHTML=realizadas.length?realizadas.map(cardRealizada).join(''):'<div style="text-align:center;padding:30px;color:var(--muted)">Aún no hay tareas realizadas</div>';
+}
+function abrirModalTarea(id){
+  document.getElementById('modal-tar-id').value=id;
+  document.getElementById('modal-tar-quien').value='';
+  document.getElementById('modal-tar-notas').value='';
+  document.getElementById('modal-tar-foto').value='';
+  document.getElementById('modal-tarea-ok').style.display='flex';
+}
+async function confirmarTareaRealizada(){
+  const id=document.getElementById('modal-tar-id').value;
+  const t=(DB.tareas||[]).find(x=>x.id===id);
+  if(!t)return;
+  const quien=document.getElementById('modal-tar-quien').value.trim();
+  if(!quien){alert('Indica tu nombre');return;}
+  const fileInput=document.getElementById('modal-tar-foto');
+  const foto=fileInput.files[0]?await fileToBase64(fileInput.files[0]):'';
+  t.estado='realizada';
+  t.quien_realizo=quien;
+  t.notas_realizacion=document.getElementById('modal-tar-notas').value.trim();
+  t.foto_realizada=foto;
+  t.fecha_realizada=new Date().toISOString().slice(0,10);
+  saveDB();
+  document.getElementById('modal-tarea-ok').style.display='none';
+  renderTareas();
+}
+function deleteTarea(id){
+  if(!confirm('¿Eliminar esta tarea del registro?'))return;
+  DB.tareas=DB.tareas.filter(t=>t.id!==id);saveDB();renderTareas();
+}
+function exportarTareasExcel(){
+  if(!window.XLSX){alert('Espera a que cargue la librería Excel.');return;}
+  const wb=XLSX.utils.book_new();
+  const rows=[['Título','Descripción','Encargado','Trabajador asignado','Prioridad','Fecha límite','Estado','Realizada por','Fecha realización','Notas']];
+  (DB.tareas||[]).forEach(t=>rows.push([t.titulo,t.descripcion,t.encargado,t.trabajador,t.prioridad,t.fecha_limite,t.estado==='realizada'?'✅ Realizada':'⏳ Pendiente',t.quien_realizo||'',t.fecha_realizada||'',t.notas_realizacion||'']));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Tareas');
+  XLSX.writeFile(wb,'Tareas_Albaraba_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+// ═══════════════════════════════════════════════════
+// MEJORAS
+// ═══════════════════════════════════════════════════
+function switchMejorasTab(el,tabId){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['mej-tab-pendientes','mej-tab-completadas'].forEach(id=>{
+    const t=document.getElementById(id);if(t)t.style.display='none';
+  });
+  const target=document.getElementById(tabId);if(target)target.style.display='';
+}
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    if(!file){res('');return;}
+    const r=new FileReader();
+    r.onload=e=>{
+      // Redimensionar imagen para no sobrecargar Firebase
+      const img=new Image();
+      img.onload=()=>{
+        const MAX=800;
+        let w=img.width,h=img.height;
+        if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+        if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        res(canvas.toDataURL('image/jpeg',0.7));
+      };
+      img.src=e.target.result;
+    };
+    r.onerror=rej;
+    r.readAsDataURL(file);
+  });
+}
+async function guardarMejora(){
+  const titulo=document.getElementById('mej-titulo').value.trim();
+  if(!titulo){alert('Escribe un título para la mejora');return;}
+  const fileInput=document.getElementById('mej-foto-antes');
+  const foto=fileInput.files[0]?await fileToBase64(fileInput.files[0]):'';
+  const obj={
+    id:uid(),
+    titulo,
+    zona:document.getElementById('mej-zona').value,
+    prioridad:document.getElementById('mej-prioridad').value,
+    descripcion:document.getElementById('mej-desc').value.trim(),
+    foto_antes:foto,
+    fecha_creacion:new Date().toISOString().slice(0,10),
+    estado:'pendiente',
+    foto_despues:'',
+    notas_completado:'',
+    fecha_completada:''
+  };
+  DB.mejoras.unshift(obj);saveDB();
+  document.getElementById('mej-titulo').value='';
+  document.getElementById('mej-desc').value='';
+  fileInput.value='';
+  renderMejoras();
+}
+function renderMejoras(){
+  const pendientes=DB.mejoras.filter(m=>m.estado==='pendiente');
+  const completadas=DB.mejoras.filter(m=>m.estado==='completada');
+  const prioBadge=p=>p==='alta'?'<span class="badge b-red">🔴 Alta</span>':p==='media'?'<span class="badge b-warn">🟡 Media</span>':'<span class="badge b-ok">🟢 Baja</span>';
+  const cardPend=m=>`<div class="card" style="border-left:4px solid ${m.prioridad==='alta'?'#dc2626':m.prioridad==='media'?'#f59e0b':'#16a34a'}">
+    <div style="padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px">${esc(m.titulo)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${esc(m.zona)} · ${m.fecha_creacion} · ${prioBadge(m.prioridad)}</div>
+          ${m.descripcion?`<div style="font-size:13px;color:var(--text);margin-bottom:8px">${esc(m.descripcion)}</div>`:''}
+        </div>
+        <button class="btn btn-sm btn-del" onclick="deleteMejora('${m.id}')">🗑</button>
+      </div>
+      ${m.foto_antes?`<img src="${m.foto_antes}" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px;margin-bottom:8px" alt="Foto problema">`:''}
+      <button class="btn btn-gold" style="width:100%;justify-content:center" onclick="abrirModalCompletar('${m.id}')">✅ Marcar como completada</button>
+    </div>
+  </div>`;
+  const cardComp=m=>`<div class="card" style="border-left:4px solid #16a34a;opacity:.85">
+    <div style="padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:15px;margin-bottom:4px">✅ ${esc(m.titulo)}</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">${esc(m.zona)} · Completada: ${m.fecha_completada}</div>
+          ${m.notas_completado?`<div style="font-size:13px;margin-bottom:8px">💬 ${esc(m.notas_completado)}</div>`:''}
+        </div>
+        <button class="btn btn-sm btn-del" onclick="deleteMejora('${m.id}')">🗑</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${m.foto_antes?`<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Antes</div><img src="${m.foto_antes}" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px" alt="Antes"></div>`:''}
+        ${m.foto_despues?`<div><div style="font-size:11px;color:var(--muted);margin-bottom:4px">Después</div><img src="${m.foto_despues}" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px" alt="Después"></div>`:''}
+      </div>
+    </div>
+  </div>`;
+  const lp=document.getElementById('mej-list-pendientes');
+  const lc=document.getElementById('mej-list-completadas');
+  if(lp)lp.innerHTML=pendientes.length?pendientes.map(cardPend).join(''):'<div style="text-align:center;padding:30px;color:var(--muted)">✅ Sin mejoras pendientes</div>';
+  if(lc)lc.innerHTML=completadas.length?completadas.map(cardComp).join(''):'<div style="text-align:center;padding:30px;color:var(--muted)">Sin mejoras completadas aún</div>';
+}
+function abrirModalCompletar(id){
+  document.getElementById('modal-mej-id').value=id;
+  document.getElementById('modal-mej-notas').value='';
+  document.getElementById('modal-mej-foto').value='';
+  document.getElementById('modal-completar').style.display='flex';
+}
+async function confirmarCompletada(){
+  const id=document.getElementById('modal-mej-id').value;
+  const m=DB.mejoras.find(x=>x.id===id);
+  if(!m)return;
+  const fileInput=document.getElementById('modal-mej-foto');
+  const foto=fileInput.files[0]?await fileToBase64(fileInput.files[0]):'';
+  m.estado='completada';
+  m.notas_completado=document.getElementById('modal-mej-notas').value.trim();
+  m.foto_despues=foto;
+  m.fecha_completada=new Date().toISOString().slice(0,10);
+  saveDB();
+  document.getElementById('modal-completar').style.display='none';
+  renderMejoras();
+}
+function deleteMejora(id){
+  if(!confirm('¿Eliminar esta mejora?'))return;
+  DB.mejoras=DB.mejoras.filter(m=>m.id!==id);saveDB();renderMejoras();
 }
 
 // ═══════════════════════════════════════════════════
