@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Albaraba SL · Catering & APPCC</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Albaraba">
+<link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- Firebase -->
@@ -14,6 +21,10 @@
 :root{--primary:#1a1a2e;--gold:#c9a227;--gold2:#f0c040;--green:#2d6a4f;--bg:#f4f5f7;--surface:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--sw:230px}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.admin-only{display:none}
+body.role-admin .admin-only{display:flex}
+.nav-label.admin-only{display:none}
+body.role-admin .nav-label.admin-only{display:block}
 /* LAYOUT */
 .layout{display:flex;min-height:100vh}
 .sidebar{width:var(--sw);background:var(--primary);color:#fff;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:200;flex-shrink:0}
@@ -194,8 +205,8 @@ textarea.fc{resize:vertical;min-height:70px}
     <p>APPCC · Catering · Gestión</p>
   </div>
   <div class="nav-group">
-    <div class="nav-label">Principal</div>
-    <div class="ni active" id="ni-dashboard" onclick="nav('dashboard')"><span class="ic">📊</span> Dashboard</div>
+    <div class="nav-label admin-only">Principal</div>
+    <div class="ni active admin-only" id="ni-dashboard" onclick="nav('dashboard')"><span class="ic">📊</span> Dashboard</div>
     <div class="nav-label">Catálogo</div>
     <div class="ni" id="ni-proveedores" onclick="nav('proveedores')"><span class="ic">🏭</span> Proveedores</div>
     <div class="ni" id="ni-productos" onclick="nav('productos')"><span class="ic">📦</span> Productos</div>
@@ -204,20 +215,22 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="ni" id="ni-hojas" onclick="nav('hojas')"><span class="ic">📋</span> Hojas de Servicio</div>
     <div class="ni" id="ni-pedidos" onclick="nav('pedidos')"><span class="ic">🛒</span> Generar Pedido</div>
     <div class="ni" id="ni-stock" onclick="nav('stock')"><span class="ic">📦</span> Stock</div>
-    <div class="nav-label">Formularios</div>
-    <div class="ni" onclick="window.open('Hoja_Servicio_ALABOCA.html','_blank')"><span class="ic">📋</span> Hoja Alaboca</div>
-    <div class="ni" onclick="window.open('Hoja_Servicio_PV.html','_blank')"><span class="ic">🌿</span> Hoja PV</div>
-    <div class="ni" onclick="window.open('Presupuesto_Catering.html','_blank')"><span class="ic">💼</span> Presupuesto</div>
-    <div class="nav-label">Documentos</div>
-    <div class="ni" id="ni-informes" onclick="nav('informes')"><span class="ic">📄</span> Informes</div>
-    <div class="ni" id="ni-gastos" onclick="nav('gastos')"><span class="ic">💰</span> Gastos</div>
-    <div class="nav-label">APPCC / Sanidad</div>
-    <div class="ni" id="ni-appcc" onclick="nav('appcc')"><span class="ic">🧹</span> APPCC</div>
+    <div class="nav-label admin-only">Formularios</div>
+    <div class="ni admin-only" onclick="window.open('Hoja_Servicio_ALABOCA.html','_blank')"><span class="ic">📋</span> Hoja Alaboca</div>
+    <div class="ni admin-only" onclick="window.open('Hoja_Servicio_PV.html','_blank')"><span class="ic">🌿</span> Hoja PV</div>
+    <div class="ni admin-only" onclick="window.open('Presupuesto_Catering.html','_blank')"><span class="ic">💼</span> Presupuesto</div>
+    <div class="nav-label admin-only">Documentos</div>
+    <div class="ni admin-only" id="ni-informes" onclick="nav('informes')"><span class="ic">📄</span> Informes</div>
+    <div class="ni admin-only" id="ni-gastos" onclick="nav('gastos')"><span class="ic">💰</span> Gastos</div>
+    <div class="nav-label admin-only">APPCC / Sanidad</div>
+    <div class="ni admin-only" id="ni-appcc" onclick="nav('appcc')"><span class="ic">🧹</span> APPCC</div>
+    <div class="nav-label">Equipo</div>
     <div class="ni" id="ni-mejoras" onclick="nav('mejoras')"><span class="ic">🔧</span> Mejoras</div>
     <div class="ni" id="ni-tareas" onclick="nav('tareas')"><span class="ic">📝</span> Tareas</div>
-    <div class="nav-label">Datos</div>
-    <div class="ni" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
-    <div class="ni" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
+    <div class="ni admin-only" id="ni-usuarios" onclick="nav('usuarios')"><span class="ic">👥</span> Usuarios</div>
+    <div class="nav-label admin-only">Datos</div>
+    <div class="ni admin-only" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
+    <div class="ni admin-only" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
   <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.35);display:flex;align-items:center;justify-content:space-between">
@@ -544,6 +557,39 @@ textarea.fc{resize:vertical;min-height:70px}
   <!-- COMPLETADAS -->
   <div id="mej-tab-completadas" style="display:none">
     <div id="mej-list-completadas" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-top:4px"></div>
+  </div>
+</div>
+
+<!-- USUARIOS -->
+<div class="section" id="section-usuarios">
+  <div class="topbar">
+    <div><div class="pg-title">👥 Usuarios</div><div class="pg-sub">Gestión del equipo y accesos</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:800px">
+    <!-- Crear usuario -->
+    <div class="card">
+      <div class="card-head"><h3>➕ Crear cuenta de trabajador</h3></div>
+      <div style="padding:14px">
+        <div class="fg"><label class="fl">Nombre</label><input class="fc" id="usr-nombre" placeholder="Nombre del trabajador"></div>
+        <div class="fg"><label class="fl">Email</label><input class="fc" id="usr-email" type="email" placeholder="email@ejemplo.com"></div>
+        <div class="fg"><label class="fl">Contraseña</label><input class="fc" id="usr-pwd" type="password" placeholder="Mínimo 6 caracteres"></div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">El trabajador verá: Proveedores, Productos, Elaboraciones, Hojas de Servicio, Pedidos, Stock, Mejoras y Tareas. Comparte el email y contraseña con él.</p>
+        <button class="btn btn-gold" onclick="crearUsuario()" style="width:100%;justify-content:center">Crear cuenta</button>
+        <div id="usr-msg" style="font-size:12px;text-align:center;margin-top:8px;min-height:16px"></div>
+      </div>
+    </div>
+    <!-- Admins -->
+    <div class="card">
+      <div class="card-head"><h3>🔑 Administradores</h3></div>
+      <div style="padding:14px">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Los admins ven todo. Los trabajadores ven: Catálogo, Operaciones, Hojas de Servicio, Mejoras y Tareas. No ven: Dashboard, Informes, Gastos, APPCC, Formularios ni Datos.</p>
+        <div id="admins-list" style="margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px">
+          <input class="fc" id="new-admin-email" type="email" placeholder="email@ejemplo.com" style="flex:1">
+          <button class="btn btn-gold" onclick="addAdmin()">Añadir</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1011,6 +1057,7 @@ function applyMigrations(){
   if(!DB.appcc.incidencias)DB.appcc.incidencias=[];
   if(!DB.mejoras)DB.mejoras=[];
   if(!DB.tareas)DB.tareas=[];
+  if(!DB.admins)DB.admins=['contacto@alaboca.es'];
   if(DB.proveedores.length===0){
     DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
   }
@@ -1043,7 +1090,8 @@ function loadDB(){
         applyMigrations();
         localStorage.setItem('albaraba_v2',JSON.stringify(DB));
         setSyncStatus('ok');
-        if(currentSection)nav(currentSection);else nav('dashboard');
+        if(fbAuth&&fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
+        if(currentSection)nav(currentSection);else nav(userRole==='admin'?'dashboard':'tareas');
       } else if(raw){
         // Firebase vacío pero tenemos datos locales → subirlos
         fbDB.ref('albaraba_v2').set(DB).then(()=>setSyncStatus('ok'));
@@ -1085,6 +1133,7 @@ function nav(s){
   else if(s==='appcc')renderAppcc();
   else if(s==='mejoras')renderMejoras();
   else if(s==='tareas')renderTareas();
+  else if(s==='usuarios'){renderUsuarios();}
   closeSidebar();
   window.scrollTo(0,0);
 }
@@ -1205,7 +1254,8 @@ function renderDashboard(){
   }).join(''):'<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">✅ Sin eventos en los próximos 7 días</div>';
   const appccAlert=DB.appcc.incidencias.filter(i=>i.estado!=='cerrada').length>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('appcc')">⚠️ <strong>${DB.appcc.incidencias.filter(i=>i.estado!=='cerrada').length} incidencia(s) APPCC abiertas.</strong> <u>Ir a APPCC →</u></div>`:'';
   const mejAlt=(DB.mejoras||[]).filter(m=>m.estado==='pendiente'&&m.prioridad==='alta').length;
-  const mejorasAlert=mejAlt>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('mejoras')">🔧 <strong>${mejAlt} mejora(s) pendiente(s) de alta prioridad.</strong> <u>Ver Mejoras →</u></div>`:`${(DB.mejoras||[]).filter(m=>m.estado==='pendiente').length>0?`<div class="notice" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('mejoras')">🔧 <strong>${DB.mejoras.filter(m=>m.estado==='pendiente').length} mejora(s) pendiente(s).</strong> <u>Ver Mejoras →</u></div>`:''}``;
+  const mejPend=(DB.mejoras||[]).filter(m=>m.estado==='pendiente').length;
+  const mejorasAlert=mejAlt>0?'<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav(\'mejoras\')">🔧 <strong>'+mejAlt+' mejora(s) de alta prioridad pendientes.</strong> <u>Ver Mejoras →</u></div>':mejPend>0?'<div class="notice" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav(\'mejoras\')">🔧 <strong>'+mejPend+' mejora(s) pendiente(s).</strong> <u>Ver Mejoras →</u></div>':'';
   const sinPrecioCount=DB.productos.filter(p=>!p.precio||parseFloat(p.precio)===0).length;
   const sinPrecioAlert=sinPrecioCount>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('productos')">💰 <strong>${sinPrecioCount} productos sin precio.</strong> Añade precios para que funcione el cálculo de costes en Gastos. <u>Ir a Productos →</u></div>`:'';
   const tarPend=(DB.tareas||[]).filter(t=>t.estado==='pendiente');
@@ -2517,6 +2567,78 @@ function exportarAppccExcel(){
 }
 
 // ═══════════════════════════════════════════════════
+// ROLES Y USUARIOS
+// ═══════════════════════════════════════════════════
+let userRole='trabajador';
+function applyRole(email){
+  const admins=DB.admins||['contacto@alaboca.es'];
+  userRole=admins.includes((email||'').toLowerCase().trim())?'admin':'trabajador';
+  if(userRole==='admin'){
+    document.body.classList.add('role-admin');
+  } else {
+    document.body.classList.remove('role-admin');
+  }
+  // Mostrar usuario actual en sidebar
+  const lb=document.getElementById('sync-label');
+  if(lb)lb.textContent=userRole==='admin'?'Admin':'Trabajador';
+}
+function renderUsuarios(){
+  const list=document.getElementById('admins-list');
+  if(!list)return;
+  const admins=DB.admins||[];
+  list.innerHTML=admins.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+    <span style="font-size:13px">👤 ${esc(e)}</span>
+    ${e!=='contacto@alaboca.es'?`<button class="btn btn-sm btn-del" onclick="removeAdmin('${esc(e)}')">🗑</button>`:'<span style="font-size:11px;color:var(--muted)">Principal</span>'}
+  </div>`).join('');
+}
+function addAdmin(){
+  const email=document.getElementById('new-admin-email').value.trim().toLowerCase();
+  if(!email){alert('Escribe un email');return;}
+  if(!DB.admins)DB.admins=['contacto@alaboca.es'];
+  if(DB.admins.includes(email)){alert('Ya es administrador');return;}
+  DB.admins.push(email);saveDB();renderUsuarios();
+  document.getElementById('new-admin-email').value='';
+}
+function removeAdmin(email){
+  if(email==='contacto@alaboca.es'){alert('No puedes eliminar el admin principal');return;}
+  if(!confirm('¿Quitar a '+email+' como administrador?'))return;
+  DB.admins=DB.admins.filter(e=>e!==email);saveDB();renderUsuarios();
+}
+async function crearUsuario(){
+  const nombre=document.getElementById('usr-nombre').value.trim();
+  const email=document.getElementById('usr-email').value.trim();
+  const pwd=document.getElementById('usr-pwd').value;
+  const msg=document.getElementById('usr-msg');
+  if(!nombre||!email||!pwd){msg.style.color='#dc2626';msg.textContent='Rellena todos los campos';return;}
+  if(pwd.length<6){msg.style.color='#dc2626';msg.textContent='La contraseña debe tener al menos 6 caracteres';return;}
+  if(!fbAuth){msg.style.color='#dc2626';msg.textContent='Firebase no disponible';return;}
+  msg.style.color='var(--muted)';msg.textContent='Creando cuenta...';
+  const adminEmail=fbAuth.currentUser?.email;
+  const adminPwdEl=document.getElementById('usr-pwd');
+  try{
+    // Guardar sesión admin actual
+    const adminUser=fbAuth.currentUser;
+    // Crear nuevo usuario (esto cambia la sesión activa)
+    await fbAuth.createUserWithEmailAndPassword(email,pwd);
+    // Volver a iniciar sesión como admin
+    // El admin tendrá que reintroducir su contraseña
+    document.getElementById('usr-nombre').value='';
+    document.getElementById('usr-email').value='';
+    document.getElementById('usr-pwd').value='';
+    msg.style.color='#16a34a';
+    msg.textContent='✅ Cuenta creada. Ahora debes volver a iniciar sesión como admin.';
+    setTimeout(()=>{
+      fbAuth.signOut();
+    },2500);
+  }catch(e){
+    msg.style.color='#dc2626';
+    if(e.code==='auth/email-already-in-use')msg.textContent='Este email ya tiene cuenta';
+    else if(e.code==='auth/invalid-email')msg.textContent='Email no válido';
+    else msg.textContent='Error: '+e.message;
+  }
+}
+
+// ═══════════════════════════════════════════════════
 // TAREAS
 // ═══════════════════════════════════════════════════
 function switchTareasTab(el,tabId){
@@ -2786,6 +2908,9 @@ function doLogin(){
     });
 }
 
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
 window.addEventListener('DOMContentLoaded',()=>{
   if(FB_READY&&fbAuth){
     // Con Firebase: esperar a que el estado de auth esté listo
@@ -2794,7 +2919,8 @@ window.addEventListener('DOMContentLoaded',()=>{
       if(user){
         if(overlay)overlay.style.display='none';
         loadDB();
-        nav('dashboard');
+        applyRole(user.email);
+        nav(userRole==='admin'?'dashboard':'tareas');
       } else {
         if(overlay)overlay.style.display='flex';
       }
