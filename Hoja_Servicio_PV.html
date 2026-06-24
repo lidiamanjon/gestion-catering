@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Placeres de la Vida — Hoja de Servicio</title>
+<style>
+:root{--verde:#2e7d32;--verde2:#66bb6a;--naranja:#E8651A;--naranja2:#f0955a;--azul:#1a237e;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#e8f5e9;color:#222;font-size:16px}
+header{background:var(--verde);color:#fff;padding:16px 20px;text-align:center}
+header h1{font-size:1.3em;letter-spacing:1px} header p{font-size:.8em;opacity:.85;margin-top:3px}
+
+.card{background:#fff;margin:10px;border-radius:10px;padding:14px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+label{font-size:.76em;font-weight:700;color:#555;display:block;margin-bottom:3px}
+input,select{width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:7px;font-size:1em;background:#fafafa}
+input:focus,select:focus{outline:none;border-color:var(--verde);background:#fff}
+
+.sec-form{margin-top:12px;padding-top:12px;border-top:2px solid #c8e6c9}
+.sec-form-tit{font-size:.82em;font-weight:700;color:var(--verde);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.config-bloque{border:1.5px solid #c8e6c9;border-radius:8px;padding:12px;margin-top:10px}
+.config-bloque h3{font-size:.85em;color:var(--verde);margin-bottom:8px;font-weight:700}
+.almacen-form{background:#fff8f5;border:1.5px solid #ffd0b8;border-radius:8px;padding:12px;margin-top:10px}
+.almacen-form h3{font-size:.85em;color:var(--naranja);margin-bottom:8px;font-weight:700}
+
+.check-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.check-item{display:flex;align-items:center;gap:6px;font-size:.85em;cursor:pointer;padding:5px 7px;border-radius:5px;border:1px solid #eee;line-height:1.3}
+.check-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--verde);flex-shrink:0}
+.check-item:hover{background:#f1f8e9}
+.check-item.activo{background:#f1f8e9;border-color:var(--verde2)}
+.radio-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.radio-btn{padding:6px 12px;border:1.5px solid #ddd;border-radius:20px;font-size:.82em;cursor:pointer;background:#fafafa}
+.radio-btn.sel{background:var(--verde);color:#fff;border-color:var(--verde)}
+.grupo-lbl{font-size:.75em;font-weight:700;color:var(--azul);margin:8px 0 4px;padding:2px 0;border-bottom:1px solid #c8e6c9}
+.btn-personalizar{background:none;border:1.5px solid var(--naranja2);color:var(--naranja);padding:5px 12px;border-radius:15px;cursor:pointer;font-size:.8em;margin-top:8px}
+.custom-beb-row{display:grid;grid-template-columns:1fr 70px 60px;align-items:center;gap:6px;font-size:.85em;padding:3px 0}
+.custom-beb-row input{padding:5px 7px;text-align:center}
+
+.btn-calc{display:block;width:calc(100% - 20px);margin:0 10px 10px;background:var(--verde);color:#fff;border:none;padding:14px;border-radius:10px;font-size:1.1em;font-weight:700;cursor:pointer}
+.btn-calc:active{filter:brightness(.85)}
+
+.resultados{margin:0 10px 14px;display:none}
+.resultados.visible{display:block}
+.res-header-cocina{background:var(--verde);color:#fff;padding:11px 14px;border-radius:10px 10px 0 0}
+.res-header-cocina b{display:block;font-size:1.05em} .res-header-cocina span{opacity:.8;font-size:.82em}
+.res-header-almacen{background:var(--naranja);color:#fff;padding:11px 14px;border-radius:10px 10px 0 0;margin-top:10px}
+.res-header-almacen b{display:block;font-size:1.05em} .res-header-almacen span{opacity:.8;font-size:.82em}
+.separador-hojas{background:#e0e0e0;color:#666;font-size:.8em;text-align:center;padding:8px;margin:8px 0;border-radius:4px;font-weight:700}
+.banner-fecha{background:#fff;text-align:center;padding:22px 10px 16px;border-radius:10px 10px 0 0;border-bottom:4px solid var(--verde);margin-bottom:0}
+.banner-fecha .bf-fecha{font-size:72px;font-weight:900;color:#111;line-height:1.1;letter-spacing:1px}
+.banner-fecha .bf-hora{font-size:52px;font-weight:700;color:var(--verde);margin-top:6px}
+.banner-fecha .bf-evento{font-size:18px;color:#555;margin-top:8px}
+
+.seccion-cocina{background:#fff;border-left:4px solid var(--verde2);margin-bottom:2px}
+.seccion-almacen{background:#fff;border-left:4px solid var(--naranja2);margin-bottom:2px}
+.sec-tit-c{background:#f1f8e9;padding:10px 14px;font-weight:700;font-size:1em;color:var(--verde);cursor:pointer;display:flex;justify-content:space-between}
+.sec-tit-a{background:#fff3ec;padding:10px 14px;font-weight:700;font-size:1em;color:var(--naranja);cursor:pointer;display:flex;justify-content:space-between}
+.seccion-cocina.cerrada .sec-body,.seccion-almacen.cerrada .sec-body{display:none}
+.sec-body{padding:0}
+
+.item{display:grid;grid-template-columns:auto auto 1fr;align-items:center;padding:9px 14px;border-bottom:1px solid #f0f0f0;gap:10px}
+.item:last-child{border-bottom:none}
+.item-n{font-size:1em}.item-n small{display:block;color:#888;font-size:.78em;margin-top:1px}
+.item-f{font-size:1em;color:var(--azul);min-width:18px;text-align:center}
+.item-q-wrap{display:flex;align-items:center;gap:5px;justify-content:flex-start}
+.item-q{font-size:1.25em;font-weight:800;color:var(--verde);background:#e8f5e9;border-radius:7px;padding:3px 8px;text-align:center;width:72px;border:1.5px solid transparent;outline:none;cursor:text}
+.item-q:focus{border-color:var(--verde);background:#d4edda}
+.item-q.naranja{color:#e65100;background:#fff3e0}
+.item-q.naranja:focus{border-color:var(--naranja);background:#ffe8d6}
+.item-q.destac{background:#e0f2f1;color:#00695c;font-size:1.4em;width:84px}
+.item-u{font-size:.85em;color:#888;white-space:nowrap}
+.info-box{background:#e3f2fd;border-left:3px solid var(--azul);margin:6px 14px;padding:8px 10px;border-radius:4px;font-size:.82em;color:#0d47a1;line-height:1.5}
+.warn-box{background:#fff8e1;border-left:3px solid #ffa000;margin:6px 14px;padding:8px 10px;border-radius:4px;font-size:.82em;color:#5d4037}
+.btns-accion{display:flex;gap:6px;margin-top:2px}
+.btn-impr{flex:1;background:#444;color:#fff;border:none;padding:11px;border-radius:0 0 0 10px;font-size:.92em;cursor:pointer}
+.btn-dl{flex:1;background:var(--verde);color:#fff;border:none;padding:11px;border-radius:0 0 10px 0;font-size:.92em;cursor:pointer;font-weight:700}
+.btn-dl:active,.btn-impr:active{filter:brightness(.85)}
+
+@media print{
+  header,.card,.btn-calc,.separador-hojas{display:none!important}
+  .resultados{display:block!important;margin:0}
+  .seccion-cocina.cerrada .sec-body,.seccion-almacen.cerrada .sec-body{display:block!important}
+  .seccion-cocina,.seccion-almacen{border-left:2px solid #ccc;page-break-inside:avoid}
+  body{background:#fff}
+  .almacen-inicio{page-break-before:always}
+  .btns-accion{display:none!important}
+  .res-header-almacen{margin-top:0}
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>🌿 PLACERES DE LA VIDA CATERING</h1>
+  <p>Hoja de servicio — cocina + almacén en un solo formulario</p>
+</header>
+
+<div class="card">
+  <div class="grid2">
+    <div class="full"><label>EVENTO / CLIENTE</label><input type="text" id="evt-p" placeholder="Ej: Reunión Diputación"></div>
+    <div><label>📞 TELÉFONO CLIENTE</label><input type="tel" id="tel-p" placeholder="Ej: 600 123 456"></div>
+    <div><label>📍 UBICACIÓN / DIRECCIÓN</label><input type="text" id="ubic-p" placeholder="Ej: Sala Araba, C/ Fueros 2 - Vitoria-Gasteiz"></div>
+    <div><label>FECHA</label><input type="date" id="fec-p"></div>
+    <div><label>HORA</label><input type="time" id="hora-p" value="13:00"></div>
+    <div><label>Nº PERSONAS (PAX)</label><input type="number" id="pax-p" value="30" min="1"></div>
+    <div><label>🌱 PERSONAS VEGANAS</label><input type="number" id="nveg-p" value="0" min="0"></div>
+    <div><label>🌾 PERSONAS SIN GLUTEN</label><input type="number" id="nsg-p" value="0" min="0"></div>
+    <div class="full"><label>TIPO DE SERVICIO</label>
+      <select id="srv-p" onchange="cambiarServicio()">
+        <option value="LUNCH">🍱 Lunch / Cóctel — bocados</option>
+        <option value="COFFEE">☕ Coffee Break</option>
+        <option value="MENU_POPULAR">🍽 Menú Popular (20,50€)</option>
+        <option value="MENU_CELEBRACION">✨ Menú Celebración (28,50€)</option>
+        <option value="MENU_INFANTIL">👶 Menú Infantil (16€)</option>
+        <option value="CAZUELA">🍲 Platos de Cazuela</option>
+        <option value="ENVASADO">📦 Menú Envasado Popular (15€)</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECCIÓN COCINA                         -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="sec-form">
+    <div class="sec-form-tit">🍳 COCINA — SELECCIÓN DE PLATOS / BOCADOS</div>
+
+    <!-- MODO SERVICIO (solo menús) -->
+    <div class="config-bloque" id="blq-modo-srv-p" style="display:none">
+      <h3>🚚 TIPO DE ENTREGA</h3>
+      <div class="radio-row" id="radio-modoserv-p">
+        <div class="radio-btn sel" onclick="selR('modoserv',this,'completo')">✅ Servicio completo (vajilla, bebidas, mantelería)</div>
+        <div class="radio-btn" onclick="selR('modoserv',this,'entrega')">📦 Solo entrega (solo comida)</div>
+      </div>
+    </div>
+
+    <!-- VAJILLA (lunch/coffee) -->
+    <div class="config-bloque" id="blq-vajilla-p">
+      <h3>🍽 VAJILLA</h3>
+      <div class="radio-row" id="radio-vajilla-p">
+        <div class="radio-btn sel" onclick="selR('vajilla',this,'desechable')">Desechable</div>
+        <div class="radio-btn" onclick="selR('vajilla',this,'normal')">Cristalería / normal</div>
+        <div class="radio-btn" onclick="selR('vajilla',this,'no')">Sin vajilla</div>
+      </div>
+    </div>
+
+    <!-- LUNCH / CÓCTEL -->
+    <div class="config-bloque" id="blq-lunch-p">
+      <h3>🥢 BOCADOS — 1 ud por persona de cada seleccionado</h3>
+
+      <p class="grupo-lbl">❄ BOCADOS FRÍOS TRADICIONALES</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Chupito de gazpacho tradicional"> Chupito de gazpacho</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Gilda clásica de anchoa y boquerón"> Gilda clásica anchoa</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Tostada de brie con miel y nueces"> Tostada brie, miel y nueces</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Pan de oliva negra con atún, mayonesa y boquerón"> Pan oliva negra, atún y boquerón</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Delicia crujiente de ensaladilla rusa"> Ensaladilla rusa crujiente</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Tostada con jamón y tomate"> Tostada con jamón y tomate</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Empanada de queso de cabra y cebolla caramelizada"> Empanada queso cabra y cebolla</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Pan de calabaza con salmón, queso crema y rúcula"> Pan calabaza, salmón y rúcula</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Tabla de degustación de quesos"> 🧀 Tabla degustación quesos</label>
+      </div>
+
+      <p class="grupo-lbl">🌟 BOCADOS FRÍOS CÓCTEL</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Tartar de atún y mango sobre sablé"> Tartar atún y mango s/sablé</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Brioche matrimonio de anchoa y boquerón"> Brioche matrimonio anchoa</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Cono con jamón y puerro"> Cono con jamón y puerro</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Focaccia con queso crema y salmón"> Focaccia queso crema y salmón</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Capricho de mejillón sobre patata"> Capricho mejillón s/patata</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Roast beef sobre pan de queso"> Roast beef s/pan queso</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Focaccia de tomate cherry y aceite de albahaca"> Focaccia tomate cherry</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Gilda premium"> Gilda premium</label>
+      </div>
+
+      <p class="grupo-lbl">🔥 CALIENTES TRADICIONALES</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Culant de tortilla de patata"> Culant de tortilla de patata</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Saquito crujiente de carrilleras ibéricas"> Saquito crujiente carrilleras</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Langostino suflado en salsa agridulce"> Langostino suflado agridulce</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Morcilla crujiente con alegría riojana"> Morcilla crujiente con alegría</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Croquetas variadas (jamón, boletus y queso)"> Croquetas variadas</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Hamburguesa brioche"> Hamburguesa brioche</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Pan bao negro con costilla y pico de gallo"> Pan bao negro con costilla</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Vegetal de pollo en pan de queso"> Vegetal de pollo en pan queso</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Verduras en tempura"> Verduras en tempura</label>
+      </div>
+
+      <p class="grupo-lbl">🌟 CALIENTES CÓCTEL</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Saquito de langostino"> Saquito de langostino</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Pimiento relleno de marisco"> Pimiento relleno de marisco</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Pastel de nata y bacalao"> Pastel de nata y bacalao</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Arepa de rabo de toro"> Arepa de rabo de toro</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Raviolis de espinacas y ricota"> Raviolis espinacas y ricota</label>
+      </div>
+
+      <p class="grupo-lbl">🍬 DULCES CAPRICHOS</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Culant de chocolate"> Culant de chocolate</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Sablé de pistacho y frambuesa"> Sablé pistacho y frambuesa</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Lionesa"> Lionesa</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Tocino de cielo"> Tocino de cielo</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Milhoja de nata y crema"> Milhoja de nata y crema</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Pastel de limón"> Pastel de limón</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Pastel de mango"> Pastel de mango</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Torrija brioche"> Torrija brioche</label>
+        <label class="check-item"><input type="checkbox" name="pincho-p" value="Tarta de fresa y nata estilo chupa chups"> Tarta fresa y nata</label>
+      </div>
+
+      <p class="grupo-lbl">🌱 VEGANO — SALADOS (solo para personas veganas)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Tatin de verduras asadas (V)"> Tatin de verduras asadas</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Bocado nuggets veganos (V)"> Nuggets veganos con verdura</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Sándwich vegetal vegano (V)"> Sándwich vegetal vegano</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Focaccia tomate cherry y albahaca (V)"> Focaccia tomate cherry (V)</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Pan de calabaza con hummus y rúcula (V)"> Pan calabaza, hummus y rúcula</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Pan de oliva negra con verduras asadas (V)"> Pan oliva negra y verduras</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Cazuela de ensalada de garbanzos (V)"> Ensalada de garbanzos</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Chupito de gazpacho de remolacha (V)"> Gazpacho de remolacha</label>
+      </div>
+      <p class="grupo-lbl">🌱 VEGANO — DULCES (solo para personas veganas)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Macedonia (V)"> Macedonia (V)</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Mousse de mango (V)"> Mousse de mango (V)</label>
+        <label class="check-item"><input type="checkbox" name="pincho-veg-p" value="Bizcocho de plátano (V)"> Bizcocho de plátano (V)</label>
+      </div>
+
+      <p class="grupo-lbl">🌾 SIN GLUTEN (solo para personas con intolerancia)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="pincho-sg-p" value="Culant de tortilla de patata SG (SG)"> Culant tortilla SG</label>
+        <label class="check-item"><input type="checkbox" name="pincho-sg-p" value="Chupito de gazpacho tradicional SG (SG)"> Gazpacho SG</label>
+        <label class="check-item"><input type="checkbox" name="pincho-sg-p" value="Croquetas sin gluten (SG)"> Croquetas SG</label>
+        <label class="check-item"><input type="checkbox" name="pincho-sg-p" value="Tostada con jamón y tomate SG (SG)"> Tostada j/t SG</label>
+        <label class="check-item"><input type="checkbox" name="pincho-sg-p" value="Morcilla crujiente SG (SG)"> Morcilla crujiente SG</label>
+        <label class="check-item"><input type="checkbox" name="pincho-sg-p" value="Pastel de limón SG (SG)"> Pastel de limón SG</label>
+      </div>
+      <p class="grupo-lbl">🌟 BOCADOS EXTRA (precio adicional por persona — aparecerá en el presupuesto)</p>
+      <div id="pext-p-cont"></div>
+      <button type="button" onclick="addPinchoExtra('p')" style="background:none;border:1.5px dashed var(--verde);color:var(--verde);padding:5px 14px;border-radius:15px;cursor:pointer;font-size:.8em;margin-top:4px">+ Añadir bocado extra con precio</button>
+    </div>
+
+    <!-- COFFEE BREAK -->
+    <div class="config-bloque" id="blq-coffee-p" style="display:none">
+      <h3>☕ COFFEE BREAK</h3>
+      <div class="radio-row" id="radio-coffeeopt-p">
+        <div class="radio-btn sel" onclick="selR('coffeeopt',this,'basico')">Básico (7€)</div>
+        <div class="radio-btn" onclick="selR('coffeeopt',this,'completo1')">Completo 1 (11€)</div>
+        <div class="radio-btn" onclick="selR('coffeeopt',this,'completo2')">Completo 2 (12€)</div>
+      </div>
+      <div id="coffee-desc-p" style="font-size:.8em;color:#555;margin:8px 0;padding:8px;background:#f9fbe7;border-radius:6px;line-height:1.7">
+        Café · Infusiones · Leche entera, soja y sin lactosa · Cola Cao · Vajilla · 2 piezas dulces/saladas (7€)
+      </div>
+
+      <p class="grupo-lbl">🥪 CANAPÉS SALADOS</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Tortilla de patata"> Tortilla de patata</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Jamón con tomate en pan cristal"> Jamón con tomate en pan cristal</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Pan de calabaza con salmón"> Pan de calabaza con salmón</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Atún con mayonesa en pan de oliva negra"> Atún, mayonesa pan oliva negra</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Croissant vegetal de pavo y queso"> Croissant vegetal pavo y queso</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Mini focaccia tomate cherry y albahaca"> Mini focaccia tomate cherry</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Arepas rellenas de aguacate"> Arepas rellenas de aguacate</label>
+      </div>
+
+      <p class="grupo-lbl">🍩 DULCES Y REPOSTERÍA ARTESANAL</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Napolitana"> Napolitana</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Croissant"> Croissant</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Roll de canela"> Roll de canela</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Bizcocho casero de limón, pasas y nueces"> Bizcocho limón, pasas y nueces</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Bizcocho casero de chocolate"> Bizcocho casero de chocolate</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Cookies caseras con chispas de chocolate"> Cookies con chispas</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Pastel de manzana"> Pastel de manzana</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Brownie Rocky Road de tres texturas"> Brownie Rocky Road</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Brownie húmedo de pistacho y frambuesa"> Brownie pistacho y frambuesa</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Mini gofres de chocolate"> Mini gofres de chocolate</label>
+      </div>
+
+      <p class="grupo-lbl">🍓 FRESCOS Y SALUDABLES</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Vasito de yogur con muesli y fruta"> Yogur con muesli y fruta</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Vasito de fruta fresca"> Vasito de fruta fresca</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Pieza de fruta entera"> Pieza de fruta entera</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Zumo natural de naranja"> Zumo natural de naranja</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Batido detox verde"> Batido detox verde</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Batido detox remolacha, naranja y zanahoria"> Batido detox remolacha</label>
+        <label class="check-item"><input type="checkbox" name="coffee-p" value="Agua aromatizada pepino, lima y menta"> Agua aromatizada pepino y menta</label>
+      </div>
+
+      <p class="grupo-lbl">🌱 VEGANO — COFFEE (solo para personas veganas)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="coffee-veg-p" value="Arepas de aguacate (V)"> Arepas aguacate (V)</label>
+        <label class="check-item"><input type="checkbox" name="coffee-veg-p" value="Mini focaccia tomate cherry vegana (V)"> Mini focaccia tomate cherry (V)</label>
+        <label class="check-item"><input type="checkbox" name="coffee-veg-p" value="Pan de calabaza con hummus y rúcula (V)"> Pan calabaza hummus y rúcula (V)</label>
+        <label class="check-item"><input type="checkbox" name="coffee-veg-p" value="Palmeritas veganas (V)"> Palmeritas veganas (V)</label>
+        <label class="check-item"><input type="checkbox" name="coffee-veg-p" value="Croissant vegano (V)"> Croissant vegano (V)</label>
+        <label class="check-item"><input type="checkbox" name="coffee-veg-p" value="Bizcocho vegano casero (V)"> Bizcocho vegano casero (V)</label>
+      </div>
+
+      <p class="grupo-lbl">🌾 SIN GLUTEN — COFFEE (solo para personas con intolerancia)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="coffee-sg-p" value="Tortilla de patata sin gluten (SG)"> Tortilla patata SG</label>
+        <label class="check-item"><input type="checkbox" name="coffee-sg-p" value="Atún mayonesa pan sin gluten (SG)"> Atún mayonesa pan SG</label>
+        <label class="check-item"><input type="checkbox" name="coffee-sg-p" value="Palmeritas sin gluten (SG)"> Palmeritas SG</label>
+        <label class="check-item"><input type="checkbox" name="coffee-sg-p" value="Rolls de canela sin gluten (SG)"> Rolls canela SG</label>
+        <label class="check-item"><input type="checkbox" name="coffee-sg-p" value="Croissant sin gluten (SG)"> Croissant SG</label>
+      </div>
+    </div>
+
+    <!-- MENÚ POPULAR -->
+    <div class="config-bloque" id="blq-popular-p" style="display:none">
+      <h3>🍽 MENÚ POPULAR — 20,50€ + IVA</h3>
+      <div class="radio-row" id="radio-formatopop-p">
+        <div class="radio-btn sel" onclick="selR('formatopop',this,'1er2do')">1º + 2º plato</div>
+        <div class="radio-btn" onclick="selR('formatopop',this,'entrantes')">3 Entrantes + plato principal</div>
+      </div>
+      <div id="pop-entrantes-sel-p" style="display:none;margin-top:8px">
+        <p class="grupo-lbl">ENTRANTES</p>
+        <div class="check-grid">
+          <label class="check-item"><input type="checkbox" name="ent-pop-p" value="Croquetas variadas"> Croquetas variadas</label>
+          <label class="check-item"><input type="checkbox" name="ent-pop-p" value="Tabla de embutidos y quesos"> Tabla embutidos y quesos</label>
+          <label class="check-item"><input type="checkbox" name="ent-pop-p" value="Chorizo a la sidra"> Chorizo a la sidra</label>
+          <label class="check-item"><input type="checkbox" name="ent-pop-p" value="Ensalada de tomate con ventresca"> Ensalada tomate y ventresca</label>
+          <label class="check-item"><input type="checkbox" name="ent-pop-p" value="Morcilla crujiente con alegrías"> Morcilla crujiente</label>
+          <label class="check-item"><input type="checkbox" name="ent-pop-p" value="Langostinos suflados con salsa agridulce"> Langostinos suflados</label>
+        </div>
+      </div>
+      <p class="grupo-lbl">PRIMEROS</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="prim-pop-p" value="Flor de alcachofa confitada con ajo y jamón"> Flor de alcachofa</label>
+        <label class="check-item"><input type="checkbox" name="prim-pop-p" value="Alubias estofadas con chorizo"> Alubias estofadas</label>
+        <label class="check-item"><input type="checkbox" name="prim-pop-p" value="Patatas guisadas con chorizo"> Patatas guisadas</label>
+        <label class="check-item"><input type="checkbox" name="prim-pop-p" value="Ensaladilla rusa cremosa"> Ensaladilla rusa cremosa</label>
+      </div>
+      <p class="grupo-lbl">SEGUNDOS</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="seg-pop-p" value="Pollo asado en salsa de la casa"> Pollo asado en salsa</label>
+        <label class="check-item"><input type="checkbox" name="seg-pop-p" value="Albóndigas en salsa de piquillo"> Albóndigas en piquillo</label>
+        <label class="check-item"><input type="checkbox" name="seg-pop-p" value="Costillas con miel y mostaza"> Costillas miel y mostaza</label>
+        <label class="check-item"><input type="checkbox" name="seg-pop-p" value="Ragú de ternera"> Ragú de ternera</label>
+        <label class="check-item"><input type="checkbox" name="seg-pop-p" value="Merluza en salsa verde"> Merluza en salsa verde</label>
+      </div>
+      <p class="grupo-lbl">POSTRES (a elegir — se repartirán aprox. igual)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="post-pop-p" value="Torrija de brioche caramelizada al Baileys"> Torrija brioche Baileys</label>
+        <label class="check-item"><input type="checkbox" name="post-pop-p" value="Coulant de chocolate"> Coulant de chocolate</label>
+        <label class="check-item"><input type="checkbox" name="post-pop-p" value="Coulant de queso manchego"> Coulant queso manchego</label>
+      </div>
+      <div style="margin-top:10px;border-top:1px solid #eee;padding-top:8px">
+        <label class="check-item" style="display:inline-flex;border:none;padding:0;gap:8px;font-size:.85em;font-weight:700">
+          <input type="checkbox" id="cb-infantil-pop" onchange="document.getElementById('inf-pop-sub').style.display=this.checked?'block':'none'"> 👶 ¿Hay niños con menú infantil?
+        </label>
+        <div id="inf-pop-sub" style="display:none;margin-top:8px">
+          <div class="grid2"><div><label>Nº niños</label><input type="number" id="pax-infantil-pop" min="1" placeholder="0"></div></div>
+          <p class="grupo-lbl" style="margin-top:6px">PLATOS INFANTILES</p>
+          <div class="check-grid">
+            <label class="check-item"><input type="checkbox" name="inf-pop-p" value="Pasta boloñesa"> Pasta boloñesa</label>
+            <label class="check-item"><input type="checkbox" name="inf-pop-p" value="Arroz a la cubana"> Arroz a la cubana</label>
+            <label class="check-item"><input type="checkbox" name="inf-pop-p" value="Alitas de pollo con patatas fritas"> Alitas con patatas</label>
+            <label class="check-item"><input type="checkbox" name="inf-pop-p" value="Albóndigas con tomate"> Albóndigas con tomate</label>
+            <label class="check-item"><input type="checkbox" name="inf-pop-p" value="Merluza rebozada"> Merluza rebozada</label>
+            <label class="check-item"><input type="checkbox" name="inf-pop-p" value="Coulant de chocolate (postre)"> Coulant chocolate (postre)</label>
+            <label class="check-item"><input type="checkbox" name="inf-pop-p" value="Natillas (postre infantil)"> Natillas (postre)</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENÚ CELEBRACIÓN -->
+    <div class="config-bloque" id="blq-celebracion-p" style="display:none">
+      <h3>✨ MENÚ CELEBRACIÓN — 28,50€ + IVA</h3>
+      <p class="grupo-lbl">ENTRANTES (hasta 3)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="ent-cel-p" value="Ibéricos y quesos seleccionados"> Ibéricos y quesos</label>
+        <label class="check-item"><input type="checkbox" name="ent-cel-p" value="Croquetones variados"> Croquetones variados</label>
+        <label class="check-item"><input type="checkbox" name="ent-cel-p" value="Ensalada tomate, ventresca y piparra"> Ensalada tomate y ventresca</label>
+        <label class="check-item"><input type="checkbox" name="ent-cel-p" value="Morcilla crujiente con alegría"> Morcilla crujiente</label>
+        <label class="check-item"><input type="checkbox" name="ent-cel-p" value="Saquitos de carrillera con mermelada de mango"> Saquitos de carrillera</label>
+        <label class="check-item"><input type="checkbox" name="ent-cel-p" value="Foie con mermeladas variadas"> Foie con mermeladas</label>
+        <label class="check-item"><input type="checkbox" name="ent-cel-p" value="Ensaladilla de pulpo"> Ensaladilla de pulpo</label>
+        <label class="check-item"><input type="checkbox" name="ent-cel-p" value="Cóctel de camarón"> Cóctel de camarón</label>
+      </div>
+      <p class="grupo-lbl">PRIMEROS</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="prim-cel-p" value="Tallarines negros con chipirones y camarones"> Tallarines negros</label>
+        <label class="check-item"><input type="checkbox" name="prim-cel-p" value="Vieiras gratinadas con langostinos"> Vieiras gratinadas</label>
+        <label class="check-item"><input type="checkbox" name="prim-cel-p" value="Canelones de pato"> Canelones de pato</label>
+        <label class="check-item"><input type="checkbox" name="prim-cel-p" value="Crepe de chipirón y txangurro"> Crepe chipirón y txangurro</label>
+        <label class="check-item"><input type="checkbox" name="prim-cel-p" value="Flor de alcachofa con ajo y jamón"> Flor de alcachofa</label>
+      </div>
+      <p class="grupo-lbl">SEGUNDOS</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="seg-cel-p" value="Carrilleras al vino tinto"> Carrilleras al vino tinto</label>
+        <label class="check-item"><input type="checkbox" name="seg-cel-p" value="Bacalao sobre pisto"> Bacalao sobre pisto</label>
+        <label class="check-item"><input type="checkbox" name="seg-cel-p" value="Pimientos rellenos de bacalao"> Pimientos rellenos bacalao</label>
+        <label class="check-item"><input type="checkbox" name="seg-cel-p" value="Merluza en salsa verde"> Merluza en salsa verde</label>
+        <label class="check-item"><input type="checkbox" name="seg-cel-p" value="Solomillo de ternera"> Solomillo de ternera</label>
+        <label class="check-item"><input type="checkbox" name="seg-cel-p" value="Lubina al horno"> Lubina al horno</label>
+      </div>
+      <p class="grupo-lbl">POSTRES (a elegir)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="post-cel-p" value="Torrija de brioche al Baileys"> Torrija brioche Baileys</label>
+        <label class="check-item"><input type="checkbox" name="post-cel-p" value="Coulant de chocolate"> Coulant de chocolate</label>
+        <label class="check-item"><input type="checkbox" name="post-cel-p" value="Coulant de queso manchego"> Coulant queso manchego</label>
+        <label class="check-item"><input type="checkbox" name="post-cel-p" value="Cúpula de coco y piña colada"> Cúpula de coco y piña</label>
+        <label class="check-item"><input type="checkbox" name="post-cel-p" value="Pastel cremoso de nata y fresa"> Pastel nata y fresa</label>
+        <label class="check-item"><input type="checkbox" name="post-cel-p" value="Manzana pastel"> Manzana pastel</label>
+      </div>
+      <div style="margin-top:10px;border-top:1px solid #eee;padding-top:8px">
+        <label class="check-item" style="display:inline-flex;border:none;padding:0;gap:8px;font-size:.85em;font-weight:700">
+          <input type="checkbox" id="cb-infantil-cel" onchange="document.getElementById('inf-cel-sub').style.display=this.checked?'block':'none'"> 👶 ¿Hay niños con menú infantil?
+        </label>
+        <div id="inf-cel-sub" style="display:none;margin-top:8px">
+          <div class="grid2"><div><label>Nº niños</label><input type="number" id="pax-infantil-cel" min="1" placeholder="0"></div></div>
+          <p class="grupo-lbl" style="margin-top:6px">PLATOS INFANTILES</p>
+          <div class="check-grid">
+            <label class="check-item"><input type="checkbox" name="inf-cel-p" value="Pasta boloñesa"> Pasta boloñesa</label>
+            <label class="check-item"><input type="checkbox" name="inf-cel-p" value="Arroz a la cubana"> Arroz a la cubana</label>
+            <label class="check-item"><input type="checkbox" name="inf-cel-p" value="Alitas de pollo con patatas fritas"> Alitas con patatas</label>
+            <label class="check-item"><input type="checkbox" name="inf-cel-p" value="Albóndigas con tomate"> Albóndigas con tomate</label>
+            <label class="check-item"><input type="checkbox" name="inf-cel-p" value="Merluza rebozada"> Merluza rebozada</label>
+            <label class="check-item"><input type="checkbox" name="inf-cel-p" value="Coulant de chocolate (postre)"> Coulant chocolate (postre)</label>
+            <label class="check-item"><input type="checkbox" name="inf-cel-p" value="Natillas (postre infantil)"> Natillas (postre)</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENÚ INFANTIL -->
+    <div class="config-bloque" id="blq-infantil-p" style="display:none">
+      <h3>👶 MENÚ INFANTIL — 16€ + IVA</h3>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="inf-p" value="Pasta boloñesa"> Pasta boloñesa</label>
+        <label class="check-item"><input type="checkbox" name="inf-p" value="Arroz a la cubana"> Arroz a la cubana</label>
+        <label class="check-item"><input type="checkbox" name="inf-p" value="Alitas de pollo con patatas fritas"> Alitas con patatas</label>
+        <label class="check-item"><input type="checkbox" name="inf-p" value="Albóndigas con tomate"> Albóndigas con tomate</label>
+        <label class="check-item"><input type="checkbox" name="inf-p" value="Merluza rebozada"> Merluza rebozada</label>
+        <label class="check-item"><input type="checkbox" name="inf-p" value="Coulant de chocolate (postre infantil)"> Coulant de chocolate</label>
+        <label class="check-item"><input type="checkbox" name="inf-p" value="Natillas (postre infantil)"> Natillas</label>
+      </div>
+    </div>
+
+    <!-- CAZUELA -->
+    <div class="config-bloque" id="blq-cazuela-p" style="display:none">
+      <h3>🍲 PLATOS DE CAZUELA</h3>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="caz-p" value="Marmitako tradicional"> 🐟 Marmitako</label>
+        <label class="check-item"><input type="checkbox" name="caz-p" value="Alubiada con sacramentos"> 🫘 Alubiada con sacramentos</label>
+        <label class="check-item"><input type="checkbox" name="caz-p" value="Bacalao al ajoarriero"> 🐟 Bacalao al ajoarriero</label>
+        <label class="check-item"><input type="checkbox" name="caz-p" value="Patatas con chorizo"> 🥔 Patatas con chorizo</label>
+      </div>
+    </div>
+
+    <!-- ENVASADO -->
+    <div class="config-bloque" id="blq-envasado-p" style="display:none">
+      <h3>📦 MENÚ ENVASADO POPULAR — 15€ + IVA</h3>
+      <p class="grupo-lbl">PRIMEROS</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="env-p" value="Macarrones con tomate y chorizo"> Macarrones con chorizo</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Pasta carbonara"> Pasta carbonara</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Lasaña de carne"> Lasaña de carne</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Flor de alcachofa"> Flor de alcachofa</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Lentejas estofadas"> Lentejas estofadas</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Gazpacho"> Gazpacho</label>
+      </div>
+      <p class="grupo-lbl">SEGUNDOS</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="env-p" value="Albóndigas con tomate"> Albóndigas con tomate</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Pimientos rellenos de bacalao"> Pimientos rellenos bacalao</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Pimientos rellenos de carne"> Pimientos rellenos carne</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Ragout de cerdo"> Ragout de cerdo</label>
+      </div>
+      <p class="grupo-lbl">POSTRES (a elegir)</p>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" name="env-p" value="Natillas"> Natillas</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Arroz con leche"> Arroz con leche</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Brownie de chocolate"> Brownie de chocolate</label>
+        <label class="check-item"><input type="checkbox" name="env-p" value="Yogur con mango"> Yogur con mango</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-form">
+    <div class="sec-form-tit">➕ EXTRAS COCINA — productos no listados</div>
+    <textarea id="extras-cocina-p" rows="4" style="width:100%;padding:9px 11px;border:1.5px solid #c8e6c9;border-radius:7px;font-size:.9em;background:#fafafa;resize:vertical;font-family:inherit" placeholder="El prefijo determina en qué sección aparece:&#10;entrante: tabla ibéricos x 3&#10;primero: crema de zanahoria x 15&#10;segundo: chuletón de ternera x 5&#10;postre: coulant de chocolate x 20&#10;infantil: nuggets de pollo x 10&#10;(sin prefijo = sección Extras al final)"></textarea>
+    <p style="font-size:.75em;color:#888;margin-top:4px">Prefijos válidos: <strong>entrante / primero / segundo / postre / infantil / principal</strong> · Cantidad al final: <strong>x 20</strong></p>
+  </div>
+
+  <!-- ═══════════════════════════════════════ -->
+  <!-- SECCIÓN ALMACÉN                        -->
+  <!-- ═══════════════════════════════════════ -->
+  <div class="sec-form" id="sec-alm-p">
+    <div class="sec-form-tit">📦 ALMACÉN — MATERIALES Y MONTAJE</div>
+
+    <div class="almacen-form" id="blq-agua-p">
+      <h3>💧 TIPO DE AGUA</h3>
+      <div class="radio-row" id="radio-agua-p">
+        <div class="radio-btn sel" onclick="selR('agua',this,'botella33')">Botellín 33cl</div>
+        <div class="radio-btn" onclick="selR('agua',this,'botella1.5')">Botella 1.5L</div>
+        <div class="radio-btn" onclick="selR('agua',this,'jarra')">Jarras</div>
+        <div class="radio-btn" onclick="selR('agua',this,'termocristal')">Termos cristal</div>
+        <div class="radio-btn" onclick="selR('agua',this,'no')">Sin agua</div>
+      </div>
+    </div>
+
+    <div class="almacen-form" id="blq-bebidas-p">
+      <h3>🍷 BEBIDAS (2 por persona)</h3>
+      <div class="check-grid" id="checks-bebidas-p">
+        <label class="check-item"><input type="checkbox" value="vinotinto"> Vino tinto 🍷</label>
+        <label class="check-item"><input type="checkbox" value="vinoblanco"> Vino blanco 🥂</label>
+        <label class="check-item"><input type="checkbox" value="cocacola"> Coca-Cola 🥤</label>
+        <label class="check-item"><input type="checkbox" value="cocacola0"> Coca-Cola 0</label>
+        <label class="check-item"><input type="checkbox" value="acuarius"> Acuarius limón</label>
+        <label class="check-item"><input type="checkbox" value="kas"> Kas naranja</label>
+        <label class="check-item"><input type="checkbox" value="cerveza00"> Cerveza 0.0</label>
+        <label class="check-item"><input type="checkbox" value="estrella"> Estrella Galicia 🍺</label>
+        <label class="check-item"><input type="checkbox" value="aguagas"> Agua con gas</label>
+      </div>
+      <div style="text-align:right">
+        <button class="btn-personalizar" id="btn-perso-p" onclick="togglePersonalizarP()">⚙ Personalizar cantidades</button>
+      </div>
+      <div id="bebidas-custom-p" style="display:none;margin-top:8px">
+        <p style="font-size:.78em;color:#888;margin-bottom:6px">Cantidades exactas (deja en blanco para auto):</p>
+        <div id="custom-grid-p"></div>
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid #ffd0b8">
+        <label class="check-item" style="display:inline-flex;border:none;padding:0">
+          <input type="checkbox" id="llevan-hielo-p"> 🧊 Llevan hielo (calcular frío)
+        </label>
+      </div>
+    </div>
+
+    <div class="almacen-form" id="blq-vasos-p">
+      <h3>🥤 VASOS / RECIPIENTES</h3>
+      <div class="radio-row" id="radio-tipovaso-p">
+        <div class="radio-btn sel" onclick="selR('tipovaso',this,'desechable')">Desechable</div>
+        <div class="radio-btn" onclick="selR('tipovaso',this,'cristal')">Vasos cristal</div>
+        <div class="radio-btn" onclick="selR('tipovaso',this,'copas')">Copas</div>
+        <div class="radio-btn" onclick="selR('tipovaso',this,'tazas')">Tazas + platillo ☕</div>
+      </div>
+      <div style="margin-top:8px">
+        <label>¿Qué se sirve en vajilla?</label>
+        <div class="check-grid">
+          <label class="check-item"><input type="checkbox" id="des-cafe-p"> Café</label>
+          <label class="check-item"><input type="checkbox" id="des-zumo-p"> Zumo naranja</label>
+          <label class="check-item"><input type="checkbox" id="des-agua-p"> Agua</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="almacen-form" id="blq-cafe-p">
+      <h3>☕ ¿SE SIRVE CAFÉ?</h3>
+      <div class="radio-row" id="radio-cafe-p">
+        <div class="radio-btn sel" onclick="selR('cafep',this,'no')">No</div>
+        <div class="radio-btn" onclick="selR('cafep',this,'si')">Sí</div>
+      </div>
+      <div id="coffee-bebcal-p" style="display:none;margin-top:10px">
+        <label>Bebidas calientes disponibles</label>
+        <div class="check-grid">
+          <label class="check-item"><input type="checkbox" id="cb-leche-p" checked> 🥛 Leche</label>
+          <label class="check-item"><input type="checkbox" id="cb-soja-p"> 🥛 Leche de soja</label>
+          <label class="check-item"><input type="checkbox" id="cb-aguacal-p" checked> 🫖 Agua caliente (infusiones)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="almacen-form">
+      <h3>🪑 MESAS Y MANTELERÍA</h3>
+      <div style="display:grid;gap:8px;margin-bottom:8px">
+        <div>
+          <label>Mesas altas cóctel (1 cada 15 pax)</label>
+          <div class="radio-row" id="radio-mesasaltas-p">
+            <div class="radio-btn sel" onclick="selR('mesasaltasp',this,'no')">No</div>
+            <div class="radio-btn" onclick="selR('mesasaltasp',this,'si')">Sí</div>
+          </div>
+        </div>
+        <div>
+          <label>Mesas bajas de apoyo (1 cada 20 pax)</label>
+          <div class="radio-row" id="radio-mesasbajas-p">
+            <div class="radio-btn sel" onclick="selR('mesasbajasp',this,'no')">No</div>
+            <div class="radio-btn" onclick="selR('mesasbajasp',this,'si')">Sí</div>
+          </div>
+        </div>
+        <div id="row-mesascomer-p" style="display:none">
+          <label>Mesas de comer (1 cada 6 pax)</label>
+          <div class="radio-row" id="radio-mesascomer-p">
+            <div class="radio-btn sel" onclick="selR('mesascomerp',this,'no')">No</div>
+            <div class="radio-btn" onclick="selR('mesascomerp',this,'si')">Sí</div>
+          </div>
+        </div>
+      </div>
+      <label>Tipo de mantel</label>
+      <div class="radio-row" id="radio-mantel-p">
+        <div class="radio-btn sel" onclick="selR('mantelp',this,'negro')">Tela negro</div>
+        <div class="radio-btn" onclick="selR('mantelp',this,'blanco')">Tela blanco</div>
+        <div class="radio-btn" onclick="selR('mantelp',this,'desechable')">Desechable</div>
+        <div class="radio-btn" onclick="selR('mantelp',this,'ninguno')">Sin mantel</div>
+      </div>
+      <div style="margin-top:8px">
+        <label>Camino de mesa decorativo</label>
+        <div class="radio-row" id="radio-mantelcentro-p">
+          <div class="radio-btn sel" onclick="selR('mantelcentrop',this,'ninguno')">Sin camino</div>
+          <div class="radio-btn" onclick="selR('mantelcentrop',this,'azul')">Azul verdoso</div>
+          <div class="radio-btn" onclick="selR('mantelcentrop',this,'crema')">Crema</div>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <label>¿Sillas?</label>
+        <div class="radio-row" id="radio-sillas-p">
+          <div class="radio-btn sel" onclick="selR('sillasp',this,'no')">No</div>
+          <div class="radio-btn" onclick="selR('sillasp',this,'si')">Sí (1 por persona)</div>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <label>¿Carpas?</label>
+        <div class="radio-row" id="radio-carpas-p">
+          <div class="radio-btn sel" onclick="selR('carpasp',this,'no')">No</div>
+          <div class="radio-btn" onclick="selR('carpasp',this,'si')">Sí</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="almacen-form">
+      <h3>👨‍🍳 CAMAREROS</h3>
+      <div class="grid2" style="gap:8px;margin-bottom:10px">
+        <div>
+          <label>Número de camareros</label>
+          <input type="number" id="num-cam-p" value="0" min="0" max="20" style="font-size:1.3em;font-weight:700;text-align:center;color:var(--verde)">
+        </div>
+        <div style="display:flex;align-items:flex-end"><span style="font-size:.8em;color:#888;padding-bottom:10px">0 = sin camareros</span></div>
+      </div>
+      <div class="check-grid">
+        <label class="check-item"><input type="checkbox" class="cam-p" value="bandejear"> 🫴 Bandejear todo</label>
+        <label class="check-item"><input type="checkbox" class="cam-p" value="bebidas-recoger"> 🍷 Bebidas y recoger</label>
+        <label class="check-item"><input type="checkbox" class="cam-p" value="solo-recoger"> 🧹 Solo recoger</label>
+        <label class="check-item"><input type="checkbox" class="cam-p" value="repartir-platos"> 🍽 Repartir platos</label>
+        <label class="check-item"><input type="checkbox" class="cam-p" value="servicio-mesa"> 🤵 Servicio completo</label>
+      </div>
+    </div>
+
+    <div class="almacen-form">
+      <h3>🎨 DECORACIÓN Y EXTRAS</h3>
+      <div class="check-grid" id="checks-deco-p">
+        <label class="check-item"><input type="checkbox" value="plantas-altas"> 🌿 Plantas altas</label>
+        <label class="check-item"><input type="checkbox" value="plantas-bajas"> 🪴 Plantas bajas</label>
+        <label class="check-item"><input type="checkbox" value="flores-planas"> 🌸 Flores planas</label>
+        <label class="check-item"><input type="checkbox" value="bases-mimbre"> 🪣 Bases mimbre</label>
+        <label class="check-item"><input type="checkbox" value="bases-termos"> 🫙 Bases termos cristal</label>
+        <label class="check-item"><input type="checkbox" value="camino-mesa"> 🧵 Camino de mesa deco</label>
+        <label class="check-item"><input type="checkbox" value="mini-basuritas"> 🗑 Mini basuritas</label>
+        <label class="check-item"><input type="checkbox" value="qr-resenas"> 📲 QR de reseñas</label>
+        <label class="check-item"><input type="checkbox" value="tarjetas"> 🪧 Tarjetas</label>
+        <label class="check-item"><input type="checkbox" value="cartel-coffee"> ☕ Cartel Coffee Break</label>
+        <label class="check-item"><input type="checkbox" value="pinzas-madera"> 🤏 Pinzas de madera</label>
+        <label class="check-item"><input type="checkbox" value="velas"> 🕯 Velas / portavelas</label>
+        <label class="check-item"><input type="checkbox" value="abridores"> 🔓 Abridores de botella</label>
+      </div>
+    </div>
+
+    <div class="sec-form">
+      <div class="sec-form-tit">➕ EXTRAS ALMACÉN — materiales no listados</div>
+      <textarea id="extras-almacen-p" rows="2" style="width:100%;padding:9px 11px;border:1.5px solid #ffd0b8;border-radius:7px;font-size:.9em;background:#fff8f5;resize:vertical;font-family:inherit" placeholder="Un material por línea:&#10;Ej: Carro de transporte&#10;Caja isotérmica grande"></textarea>
+      <p style="font-size:.75em;color:#888;margin-top:4px">Un material por línea. Cantidad 1 por defecto (editable en el resultado).</p>
+    </div>
+
+    <div class="sec-form">
+      <div class="sec-form-tit">📝 OBSERVACIONES</div>
+      <textarea id="obs-p" rows="3" style="width:100%;padding:9px 11px;border:1.5px solid #ddd;border-radius:7px;font-size:.92em;background:#fafafa;resize:vertical;font-family:inherit" placeholder="Notas internas, peticiones especiales, alergias no estándar, instrucciones de montaje..."></textarea>
+    </div>
+  </div>
+</div>
+
+<button class="btn-calc" onclick="calcular()">GENERAR HOJA COMPLETA ▶</button>
+<div class="resultados" id="resultados-p"></div>
+
+<script>
+const stP = {
+  vajilla:'desechable', modoserv:'completo', coffeeopt:'basico', formatopop:'1er2do',
+  agua:'botella33', cafep:'no', tipovaso:'desechable',
+  mesasaltasp:'no', mesasbajasp:'no', mesascomerp:'no',
+  mantelp:'negro', sillasp:'no', carpasp:'no', mantelcentrop:'ninguno'
+};
+
+const COFFEE_DESC_P = {
+  basico:'Café · Infusiones · Leche entera, soja y sin lactosa · Cola Cao · Vajilla · 2 piezas (7€)',
+  completo1:'Café · Infusiones · Leche · 2 piezas · Zumo natural · Agua · Vasito fruta fresca (11€)',
+  completo2:'Café · Infusiones · Leche · 3 piezas · Zumo natural · Agua · Vasito fruta fresca (12€)'
+};
+
+function selR(g, el, v) {
+  const grpIds=[`radio-${g}`,`radio-${g}-p`,`radio-${g}p`];
+  for(const id of grpIds){const grp=document.getElementById(id);if(grp){grp.querySelectorAll('.radio-btn').forEach(b=>b.classList.remove('sel'));break;}}
+  el.classList.add('sel');
+  stP[g]=v;
+  if(g==='coffeeopt') document.getElementById('coffee-desc-p').textContent=COFFEE_DESC_P[v]||'';
+  if(g==='formatopop') document.getElementById('pop-entrantes-sel-p').style.display=v==='entrantes'?'block':'none';
+  if(g==='cafep') document.getElementById('coffee-bebcal-p').style.display=v==='si'?'block':'none';
+}
+
+document.querySelectorAll('.check-item input[type=checkbox]').forEach(inp=>{
+  inp.addEventListener('change',e=>e.target.closest('.check-item').classList.toggle('activo',e.target.checked));
+});
+
+function togglePersonalizarP(){
+  const panel=document.getElementById('bebidas-custom-p'),btn=document.getElementById('btn-perso-p');
+  const show=panel.style.display==='none';
+  panel.style.display=show?'block':'none';
+  btn.textContent=show?'✓ Cálculo automático':'⚙ Personalizar cantidades';
+  if(show) genCustomP();
+}
+function genCustomP(){
+  const sels=[...document.querySelectorAll('#checks-bebidas-p input:checked')].map(i=>i.value);
+  const LBLS={vinotinto:'Vino tinto',vinoblanco:'Vino blanco',cocacola:'Coca-Cola',cocacola0:'Coca-Cola 0',acuarius:'Acuarius',kas:'Kas naranja',cerveza00:'Cerveza 0.0',estrella:'Estrella Galicia',aguagas:'Agua con gas'};
+  const grid=document.getElementById('custom-grid-p');
+  if(!sels.length){grid.innerHTML='<p style="font-size:.8em;color:#aaa">Marca primero las bebidas.</p>';return;}
+  grid.innerHTML=sels.map(v=>{const prev=document.getElementById(`cpv-${v}`);return `<div class="custom-beb-row"><span>${LBLS[v]||v}</span><input type="number" id="cpv-${v}" placeholder="auto" min="0" value="${prev?prev.value:''}"><span style="color:#888">${['vinotinto','vinoblanco'].includes(v)?'botellas':'uds'}</span></div>`;}).join('');
+}
+document.getElementById('checks-bebidas-p').addEventListener('change',()=>{
+  if(document.getElementById('bebidas-custom-p').style.display!=='none') genCustomP();
+});
+
+function cambiarServicio() {
+  const s=document.getElementById('srv-p').value;
+  const mapa={LUNCH:'blq-lunch-p',COFFEE:'blq-coffee-p',MENU_POPULAR:'blq-popular-p',MENU_CELEBRACION:'blq-celebracion-p',MENU_INFANTIL:'blq-infantil-p',CAZUELA:'blq-cazuela-p',ENVASADO:'blq-envasado-p'};
+  Object.values(mapa).forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  if(mapa[s])document.getElementById(mapa[s]).style.display='block';
+  const esMenu=['MENU_POPULAR','MENU_CELEBRACION','MENU_INFANTIL','CAZUELA','ENVASADO'].includes(s);
+  document.getElementById('blq-modo-srv-p').style.display=esMenu?'block':'none';
+  document.getElementById('blq-vajilla-p').style.display='block';
+  document.getElementById('blq-bebidas-p').style.display=s==='COFFEE'?'none':'block';
+  document.getElementById('blq-cafe-p').style.display=s==='COFFEE'?'none':'block';
+  document.getElementById('row-mesascomer-p').style.display=esMenu?'block':'none';
+  if(esMenu){
+    selR('mesascomerp',document.querySelector('#radio-mesascomer-p .radio-btn:last-child'),'si');
+    selR('mesasaltasp',document.querySelector('#radio-mesasaltas-p .radio-btn:first-child'),'no');
+    selR('mesasbajasp',document.querySelector('#radio-mesasbajas-p .radio-btn:first-child'),'no');
+  }
+  if(s==='COFFEE'){
+    selR('mantelcentrop',document.querySelector('#radio-mantelcentro-p .radio-btn:nth-child(2)'),'azul');
+    selR('tipovaso',document.querySelector('#radio-tipovaso-p .radio-btn:nth-child(4)'),'tazas');
+  }
+}
+
+const rup=x=>Math.ceil(x);
+function filC(n,q,u,frio=false,nota=''){return `<div class="item"><div class="item-q-wrap"><input class="item-q" type="number" value="${q}" min="0"><span class="item-u">${u}</span></div><div class="item-f">${frio?'❄':''}</div><div class="item-n">${n}${nota?`<small>${nota}</small>`:''}</div></div>`;}
+function filA(n,q,u,frio=false,nota=''){return `<div class="item"><div class="item-q-wrap"><input class="item-q naranja" type="number" value="${q}" min="0"><span class="item-u">${u}</span></div><div class="item-f">${frio?'❄':''}</div><div class="item-n">${n}${nota?`<small>${nota}</small>`:''}</div></div>`;}
+function seccC(t,c){if(!c.trim())return '';return `<div class="seccion-cocina"><div class="sec-tit-c" onclick="this.parentElement.classList.toggle('cerrada')"><span>${t}</span><span>▼</span></div><div class="sec-body">${c}</div></div>`;}
+function seccA(t,c){if(!c.trim())return '';return `<div class="seccion-almacen"><div class="sec-tit-a" onclick="this.parentElement.classList.toggle('cerrada')"><span>${t}</span><span>▼</span></div><div class="sec-body">${c}</div></div>`;}
+function infobox(t){return `<div class="info-box">${t}</div>`;}
+function warnbox(t){return `<div class="warn-box">${t}</div>`;}
+
+function postresAElegir(nombre,paxTotal){
+  const sels=[...document.querySelectorAll(`input[name=${nombre}]:checked`)].map(i=>i.value);
+  if(!sels.length) return warnbox('⚠ No has marcado opciones de postre.');
+  const porOpcion=Math.ceil(paxTotal/sels.length);
+  let h=infobox(`🍰 Postres a elegir entre ${sels.length} opcion${sels.length>1?'es':''} · ~${porOpcion} uds por opción`);
+  sels.forEach(p=>h+=filC(p+' (postre)',porOpcion,'uds'));
+  return h;
+}
+
+function calcular() {
+  const pax=parseInt(document.getElementById('pax-p').value)||0;
+  if(!pax) return alert('Introduce el nº de personas');
+  const nVeg=Math.min(parseInt(document.getElementById('nveg-p').value)||0,pax);
+  const nSG=Math.min(parseInt(document.getElementById('nsg-p').value)||0,pax-nVeg);
+  const paxR=pax-nVeg-nSG;
+  const srv=document.getElementById('srv-p').value;
+  const evt=document.getElementById('evt-p').value||'—';
+  const fec=document.getElementById('fec-p').value;
+  const hora=document.getElementById('hora-p').value||'13:00';
+  const horaNum=parseInt(hora.split(':')[0]);
+  const esMañana=horaNum<14;
+  const fechaStr=fec?new Date(fec+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'long',year:'numeric'}):'';
+  const SRV_LBL={LUNCH:'Lunch/Cóctel',COFFEE:'Coffee Break',MENU_POPULAR:'Menú Popular',MENU_CELEBRACION:'Menú Celebración',MENU_INFANTIL:'Menú Infantil',CAZUELA:'Cazuela',ENVASADO:'Menú Envasado'};
+  const soloEntrega=stP.modoserv==='entrega'&&['MENU_POPULAR','MENU_CELEBRACION','MENU_INFANTIL','CAZUELA','ENVASADO'].includes(srv);
+  const frioKW=['salmón','txangurro','mejillón','tartar','gazpacho','queso crema','capricho','remolacha'];
+
+  let cocinaHTML='', almacenHTML='';
+
+  // ════════════════════════════════════
+  //  PARSEO DE EXTRAS PERSONALIZADOS
+  // ════════════════════════════════════
+  const _xLines=(document.getElementById('extras-cocina-p').value||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const eg={entrante:[],primero:[],segundo:[],postre:[],infantil:[],otro:[]};
+  _xLines.forEach(l=>{
+    const qm=l.match(/[xX×]\s*(\d+)\s*$|[xX×](\d+)\s*$|\(\s*(\d+)\s*\)\s*$/);
+    const qty=qm?(parseInt(qm[1]||qm[2]||qm[3])||1):1;
+    let nom=qm?l.slice(0,qm.index).trim():l;
+    const pm=nom.match(/^(entrantes?|primer[oa]?s?|segundos?|postres?|principal|infantil|ni[ñn]os?)\s*:\s*/i);
+    if(pm){
+      nom=nom.slice(pm[0].length).trim();
+      const k=pm[1].toLowerCase();
+      if(k.startsWith('entr')) eg.entrante.push({nom,qty});
+      else if(k.startsWith('prim')) eg.primero.push({nom,qty});
+      else if(k.startsWith('seg')||k==='principal') eg.segundo.push({nom,qty});
+      else if(k.startsWith('postr')) eg.postre.push({nom,qty});
+      else if(k.startsWith('infant')||k.startsWith('ni')) eg.infantil.push({nom,qty});
+    } else eg.otro.push({nom,qty});
+  });
+  const xRender=arr=>arr.map(e=>filC(e.nom,e.qty,'uds')).join('');
+
+  // ════ COCINA ════
+  if(srv==='LUNCH'){
+    const sels=[...document.querySelectorAll('input[name=pincho-p]:checked')].map(i=>i.value);
+    const selVeg=[...document.querySelectorAll('input[name=pincho-veg-p]:checked')].map(i=>i.value);
+    const selSG=[...document.querySelectorAll('input[name=pincho-sg-p]:checked')].map(i=>i.value);
+    let h='';
+    if(sels.length>0){
+      h+=infobox(`🥢 <strong>${sels.length} tipos × ${paxR} personas = ${sels.length*paxR} uds totales</strong>${nVeg>0?` · ${nVeg} 🌱 vegano${nVeg>1?'s':''}`:''} ${nSG>0?`· ${nSG} 🌾 SG`:''}`);
+      sels.forEach(p=>h+=filC(p,paxR,'uds',frioKW.some(k=>p.toLowerCase().includes(k))));
+    } else h=warnbox('⚠ No has seleccionado bocados.');
+    if(nVeg>0&&selVeg.length>0){
+      h+=infobox(`🌱 <strong>${selVeg.length} tipos veganos × ${nVeg} persona${nVeg>1?'s':''} = ${selVeg.length*nVeg} uds</strong>`);
+      selVeg.forEach(p=>h+=filC(p,nVeg,'uds',frioKW.some(k=>p.toLowerCase().includes(k))));
+    } else if(nVeg>0) h+=warnbox(`⚠ ${nVeg} persona${nVeg>1?'s':''} vegana${nVeg>1?'s':''} sin opciones marcadas.`);
+    if(nSG>0&&selSG.length>0){
+      h+=infobox(`🌾 <strong>${selSG.length} tipos SG × ${nSG} persona${nSG>1?'s':''} = ${selSG.length*nSG} uds</strong>`);
+      selSG.forEach(p=>h+=filC(p,nSG,'uds',false));
+    } else if(nSG>0) h+=warnbox(`⚠ ${nSG} persona${nSG>1?'s':''} sin gluten sin opciones marcadas.`);
+    cocinaHTML+=seccC('🥢 BOCADOS — PRODUCCIÓN',h);
+  }
+  else if(srv==='COFFEE'){
+    const sels=[...document.querySelectorAll('input[name=coffee-p]:checked')].map(i=>i.value);
+    const selVeg=[...document.querySelectorAll('input[name=coffee-veg-p]:checked')].map(i=>i.value);
+    const selSG=[...document.querySelectorAll('input[name=coffee-sg-p]:checked')].map(i=>i.value);
+    const opt=stP.coffeeopt;
+    const ppPax=opt==='completo2'?3:2;
+    let h='';
+    if(sels.length>0){const porT=Math.ceil(paxR*ppPax/sels.length);h+=infobox(`☕ ${sels.length} tipos × ${ppPax} piezas × ${paxR} personas = <strong>${porT} uds/tipo</strong>`);sels.forEach(p=>h+=filC(p,porT,'uds'));}
+    else h=warnbox('⚠ No has seleccionado piezas.');
+    if(nVeg>0&&selVeg.length>0){const porTV=Math.ceil(nVeg*ppPax/selVeg.length);h+=infobox(`🌱 Vegano: ${selVeg.length} tipos × ${ppPax} × ${nVeg} persona${nVeg>1?'s':''} = <strong>${porTV} uds/tipo</strong>`);selVeg.forEach(p=>h+=filC(p,porTV,'uds'));}
+    else if(nVeg>0) h+=warnbox(`⚠ ${nVeg} vegano${nVeg>1?'s':''} sin opciones.`);
+    if(nSG>0&&selSG.length>0){const porTSG=Math.ceil(nSG*ppPax/selSG.length);h+=infobox(`🌾 SG: ${selSG.length} tipos × ${ppPax} × ${nSG} persona${nSG>1?'s':''} = <strong>${porTSG} uds/tipo</strong>`);selSG.forEach(p=>h+=filC(p,porTSG,'uds'));}
+    else if(nSG>0) h+=warnbox(`⚠ ${nSG} SG sin opciones.`);
+    cocinaHTML+=seccC('☕ COFFEE — PIEZAS',h);
+  }
+  else {
+    const esMenu=['MENU_POPULAR','MENU_CELEBRACION','MENU_INFANTIL','CAZUELA','ENVASADO'].includes(srv);
+
+    if(srv==='MENU_POPULAR'){
+      const cbInfPop=document.getElementById('cb-infantil-pop')?.checked;
+      const paxInfPop=cbInfPop?(parseInt(document.getElementById('pax-infantil-pop')?.value)||0):0;
+      const paxAdPop=pax-paxInfPop;
+      cocinaHTML+=seccC('🍽 MENÚ POPULAR',infobox(`${pax} personas${soloEntrega?' · Solo entrega':''}${paxInfPop?` · 👶 ${paxInfPop} niños`:''}`));
+      const ents=[...document.querySelectorAll('input[name=ent-pop-p]:checked')].map(i=>i.value);
+      if(ents.length||eg.entrante.length) cocinaHTML+=seccC('🥗 ENTRANTES',ents.map(e=>filC(e,rup(paxAdPop/4),'fuentes')).join('')+xRender(eg.entrante));
+      const prims=[...document.querySelectorAll('input[name=prim-pop-p]:checked')].map(i=>i.value);
+      if(prims.length) cocinaHTML+=seccC('🍝 PRIMEROS',prims.map(p=>filC(p,paxAdPop,'raciones')).join('')+xRender(eg.primero));
+      else cocinaHTML+=seccC('🍝 PRIMEROS',warnbox('⚠ No has marcado primero.')+xRender(eg.primero));
+      const segs=[...document.querySelectorAll('input[name=seg-pop-p]:checked')].map(i=>i.value);
+      if(segs.length) cocinaHTML+=seccC('🥩 SEGUNDOS',segs.map(p=>filC(p,paxAdPop,'raciones')).join('')+xRender(eg.segundo));
+      else cocinaHTML+=seccC('🥩 SEGUNDOS',warnbox('⚠ No has marcado segundo.')+xRender(eg.segundo));
+      cocinaHTML+=seccC('🍮 POSTRES',postresAElegir('post-pop-p',paxAdPop)+xRender(eg.postre));
+      const infSelsPop=[...document.querySelectorAll('input[name=inf-pop-p]:checked')].map(i=>i.value);
+      if(paxInfPop>0||eg.infantil.length){
+        cocinaHTML+=seccC('👶 MENÚ INFANTIL',(paxInfPop>0?(infSelsPop.length?infSelsPop.map(p=>filC(p,paxInfPop,'raciones')).join(''):warnbox('⚠ Marca los platos del menú infantil.')):'') +xRender(eg.infantil));
+      }
+      if(nVeg>0) cocinaHTML+=seccC('🌱 VEGANO',infobox(`${nVeg} persona${nVeg>1?'s':''} vegana${nVeg>1?'s':''} — confirmar opciones con el cliente.`));
+      if(nSG>0) cocinaHTML+=seccC('🌾 SIN GLUTEN',infobox(`${nSG} persona${nSG>1?'s':''} sin gluten — confirmar adaptación de platos.`));
+
+    } else if(srv==='MENU_CELEBRACION'){
+      const cbInfCel=document.getElementById('cb-infantil-cel')?.checked;
+      const paxInfCel=cbInfCel?(parseInt(document.getElementById('pax-infantil-cel')?.value)||0):0;
+      const paxAdCel=pax-paxInfCel;
+      cocinaHTML+=seccC('✨ MENÚ CELEBRACIÓN',infobox(`${pax} personas${soloEntrega?' · Solo entrega':''}${paxInfCel?` · 👶 ${paxInfCel} niños`:''}`));
+      const ents=[...document.querySelectorAll('input[name=ent-cel-p]:checked')].map(i=>i.value);
+      if(ents.length||eg.entrante.length) cocinaHTML+=seccC('🥗 ENTRANTES',ents.map(e=>filC(e,rup(paxAdCel/4),'fuentes')).join('')+xRender(eg.entrante));
+      const prims=[...document.querySelectorAll('input[name=prim-cel-p]:checked')].map(i=>i.value);
+      if(prims.length) cocinaHTML+=seccC('🍝 PRIMEROS',prims.map(p=>filC(p,paxAdCel,'raciones')).join('')+xRender(eg.primero));
+      else cocinaHTML+=seccC('🍝 PRIMEROS',warnbox('⚠ No has marcado primero.')+xRender(eg.primero));
+      const segs=[...document.querySelectorAll('input[name=seg-cel-p]:checked')].map(i=>i.value);
+      if(segs.length) cocinaHTML+=seccC('🥩 SEGUNDOS',segs.map(p=>filC(p,paxAdCel,'raciones')).join('')+xRender(eg.segundo));
+      else cocinaHTML+=seccC('🥩 SEGUNDOS',warnbox('⚠ No has marcado segundo.')+xRender(eg.segundo));
+      cocinaHTML+=seccC('🍮 POSTRES',postresAElegir('post-cel-p',paxAdCel)+xRender(eg.postre));
+      const infSelsCel=[...document.querySelectorAll('input[name=inf-cel-p]:checked')].map(i=>i.value);
+      if(paxInfCel>0||eg.infantil.length){
+        cocinaHTML+=seccC('👶 MENÚ INFANTIL',(paxInfCel>0?(infSelsCel.length?infSelsCel.map(p=>filC(p,paxInfCel,'raciones')).join(''):warnbox('⚠ Marca los platos del menú infantil.')):'') +xRender(eg.infantil));
+      }
+      if(nVeg>0) cocinaHTML+=seccC('🌱 VEGANO',infobox(`${nVeg} persona${nVeg>1?'s':''} vegana${nVeg>1?'s':''} — confirmar.`));
+      if(nSG>0) cocinaHTML+=seccC('🌾 SIN GLUTEN',infobox(`${nSG} persona${nSG>1?'s':''} sin gluten — confirmar adaptación.`));
+
+    } else {
+      let h=infobox(`${pax} personas${soloEntrega?' · Solo entrega':''}`);
+      const nm={MENU_INFANTIL:'inf-p',CAZUELA:'caz-p',ENVASADO:'env-p'}[srv];
+      if(nm){
+        const sels=[...document.querySelectorAll(`input[name=${nm}]:checked`)].map(i=>i.value);
+        if(srv==='ENVASADO'){
+          const primsSels=sels.filter(v=>['Macarrones con tomate y chorizo','Pasta carbonara','Lasaña de carne','Flor de alcachofa','Lentejas estofadas','Gazpacho'].includes(v));
+          const segsSels=sels.filter(v=>['Albóndigas con tomate','Pimientos rellenos de bacalao','Pimientos rellenos de carne','Ragout de cerdo'].includes(v));
+          const postSels=sels.filter(v=>['Natillas','Arroz con leche','Brownie de chocolate','Yogur con mango'].includes(v));
+          if(primsSels.length) h+=primsSels.map(p=>filC(p+' (1º)',pax,'raciones')).join('');
+          if(segsSels.length) h+=segsSels.map(p=>filC(p+' (2º)',pax,'raciones')).join('');
+          if(postSels.length) h+=postSels.map(p=>filC(p+' (postre)',pax,'uds')).join('');
+        } else {
+          sels.forEach(p=>h+=filC(p,pax,'raciones'));
+        }
+        if(!sels.length) h+=warnbox('⚠ No has seleccionado platos.');
+      }
+      if(nVeg>0) h+=infobox(`🌱 ${nVeg} persona${nVeg>1?'s':''} vegana${nVeg>1?'s':''} — confirmar opciones.`);
+      if(nSG>0) h+=infobox(`🌾 ${nSG} persona${nSG>1?'s':''} sin gluten — confirmar adaptación.`);
+      cocinaHTML+=seccC(`🍽 ${SRV_LBL[srv].toUpperCase()} — PRODUCCIÓN`,h);
+    }
+
+    if(!soloEntrega && (srv==='MENU_POPULAR'||srv==='MENU_CELEBRACION'||srv==='CAZUELA'||srv==='ENVASADO')){
+      let extH=filC('Pan (bollos)',pax,'uds',false,'1 bollo por persona');
+      extH+=filC('Vino (botellas)',rup(pax/3),'botellas',false,'1 cada 3 pax');
+      extH+=filC('Casera (botellas)',rup(pax/6),'botellas');
+      extH+=filC('Agua (botellines)',pax,'uds',true);
+      cocinaHTML+=seccC('🍞 ACOMPAÑAMIENTOS',extH);
+    }
+  }
+
+  // ════ ALMACÉN ════
+  const bebidasSels=[...document.querySelectorAll('#checks-bebidas-p input:checked')].map(i=>i.value);
+  const BEBIDAS_FRIAS=['vinoblanco','cocacola','cocacola0','acuarius','kas','cerveza00','estrella','aguagas'];
+  const bebidasFrias=bebidasSels.filter(v=>BEBIDAS_FRIAS.includes(v));
+  const aguaNecesitaHielo=(stP.agua==='botella33'||stP.agua==='botella1.5');
+  const hayBF=bebidasFrias.length>0||aguaNecesitaHielo;
+
+  if(srv==='COFFEE'){
+    const totalMl=pax*150,litros=(totalMl/1000).toFixed(1),gCafe=Math.round(totalMl/100*6),gPaq=Math.ceil(gCafe/250);
+    let t5=0,t2=0,t1=0,r=totalMl;
+    t5=Math.floor(r/5000);r-=t5*5000;t2=Math.floor(r/2000);r-=t2*2000;if(r>0)t1=1;
+    const mlL=Math.ceil(pax/3)*120,litrosL=(mlL/1000).toFixed(1);
+    let lt2=0,lt1=0,rl=mlL;lt2=Math.floor(rl/2000);rl-=lt2*2000;lt1=Math.floor(rl/1000);rl-=lt1*1000;if(rl>0)lt1++;
+    let tH=infobox(`☕ ${pax} pax × 150ml = <strong>${litros}L café · ${gCafe}g molido</strong> (~${gPaq} paq. 250g)`);
+    if(t5>0)tH+=filA('Pulsador grande / grandote (5L)',t5,'termos',false,`${t5*5}L`);
+    if(t2>0)tH+=filA('Pulsador med. / rosca med. (2L)',t2,'termos',false,`${t2*2}L`);
+    if(t1>0)tH+=filA('Rosca pequeño (1L)',t1,'termos',false,'1L');
+    tH+=infobox(`🥛 Leche (~1/3 pax): <strong>${litrosL}L</strong>`);
+    if(lt2>0)tH+=filA('Termo leche 2L',lt2,'termos',true);if(lt1>0)tH+=filA('Termo leche 1L',lt1,'termos',true);
+    if(document.getElementById('cb-aguacal-p')?.checked)tH+=filA('Termo agua caliente (infusiones)',rup(pax*0.25*200/2000)||1,'termos');
+    if(document.getElementById('cb-soja-p')?.checked)tH+=infobox('🥛 Llevar leche de soja — confirmar cantidad.');
+    almacenHTML+=seccA('☕ TERMOS — CANTIDADES',tH);
+
+    const tv=stP.tipovaso||'tazas';
+    let vH='';
+    if(document.getElementById('des-cafe-p').checked){vH+=filA(tv==='tazas'?'Tazas de café':`Vasos ${tv} (café)`,pax*2,'uds',false,'2/persona');if(tv==='tazas')vH+=filA('Platillos',pax*2,'uds');}
+    if(document.getElementById('des-zumo-p').checked)vH+=filA('Vasos zumo',pax,'uds');
+    if(document.getElementById('des-agua-p').checked)vH+=filA('Vasos agua',pax,'uds');
+    if(!vH)vH=infobox('Marca qué se va a servir.');
+    almacenHTML+=seccA(`🥤 VAJILLA`,vH);
+
+    let azH=filA('Azúcar blanco (sobres)',rup(pax*2),'sobres',false,'2/persona');
+    azH+=filA('Sacarina / edulcorante',rup(pax*1.5),'sobres');
+    azH+=filA('Azúcar moreno',rup(pax*1),'sobres');
+    azH+=filA('Palitos removedores',rup(pax*2),'uds',false,'2/persona');
+    azH+=filA('Sobres infusiones variadas',rup(pax*1.5),'sobres');
+    azH+=filA('Cola Cao (sobres)',rup(pax*0.3),'uds');
+    almacenHTML+=seccA('🍬 BUFFET DE AZUCARILLOS',azH);
+
+    if(stP.agua!=='no'){
+      let aguH='';
+      if(stP.agua==='botella33')aguH=filA('Botellines agua 33cl',pax,'uds',true);
+      else if(stP.agua==='botella1.5')aguH=filA('Botellas agua 1.5L',rup(pax/6),'botellas',true);
+      else if(stP.agua==='jarra')aguH=filA('Jarras de agua',rup(pax/6),'jarras',true);
+      else aguH=filA('Termos cristal agua',rup(pax/6),'termos',true);
+      almacenHTML+=seccA('💧 AGUA',aguH);
+    }
+    almacenHTML+=seccA('🧻 CONSUMIBLES',filA('Servilletas papel',rup(pax*3),'uds',false,'3-4/persona'));
+
+  } else {
+    // Agua
+    if(stP.agua!=='no'){
+      let aguH='';
+      if(stP.agua==='botella33')aguH=filA('Botellines agua 33cl',pax,'uds',true)+infobox('Llevar en hielera.');
+      else if(stP.agua==='botella1.5')aguH=filA('Botellas agua 1.5L',rup(pax/6),'botellas',true);
+      else if(stP.agua==='jarra')aguH=filA('Jarras de agua',rup(pax/6),'jarras',true);
+      else aguH=filA('Termos cristal agua',rup(pax/6),'termos',true);
+      almacenHTML+=seccA('💧 AGUA',aguH);
+    }
+
+    // Bebidas
+    let _cervUds=0,_refUds=0,_vbBotellas=0;
+    if(bebidasSels.length>0){
+      const totalBU=2*pax;
+      const BDEF={vinotinto:{label:'Vino tinto',es_vino:true,frio:false,peso:esMañana?1.2:1.8},vinoblanco:{label:'Vino blanco',es_vino:true,frio:true,peso:esMañana?1.8:1.2},estrella:{label:'Estrella Galicia',es_vino:false,frio:true,peso:1.4},cocacola:{label:'Coca-Cola',es_vino:false,frio:true,peso:1.0},cocacola0:{label:'Coca-Cola 0',es_vino:false,frio:true,peso:0.9},acuarius:{label:'Acuarius limón',es_vino:false,frio:true,peso:0.9},kas:{label:'Kas naranja',es_vino:false,frio:true,peso:0.9},cerveza00:{label:'Cerveza 0.0',es_vino:false,frio:true,peso:0.4},aguagas:{label:'Agua con gas',es_vino:false,frio:true,peso:0.8}};
+      const panelP=document.getElementById('bebidas-custom-p');
+      const esPerso=panelP.style.display!=='none';
+      const totalPeso=bebidasSels.reduce((s,v)=>s+(BDEF[v]?.peso||1.0),0);
+      const tieneVinos=bebidasSels.some(v=>v==='vinotinto'||v==='vinoblanco');
+      let bebH=infobox(tieneVinos?`📊 ${esMañana?'🌅 Mañana → más vino blanco':'🌆 Tarde → más vino tinto'}`:`📊 Distribución automática · ${pax} personas`);
+      bebidasSels.forEach(v=>{
+        const d=BDEF[v]||{label:v,es_vino:false,frio:false,peso:1.0};
+        const autoUds=totalBU*(d.peso||1.0)/totalPeso;
+        const panPerso=document.getElementById(`cpv-${v}`);
+        const qty=esPerso&&panPerso&&panPerso.value!==''?parseInt(panPerso.value)||0:null;
+        const finalUds=qty!==null?qty:autoUds;
+        if(d.es_vino){
+          const bots=qty!==null?qty:rup(autoUds/6);
+          bebH+=filA(d.label,bots,'botellas',d.frio,qty===null?`≈${rup(autoUds)} copas`:'');
+          if(v==='vinoblanco') _vbBotellas+=bots;
+        } else {
+          const udsF=qty!==null?qty:rup(autoUds);
+          bebH+=filA(d.label,udsF,'uds',d.frio,qty===null?`${(autoUds/pax).toFixed(1)}/pax`:'');
+          if(v==='estrella') _cervUds+=udsF;
+          if(['cocacola','cocacola0','acuarius','kas','cerveza00','aguagas'].includes(v)) _refUds+=udsF;
+        }
+      });
+      if(!esPerso) bebH+=infobox('💧 Agua aparte, no cuenta en las 2 bebidas.');
+      almacenHTML+=seccA('🍷 BEBIDAS',bebH);
+    }
+
+    // Café
+    if(stP.cafep==='si'){
+      const totalMl=pax*150,litros=(totalMl/1000).toFixed(1),gCafe=Math.round(totalMl/100*6),gPaq=Math.ceil(gCafe/250);
+      let t5=0,t2=0,t1=0,r=totalMl;t5=Math.floor(r/5000);r-=t5*5000;t2=Math.floor(r/2000);r-=t2*2000;if(r>0)t1=1;
+      let cH=infobox(`☕ ${litros}L café · ${gCafe}g molido (~${gPaq} paq. 250g)`);
+      if(t5>0)cH+=filA('Pulsador grande (5L)',t5,'termos');if(t2>0)cH+=filA('Pulsador med. (2L)',t2,'termos');if(t1>0)cH+=filA('Rosca pequeño (1L)',t1,'termos');
+      almacenHTML+=seccA('☕ CAFÉ',cH);
+    }
+
+    // Menaje (solo menús sentados)
+    if(['MENU_POPULAR','MENU_CELEBRACION','MENU_INFANTIL','CAZUELA'].includes(srv)&&!soloEntrega&&stP.vajilla!=='no'){
+      let bH=filA('Bandejas grandes >40cm',rup(pax*0.07),'uds');
+      bH+=filA('Platos',rup(pax*1.1),'uds',false,'+10%');
+      bH+=filA('Tenedores',rup(pax*1.1),'uds',false,'+10%');
+      bH+=filA('Cuchillos',rup(pax*1.1),'uds',false,'+10%');
+      bH+=filA('Cucharas postre',rup(pax*1.1),'uds');
+      bH+=filA('Copas agua/vino',rup(pax*1.2),'uds');
+      almacenHTML+=seccA('🍽 MENAJE MESA',bH);
+    }
+
+    // Consumibles
+    almacenHTML+=seccA('🧻 CONSUMIBLES',filA('Servilletas papel',rup(pax*3),'uds',false,'3-4/persona'));
+
+    // Frío — solo si se marca en el formulario
+    if(document.getElementById('llevan-hielo-p')?.checked){
+      const kgCerv=Math.ceil(_cervUds/20);
+      const kgRef=Math.ceil(_refUds/30)*2;
+      const kgVb=Math.ceil(_vbBotellas/5)*2;
+      const kgTotal=kgCerv+kgRef+kgVb;
+      let frioH=infobox(`🧊 Cálculo: ${_cervUds} cerv→${kgCerv}kg · ${_refUds} refr→${kgRef}kg · ${_vbBotellas} bot vino blanco→${kgVb}kg`);
+      frioH+=filA('Hielo (kg)',Math.max(1,kgTotal),'kg');
+      frioH+=filA('Hieleras grandes',Math.max(1,rup(pax/25)),'uds');
+      frioH+=filA('Pinzas de hielo',Math.max(1,rup(pax/25)),'uds');
+      almacenHTML+=seccA('🧊 FRÍO',frioH);
+    }
+  }
+
+  // Mesas
+  let mesH='';
+  const tieneMantel=stP.mantelp!=='ninguno';
+  const tipoMantel={negro:'Mantel tela negro',blanco:'Mantel tela blanco',desechable:'Mantel desechable',ninguno:''}[stP.mantelp];
+  if(stP.mesasaltasp==='si'){const n=rup(pax/15);mesH+=filA('Mesas altas cóctel',n,'uds');if(tieneMantel)mesH+=filA(tipoMantel+' (alta)',n+1,'uds');}
+  if(stP.mesasbajasp==='si'){const n=Math.max(2,rup(pax/20));mesH+=filA('Mesas bajas de apoyo',n,'uds');if(tieneMantel)mesH+=filA(tipoMantel+' (baja)',n+1,'uds');}
+  if(stP.mesascomerp==='si'){const n=rup(pax/6);mesH+=filA('Mesas de comer',n,'uds',false,'1 cada 6 personas');if(tieneMantel)mesH+=filA(tipoMantel+' (comer)',n+1,'uds');}
+  if(stP.sillasp==='si')mesH+=filA('Sillas',rup(pax*1.05),'uds',false,'pax +5%');
+  if(stP.carpasp==='si')mesH+=infobox('⛺ Carpas incluidas — confirmar número.');
+  if(!mesH)mesH=infobox('No se han seleccionado mesas.');
+  almacenHTML+=seccA('🪑 MONTAJE',mesH);
+
+  // Camareros
+  const nCam=parseInt(document.getElementById('num-cam-p').value)||0;
+  if(nCam>0){
+    const CAM={bandejear:'🫴 Bandejear','bebidas-recoger':'🍷 Bebidas y recoger','solo-recoger':'🧹 Solo recoger','repartir-platos':'🍽 Repartir platos','servicio-mesa':'🤵 Servicio completo'};
+    const camSel=[...document.querySelectorAll('.cam-p:checked')].map(i=>CAM[i.value]||i.value);
+    almacenHTML+=seccA('👨‍🍳 CAMAREROS',`<div class="item"><div class="item-n">Camareros<small>${camSel.join(' · ')||'—'}</small></div><div class="item-f"></div><div class="item-q-wrap"><input class="item-q destac" type="number" value="${nCam}" min="0"><span class="item-u">personas</span></div></div>`);
+  }
+
+  // Decoración
+  const DECO={'plantas-altas':'🌿 Plantas altas','plantas-bajas':'🪴 Plantas bajas','flores-planas':'🌸 Flores planas','bases-mimbre':'🪣 Bases mimbre','bases-termos':'🫙 Bases termos cristal','camino-mesa':'🧵 Camino de mesa','mini-basuritas':'🗑 Mini basuritas','qr-resenas':'📲 QR reseñas','tarjetas':'🪧 Tarjetas','cartel-coffee':'☕ Cartel Coffee','pinzas-madera':'🤏 Pinzas madera','velas':'🕯 Velas','abridores':'🔓 Abridores de botella'};
+  const decoSel=[...document.querySelectorAll('#checks-deco-p input:checked')].map(i=>i.value);
+  const nMesas=(stP.mesasaltasp==='si'?rup(pax/15):0)+(stP.mesasbajasp==='si'?Math.max(2,rup(pax/20)):0)+(stP.mesascomerp==='si'?rup(pax/6):0);
+  let decoH='';
+  if(nMesas>0){
+    decoH+=filA('Centros de mesa',nMesas,'uds',false,'1 por mesa');
+    decoH+=filA('Servilleteros',nMesas,'uds');
+    if(stP.mantelcentrop!=='ninguno')decoH+=filA(`Camino de mesa (${stP.mantelcentrop==='azul'?'azul verdoso':'crema'})`,nMesas,'uds',false,'1 por mesa');
+  }
+  decoSel.forEach(v=>decoH+=`<div class="item"><div class="item-n">${DECO[v]||v}</div><div class="item-f"></div><div class="item-q naranja">✓</div></div>`);
+  if(!decoH)decoH=infobox('No hay decoración seleccionada.');
+  almacenHTML+=seccA('🎨 DECORACIÓN Y EXTRAS',decoH);
+
+  // Montar
+  const intolStr=[nVeg>0?`${nVeg} veg🌱`:'',nSG>0?`${nSG} SG🌾`:''].filter(Boolean).join(' · ');
+  const ubic=document.getElementById('ubic-p').value;
+  const tel=document.getElementById('tel-p').value;
+  const infoEvt=`${pax} pax${intolStr?' ('+intolStr+')':''} · ${SRV_LBL[srv]||srv}${fechaStr?' · '+fechaStr:''}${hora?' · '+hora+'h':''}${tel?' · 📞'+tel:''}${ubic?' · 📍'+ubic:''}`;
+
+  const obs=document.getElementById('obs-p').value.trim();
+  const obsHTML=obs?seccC('📝 OBSERVACIONES',`<div class="item"><div class="item-n" style="white-space:pre-wrap;font-size:.9em">${obs}</div></div>`):'';
+  const obsA=obs?seccA('📝 OBSERVACIONES',`<div class="item"><div class="item-n" style="white-space:pre-wrap;font-size:.9em">${obs}</div></div>`):'';
+
+  // Extras sin clasificar (sin prefijo) → sección genérica al final
+  if(eg.otro.length) cocinaHTML+=seccC('➕ EXTRAS / PERSONALIZADO',xRender(eg.otro));
+
+  // Extras libres almacén
+  const extrasAlmacenLines=(document.getElementById('extras-almacen-p').value||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  if(extrasAlmacenLines.length) almacenHTML+=seccA('➕ MATERIALES EXTRA',extrasAlmacenLines.map(l=>filA(l,1,'uds')).join(''));
+
+  const res=document.getElementById('resultados-p');
+  res.innerHTML=`
+    <div class="banner-fecha">
+      <div class="bf-fecha">${fechaStr||'Sin fecha'}</div>
+      <div class="bf-hora">🕐 ${hora}h</div>
+      <div class="bf-evento">${evt}${ubic?' · '+ubic:''}</div>
+    </div>
+    <div class="res-header-cocina"><b>🍳 HOJA DE COCINA — ${evt}</b><span>${infoEvt}</span></div>
+    ${cocinaHTML}${obsHTML}
+    <div class="separador-hojas">✂ ─────────── SALTO DE PÁGINA — ALMACÉN DEBAJO ─────────── ✂</div>
+    <div class="almacen-inicio">
+      <div class="res-header-almacen"><b>📦 HOJA DE ALMACÉN — ${evt}</b><span>${infoEvt}</span></div>
+      ${almacenHTML}${obsA}
+    </div>
+    <div class="btns-accion">
+      <button class="btn-impr" onclick="window.print()">🖨 Imprimir</button>
+      <button class="btn-dl" onclick="descargarPDF()">⬇ Descargar PDF</button>
+      <button id="btn-guardar-gestion-p" onclick="guardarEnGestion_P()" style="flex:1;background:#1b5e20;color:#fff;border:none;padding:11px;font-size:.92em;cursor:pointer;font-weight:700;border-radius:0">📥 Guardar en Albaraba Gestión</button>
+      <button onclick="generarPresupuesto_P()" style="flex:1;background:#e65100;color:#fff;border:none;padding:11px;font-size:.92em;cursor:pointer;font-weight:700;border-radius:0">📋 Generar Presupuesto</button>
+    </div>
+  `;
+  res.classList.add('visible');
+  res.scrollIntoView({behavior:'smooth'});
+}
+
+// ── Bocados extra PV (filas dinámicas con nombre + precio/pax) ──
+function addPinchoExtra(sfx){
+  const cont=document.getElementById('pext-'+sfx+'-cont');
+  if(!cont)return;
+  const div=document.createElement('div');
+  div.style.cssText='display:grid;grid-template-columns:1fr 110px 30px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML=`
+    <input type="text" class="pe-desc" placeholder="Nombre del bocado extra" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em">
+    <input type="number" class="pe-precio" placeholder="€/pax" step="0.01" min="0" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em;text-align:right">
+    <button onclick="this.parentElement.remove()" style="background:#f44336;color:#fff;border:none;border-radius:5px;cursor:pointer;padding:6px 8px">✕</button>`;
+  cont.appendChild(div);
+}
+function getPinchosExtra(sfx){
+  return [...document.querySelectorAll('#pext-'+sfx+'-cont > div')].map(div=>({
+    desc:(div.querySelector('.pe-desc').value||'').trim(),
+    precio:parseFloat(div.querySelector('.pe-precio').value)||0
+  })).filter(p=>p.desc&&p.precio>0);
+}
+
+function generarPresupuesto_P(){
+  const srvEl=document.getElementById('srv-p');
+  const tipo=srvEl?srvEl.value:'LUNCH';
+  const pax=parseInt(document.getElementById('pax-p').value)||0;
+  const nveg=parseInt(document.getElementById('nveg-p').value)||0;
+  const nsg=parseInt(document.getElementById('nsg-p').value)||0;
+  const d={
+    marca:'PV',
+    cliente:(document.getElementById('evt-p').value||'').trim(),
+    tel:(document.getElementById('tel-p').value||'').trim(),
+    fecha_evento:document.getElementById('fec-p').value||'',
+    lugar:(document.getElementById('ubic-p').value||'').trim(),
+    pax, nveg, nsg,
+    tipo,
+    desc_evento:srvEl?srvEl.options[srvEl.selectedIndex]?.text.replace(/^[^\w]*/,'').trim()||'':'',
+    camareros:parseInt(document.getElementById('num-cam-p')?.value)||0,
+    obs:(document.getElementById('obs-p')?.value||'').trim()
+  };
+  if(tipo==='LUNCH'){
+    d.pinchos=[...document.querySelectorAll('input[name=pincho-p]:checked')].map(i=>i.value);
+    d.pinchos_veg=[...document.querySelectorAll('input[name=pincho-veg-p]:checked')].map(i=>i.value);
+    d.pinchos_sg=[...document.querySelectorAll('input[name=pincho-sg-p]:checked')].map(i=>i.value);
+    d.pinchos_extra=getPinchosExtra('p');
+  } else if(tipo==='COFFEE'){
+    d.coffee_items=[...document.querySelectorAll('input[name=coffee-p]:checked')].map(i=>i.value);
+    d.coffee_veg=[...document.querySelectorAll('input[name=coffee-veg-p]:checked')].map(i=>i.value);
+    d.coffee_sg=[...document.querySelectorAll('input[name=coffee-sg-p]:checked')].map(i=>i.value);
+    d.coffee_opt=stP.coffeeopt||'basico';
+    d.pinchos_extra=getPinchosExtra('p');
+  } else if(tipo==='MENU_POPULAR'){
+    d.menu_prims=[...document.querySelectorAll('input[name=prim-pop-p]:checked')].map(i=>i.value);
+    d.menu_segs=[...document.querySelectorAll('input[name=seg-pop-p]:checked')].map(i=>i.value);
+    d.menu_postres=[...document.querySelectorAll('input[name=post-pop-p]:checked')].map(i=>i.value);
+    d.menu_ents=[...document.querySelectorAll('input[name=ent-pop-p]:checked')].map(i=>i.value);
+    d.pinchos_extra=getPinchosExtra('p');
+  } else if(tipo==='MENU_CELEBRACION'){
+    d.menu_prims=[...document.querySelectorAll('input[name=prim-cel-p]:checked')].map(i=>i.value);
+    d.menu_segs=[...document.querySelectorAll('input[name=seg-cel-p]:checked')].map(i=>i.value);
+    d.menu_postres=[...document.querySelectorAll('input[name=post-cel-p]:checked')].map(i=>i.value);
+    d.menu_ents=[...document.querySelectorAll('input[name=ent-cel-p]:checked')].map(i=>i.value);
+    d.pinchos_extra=getPinchosExtra('p');
+  } else {
+    d.pinchos_extra=getPinchosExtra('p');
+  }
+  localStorage.setItem('catering_presup_preload_v1',JSON.stringify(d));
+  window.open('Presupuesto_Catering.html','_blank');
+}
+
+function descargarPDF() {
+  const evt = document.getElementById('evt-p').value || 'Servicio';
+  const fecha = document.getElementById('fec-p').value || '';
+  const res = document.getElementById('resultados-p');
+
+  // Nombre de archivo: DDMMAAAA_Cliente_PV.pdf
+  const d = fecha ? fecha.split('-') : null;
+  const fechaStr = d ? `${d[2]}${d[1]}${d[0]}` : '';
+  const clienteStr = evt.trim().replace(/[^\wáéíóúÁÉÍÓÚñÑ\s]/g,'').replace(/\s+/g,'_');
+  const filename = [fechaStr, clienteStr, 'PV'].filter(Boolean).join('_') + '.pdf';
+
+  // Clonar contenido sin los botones para evitar PDF en blanco
+  const clone = res.cloneNode(true);
+  const cloneBtns = clone.querySelector('.btns-accion');
+  if(cloneBtns) cloneBtns.remove();
+  const sepClone = clone.querySelector('.separador-hojas');
+  if(sepClone) sepClone.remove();
+
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'position:fixed;top:0;left:-9999px;width:780px;background:#fff;padding:20px;box-sizing:border-box;font-family:Arial,sans-serif;font-size:13px;color:#222';
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  const btn = res.querySelector('.btn-dl');
+  if(btn){ btn.textContent='⏳ Generando...'; btn.disabled=true; }
+
+  const opt = {
+    margin: [8, 6, 8, 6],
+    filename: filename,
+    image: { type:'jpeg', quality:0.95 },
+    html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff', width:780, windowWidth:780 },
+    jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
+    pagebreak: { mode:'css', before:'.almacen-inicio' }
+  };
+
+  html2pdf().set(opt).from(wrapper).save().then(()=>{
+    document.body.removeChild(wrapper);
+    if(btn){ btn.textContent='⬇ Descargar PDF'; btn.disabled=false; }
+  });
+}
+
+// ══════════════════════════════════════════
+//  GUARDAR EN ALBARABA GESTIÓN
+// ══════════════════════════════════════════
+function guardarEnGestion_P() {
+  const cliente=(document.getElementById('evt-p').value||'').trim()||'—';
+  const fecha=document.getElementById('fec-p').value;
+  const hora=document.getElementById('hora-p').value;
+  const pax=parseInt(document.getElementById('pax-p').value)||0;
+  const nveg=parseInt(document.getElementById('nveg-p').value)||0;
+  const nsg=parseInt(document.getElementById('nsg-p').value)||0;
+  const srv=document.getElementById('srv-p').value;
+  const lugar=document.getElementById('ubic-p').value;
+  const obs=document.getElementById('obs-p').value;
+  const SRV_LBL={LUNCH:'Lunch/Cóctel PV',COFFEE:'Coffee Break PV',MENU_POPULAR:'Menú Popular PV',MENU_CELEBRACION:'Menú Celebración PV',MENU_INFANTIL:'Menú Infantil PV',CAZUELA:'Cazuela PV',ENVASADO:'Menú Envasado PV'};
+  if(!pax){alert('Rellena el formulario y genera la hoja primero.');return;}
+  const menuItems=[];
+  if(srv==='LUNCH'){
+    [...document.querySelectorAll('input[name=pincho-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value,pax_override:pax-nveg-nsg}));
+    [...document.querySelectorAll('input[name=pincho-veg-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value+' 🌱',pax_override:nveg}));
+    [...document.querySelectorAll('input[name=pincho-sg-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value+' 🌾',pax_override:nsg}));
+  } else if(srv==='COFFEE'){
+    const opt=stP.coffeeopt||'basico';const ppPax=opt==='completo2'?3:2;
+    [...document.querySelectorAll('input[name=coffee-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value,pax_override:Math.ceil(pax*ppPax)}));
+    const nvegP=parseInt(document.getElementById('nveg-p').value)||0;
+    const nsgP=parseInt(document.getElementById('nsg-p').value)||0;
+    if(nvegP>0)[...document.querySelectorAll('input[name=coffee-veg-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value+' 🌱',pax_override:nvegP}));
+    if(nsgP>0)[...document.querySelectorAll('input[name=coffee-sg-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value+' 🌾',pax_override:nsgP}));
+  } else if(srv==='MENU_POPULAR'){
+    [...document.querySelectorAll('input[name=ent-pop-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value+' (entrante)',pax_override:Math.ceil(pax/4)}));
+    [...document.querySelectorAll('input[name=prim-pop-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value,pax_override:pax}));
+    [...document.querySelectorAll('input[name=seg-pop-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value,pax_override:pax}));
+    [...document.querySelectorAll('input[name=post-pop-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value+' (postre)',pax_override:pax}));
+  } else if(srv==='MENU_CELEBRACION'){
+    [...document.querySelectorAll('input[name=ent-cel-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value+' (entrante)',pax_override:Math.ceil(pax/4)}));
+    [...document.querySelectorAll('input[name=prim-cel-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value,pax_override:pax}));
+    [...document.querySelectorAll('input[name=seg-cel-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value,pax_override:pax}));
+    [...document.querySelectorAll('input[name=post-cel-p]:checked')].forEach(i=>menuItems.push({elab_id:'',nombre:i.value+' (postre)',pax_override:pax}));
+  } else {
+    const nm={MENU_INFANTIL:'inf-p',CAZUELA:'caz-p',ENVASADO:'env-p'}[srv];
+    if(nm)[...document.querySelectorAll(`input[name=${nm}]:checked`)].forEach(i=>menuItems.push({elab_id:'',nombre:i.value,pax_override:pax}));
+  }
+  if(!menuItems.length){alert('No hay elementos de menú seleccionados.');return;}
+  // Leer DB Albaraba Gestión
+  let db;
+  try{db=JSON.parse(localStorage.getItem('albaraba_v2'))||{};}catch(e){db={};}
+  if(!db.hojas)db.hojas=[];
+  if(!db.elaboraciones)db.elaboraciones=[];
+  // Emparejar por nombre
+  menuItems.forEach(m=>{
+    if(!m.elab_id&&db.elaboraciones.length){
+      const nom=m.nombre.toLowerCase().replace(/[🌱🌾]/g,'').trim();
+      const found=db.elaboraciones.find(e=>e.nombre&&(e.nombre.toLowerCase()===nom||nom.includes(e.nombre.toLowerCase())||e.nombre.toLowerCase().includes(nom)));
+      if(found)m.elab_id=found.id;
+    }
+  });
+  function uid2(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+  const hoja={
+    id:uid2(),
+    fecha:fecha||new Date().toISOString().slice(0,10),
+    hora:hora||'',
+    cliente:cliente,
+    empresa:'',
+    pax:pax,
+    servicio:SRV_LBL[srv]||srv,
+    lugar:lugar||'',
+    menu:menuItems,
+    postre:'',
+    indicaciones:obs||'',
+    notas:'',
+    fuente:'pv',
+    realizado:false
+  };
+  db.hojas.unshift(hoja);
+  // Auto-crear elaboraciones que no existen
+  const nuevasElab=[];
+  menuItems.forEach(m=>{
+    if(!m.elab_id){
+      const nomNorm=m.nombre.replace(/[🌱🌾]/g,'').trim().toLowerCase();
+      const existe=db.elaboraciones.find(e=>e.nombre&&e.nombre.toLowerCase()===nomNorm);
+      if(!existe&&nomNorm.length>2){
+        function uid3(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+        const newElab={id:uid3(),nombre:m.nombre.replace(/[🌱🌾]/g,'').trim(),
+          categoria:'pintxo_frio',raciones_base:10,ingredientes:[],proceso:'',notas:'⚠️ Pendiente: añadir ingredientes y proveedor',foto:''};
+        db.elaboraciones.push(newElab);
+        m.elab_id=newElab.id;
+        nuevasElab.push(newElab.nombre);
+      }
+    }
+  });
+  localStorage.setItem('albaraba_v2',JSON.stringify(db));
+  const btn=document.getElementById('btn-guardar-gestion-p');
+  if(btn){btn.textContent='✅ Guardado en Albaraba Gestión';btn.style.background='#2d6a4f';btn.disabled=true;}
+  let msg='✅ Hoja guardada en Albaraba Gestión.\nAbre ALBARABA_GESTION.html → Hojas de Servicio para verla.';
+  if(nuevasElab.length){
+    msg+='\n\n⚠️ Se han creado '+nuevasElab.length+' elaboraciones nuevas que necesitan ingredientes:\n• '+nuevasElab.join('\n• ')+'\n\nVe a Elaboraciones en ALBARABA_GESTION.html para añadir sus ingredientes y proveedores.';
+  }
+  alert(msg);
+}
+</script>
+</body>
+</html>

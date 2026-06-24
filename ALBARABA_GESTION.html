@@ -1,0 +1,2452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Albaraba SL · Catering & APPCC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<style>
+:root{--primary:#1a1a2e;--gold:#c9a227;--gold2:#f0c040;--green:#2d6a4f;--bg:#f4f5f7;--surface:#fff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--sw:230px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+/* LAYOUT */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:var(--sw);background:var(--primary);color:#fff;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:200;flex-shrink:0}
+.main{margin-left:var(--sw);flex:1;padding:24px;min-height:100vh}
+/* SIDEBAR */
+.logo{padding:18px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.logo h1{font-size:17px;color:var(--gold);font-weight:700}
+.logo p{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
+.nav-group{padding:8px 0}
+.nav-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.3);padding:8px 16px 2px}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;color:rgba(255,255,255,.65);transition:.15s;border-left:3px solid transparent;font-size:13px}
+.ni:hover{background:rgba(255,255,255,.07);color:#fff}
+.ni.active{background:rgba(201,162,39,.15);color:var(--gold);border-left-color:var(--gold)}
+.ni .ic{width:20px;text-align:center;font-size:16px}
+/* TOPBAR */
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;gap:12px;flex-wrap:wrap}
+.pg-title{font-size:20px;font-weight:700}
+.pg-sub{font-size:12px;color:var(--muted);margin-top:2px}
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-bottom:22px}
+.sc{background:var(--surface);border-radius:12px;padding:16px;border:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.sc-ic{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.sc-ic.g{background:rgba(201,162,39,.12)}
+.sc-ic.b{background:rgba(59,130,246,.12)}
+.sc-ic.gr{background:rgba(34,197,94,.12)}
+.sc-ic.r{background:rgba(239,68,68,.12)}
+.sc-v{font-size:26px;font-weight:700;line-height:1}
+.sc-l{font-size:11px;color:var(--muted);margin-top:2px}
+/* CARD */
+.card{background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px}
+.card-head{padding:14px 16px;display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.card-head h3{font-size:15px;font-weight:600;flex:1}
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);background:#f8fafc;border-bottom:1px solid var(--border)}
+td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbff}
+/* BTNS */
+.btn{padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:.15s;text-decoration:none}
+.btn-gold{background:var(--gold);color:#fff}.btn-gold:hover{background:#b8921f}
+.btn-light{background:var(--border);color:var(--text)}.btn-light:hover{background:#cbd5e1}
+.btn-del{background:#fee2e2;color:#dc2626}.btn-del:hover{background:#fecaca}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-outline{background:none;border:1px solid var(--border);color:var(--muted)}.btn-outline:hover{background:var(--border)}
+.btn-green{background:#dcfce7;color:#16a34a}.btn-green:hover{background:#bbf7d0}
+/* INPUT */
+.srch{flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none}
+.srch:focus{border-color:var(--gold)}
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:100%;max-width:580px;margin:auto}
+.mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.mh h2{font-size:17px;font-weight:700}
+.mclose{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1}
+/* FORM */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:12px;font-weight:600;margin-bottom:5px;color:var(--muted)}
+.fc{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit}
+.fc:focus{border-color:var(--gold)}
+select.fc{appearance:auto}
+textarea.fc{resize:vertical;min-height:70px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* BADGE */
+.badge{display:inline-block;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-cat{background:rgba(201,162,39,.12);color:#8a6914}
+.b-prov{background:rgba(45,106,79,.12);color:#1a5c3b}
+.b-warn{background:#fef3c7;color:#92400e}
+.b-ok{background:#dcfce7;color:#15803d}
+.b-red{background:#fee2e2;color:#991b1b}
+/* PHOTO */
+.photo-box{border:2px dashed var(--border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;transition:.15s}
+.photo-box:hover{border-color:var(--gold);background:rgba(201,162,39,.04)}
+.photo-box img{max-width:100%;max-height:120px;border-radius:8px;object-fit:cover}
+.tbl-photo{width:36px;height:36px;border-radius:6px;object-fit:cover;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:18px}
+/* ALERGENOS */
+.al-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.al-item{display:flex;align-items:center;gap:5px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:11px}
+.al-item input{accent-color:var(--gold)}
+.al-item.checked{background:rgba(201,162,39,.08);border-color:var(--gold)}
+/* INGREDIENTS */
+.ing-list{display:flex;flex-direction:column;gap:6px}
+.ing-row{display:flex;gap:6px;align-items:center;background:#f8fafc;border-radius:8px;padding:8px}
+.ing-row select,.ing-row input{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none}
+.ing-row select{flex:2}
+.ing-row .qty{width:70px;text-align:center}
+.ing-row .unit{width:70px}
+.ing-del{background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;padding:2px 4px}
+/* ORDER */
+.order-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:8px;margin-bottom:6px}
+.order-row span{flex:1;font-size:13px}
+.order-row .badge{font-size:11px}
+.order-qty{width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;text-align:center;font-size:13px}
+/* STOCK BAR */
+.stock-bar{height:5px;border-radius:3px;background:var(--border);overflow:hidden;margin-top:3px;width:80px}
+.stock-fill{height:100%;border-radius:3px}
+.s-ok{background:#22c55e}.s-low{background:#f59e0b}.s-out{background:#ef4444}
+/* MOBILE */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .25s}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0;padding:14px;padding-bottom:72px}
+  .mob-nav{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--primary);z-index:190;border-top:1px solid rgba(255,255,255,.1)}
+  .mn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;color:rgba(255,255,255,.5);cursor:pointer;font-size:9px;padding:8px 4px}
+  .mn-item .ic{font-size:19px}
+  .mn-item.active{color:var(--gold)}
+  .frow{grid-template-columns:1fr}
+  .al-grid{grid-template-columns:repeat(2,1fr)}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .mob-hide{display:none}
+}
+@media(min-width:769px){.mob-nav{display:none}}
+.mob-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190;display:none}
+.mob-overlay.open{display:block}
+/* SECTION */
+.section{display:none}.section.active{display:block}
+/* TABS */
+.tabs{display:flex;gap:4px;background:#f0f2f5;padding:4px;border-radius:10px;margin-bottom:18px}
+.tab{flex:1;text-align:center;padding:7px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted)}
+.tab.active{background:#fff;color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+/* NOTICE */
+.notice{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.notice.info{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+.notice.warn{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+/* REPORT CARD */
+.rep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.rep-card{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:18px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:14px}
+.rep-card:hover{border-color:var(--gold);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.rep-card .ic{font-size:30px}
+.rep-card h4{font-size:13px;font-weight:600}
+.rep-card p{font-size:11px;color:var(--muted);margin-top:2px}
+/* EMPTY */
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty .ic{font-size:44px;margin-bottom:10px}
+/* HOJA SERVICIO */
+.hoja-card{background:var(--surface);border-radius:12px;border:1px solid var(--border);margin-bottom:12px;overflow:hidden}
+.hoja-header{padding:14px 16px;display:flex;gap:12px;align-items:center;cursor:pointer;flex-wrap:wrap}
+.hoja-header:hover{background:#fafbff}
+.hoja-body{padding:16px;border-top:1px solid var(--border);display:none}
+.hoja-body.open{display:block}
+.hoja-meta{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:14px}
+.hoja-meta-item{background:#f8fafc;border-radius:8px;padding:8px 10px}
+.hoja-meta-item .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.hoja-meta-item .val{font-size:13px;font-weight:600;margin-top:2px}
+.stock-check-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;margin-bottom:4px;font-size:13px}
+.stock-ok{background:#dcfce7;color:#15803d}
+.stock-low{background:#fef9c3;color:#854d0e}
+.stock-out{background:#fee2e2;color:#991b1b}
+.menu-item-row{display:flex;gap:8px;align-items:center;margin-bottom:6px}
+.menu-item-row select,.menu-item-row input{padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none}
+.menu-item-row select:focus,.menu-item-row input:focus{border-color:var(--gold)}
+.menu-item-row select{flex:2}
+.menu-item-row .pax-qty{width:80px;text-align:center}
+/* GASTOS */
+.gastos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-bottom:22px}
+.gastos-ev{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:16px}
+.gastos-ev .ev-title{font-weight:700;font-size:14px;margin-bottom:4px}
+.gastos-ev .ev-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
+.gastos-ev .ev-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)}
+.gastos-ev .ev-total{display:flex;justify-content:space-between;font-size:14px;font-weight:700;padding:8px 0 0}
+/* PEDIDO BADGE */
+.pedido-badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.pedido-ok{background:#dcfce7;color:#15803d}
+.pedido-warn{background:#fef9c3;color:#854d0e}
+.pedido-urgent{background:#fee2e2;color:#991b1b}
+</style>
+</head>
+<body>
+<div class="mob-overlay" id="mobOvl" onclick="closeSidebar()"></div>
+
+<div class="layout">
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <div class="logo">
+    <h1>🍽 Albaraba SL</h1>
+    <p>APPCC · Catering · Gestión</p>
+  </div>
+  <div class="nav-group">
+    <div class="nav-label">Principal</div>
+    <div class="ni active" id="ni-dashboard" onclick="nav('dashboard')"><span class="ic">📊</span> Dashboard</div>
+    <div class="nav-label">Catálogo</div>
+    <div class="ni" id="ni-proveedores" onclick="nav('proveedores')"><span class="ic">🏭</span> Proveedores</div>
+    <div class="ni" id="ni-productos" onclick="nav('productos')"><span class="ic">📦</span> Productos</div>
+    <div class="ni" id="ni-elaboraciones" onclick="nav('elaboraciones')"><span class="ic">👨‍🍳</span> Elaboraciones</div>
+    <div class="nav-label">Operaciones</div>
+    <div class="ni" id="ni-hojas" onclick="nav('hojas')"><span class="ic">📋</span> Hojas de Servicio</div>
+    <div class="ni" id="ni-pedidos" onclick="nav('pedidos')"><span class="ic">🛒</span> Generar Pedido</div>
+    <div class="ni" id="ni-stock" onclick="nav('stock')"><span class="ic">📦</span> Stock</div>
+    <div class="nav-label">Formularios</div>
+    <div class="ni" onclick="window.open('Hoja_Servicio_ALABOCA.html','_blank')"><span class="ic">📋</span> Hoja Alaboca</div>
+    <div class="ni" onclick="window.open('Hoja_Servicio_PV.html','_blank')"><span class="ic">🌿</span> Hoja PV</div>
+    <div class="ni" onclick="window.open('Presupuesto_Catering.html','_blank')"><span class="ic">💼</span> Presupuesto</div>
+    <div class="nav-label">Documentos</div>
+    <div class="ni" id="ni-informes" onclick="nav('informes')"><span class="ic">📄</span> Informes</div>
+    <div class="ni" id="ni-gastos" onclick="nav('gastos')"><span class="ic">💰</span> Gastos</div>
+    <div class="nav-label">APPCC / Sanidad</div>
+    <div class="ni" id="ni-appcc" onclick="nav('appcc')"><span class="ic">🧹</span> APPCC</div>
+    <div class="nav-label">Datos</div>
+    <div class="ni" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
+    <div class="ni" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
+    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+  <div style="padding:10px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:11px;color:rgba(255,255,255,.35);display:flex;align-items:center;justify-content:space-between">
+    <span><span id="sync-status">☁️</span> <span id="sync-label">Sincronizado</span></span>
+    <button onclick="cerrarSesion()" style="background:none;border:none;color:rgba(255,255,255,.3);cursor:pointer;font-size:11px;padding:0" title="Cerrar sesión">🚪</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="section active" id="section-dashboard">
+  <div class="topbar">
+    <div><div class="pg-title">Dashboard</div><div class="pg-sub">Resumen general de Albaraba SL</div></div>
+    <button class="btn btn-gold" onclick="nav('pedidos')">🛒 Nuevo pedido</button>
+  </div>
+  <div class="stats" id="dash-stats"></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap" id="dash-grids"></div>
+</div>
+
+<!-- PROVEEDORES -->
+<div class="section" id="section-proveedores">
+  <div class="topbar">
+    <div><div class="pg-title">Proveedores</div><div class="pg-sub">Gestión de proveedores</div></div>
+    <button class="btn btn-gold" onclick="openProvModal()">+ Añadir proveedor</button>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <input class="srch" placeholder="🔍 Buscar proveedor..." oninput="renderProvTable(this.value)">
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Productos</th><th></th></tr></thead>
+    <tbody id="prov-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- PRODUCTOS -->
+<div class="section" id="section-productos">
+  <div class="topbar">
+    <div><div class="pg-title">Productos</div><div class="pg-sub">Ingredientes y materias primas</div></div>
+    <button class="btn btn-gold" onclick="openProdModal()">+ Añadir producto</button>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <input class="srch" placeholder="🔍 Buscar producto..." oninput="renderProdTable(this.value)">
+      <select class="fc" style="width:auto" onchange="renderProdTable('',this.value)">
+        <option value="">Todas categorías</option>
+        <option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option>
+        <option>Lácteos y huevos</option><option>Embutidos</option><option>Pastas y cereales</option>
+        <option>Conservas</option><option>Salsas y condimentos</option><option>Bebidas</option>
+        <option>Productos de limpieza</option><option>Desechables/Envases</option><option>Otros</option>
+      </select>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>Foto</th><th>Nombre</th><th>Categoría</th><th>Proveedor</th><th>Unidad</th><th>Precio</th><th>Rendimiento</th><th>Alergenos</th><th></th></tr></thead>
+    <tbody id="prod-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- ELABORACIONES -->
+<div class="section" id="section-elaboraciones">
+  <div class="topbar">
+    <div><div class="pg-title">Elaboraciones</div><div class="pg-sub">Recetas y preparaciones</div></div>
+    <button class="btn btn-gold" onclick="openElabModal()">+ Añadir elaboración</button>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <input class="srch" placeholder="🔍 Buscar elaboración..." oninput="renderElabTable(this.value)">
+      <select class="fc" style="width:auto" onchange="renderElabTable('',this.value)">
+        <option value="">Todas categorías</option>
+        <option value="pintxo_frio">Pintxos fríos</option>
+        <option value="pintxo_caliente">Pintxos calientes</option>
+        <option value="bocado">Formato bocado</option>
+        <option value="entrante">Entrantes</option>
+        <option value="primero">Primeros platos</option>
+        <option value="segundo">Segundos platos</option>
+        <option value="cazuela">Platos de cazuela</option>
+        <option value="postre">Postres</option>
+        <option value="coffee">☕ Coffee Break</option>
+        <option value="lunch">Lunch / Cóctel</option>
+        <option value="otros">Otros</option>
+      </select>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>Nombre</th><th>Categoría</th><th>Raciones base</th><th>Ingredientes</th><th>Alergenos</th><th></th></tr></thead>
+    <tbody id="elab-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- PEDIDOS -->
+<div class="section" id="section-pedidos">
+  <div class="topbar">
+    <div><div class="pg-title">Generar Pedido</div><div class="pg-sub">Selecciona elaboraciones y raciones</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" id="pedido-grid">
+    <div>
+      <div class="card">
+        <div class="card-head"><h3>1. Selecciona elaboraciones</h3></div>
+        <div style="padding:12px">
+          <input class="srch" style="width:100%;margin-bottom:10px" placeholder="🔍 Buscar..." oninput="renderElabSelect(this.value)">
+          <div id="elab-select-list" style="max-height:350px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-head"><h3>2. Seleccionadas</h3><button class="btn btn-sm btn-gold" onclick="calcularPedido()">Calcular pedido ▶</button></div>
+        <div style="padding:12px" id="elab-selected-list"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" id="pedido-result" style="display:none">
+    <div class="card-head"><h3>📦 Lista de compras por proveedor</h3>
+      <button class="btn btn-sm btn-green" onclick="exportarPedidoPDF()">📄 PDF</button>
+      <button class="btn btn-sm btn-outline" onclick="exportarPedidoExcel()">📊 Excel</button>
+    </div>
+    <div style="padding:16px" id="pedido-result-content"></div>
+  </div>
+</div>
+
+<!-- STOCK -->
+<div class="section" id="section-stock">
+  <div class="topbar">
+    <div><div class="pg-title">Control de Stock</div><div class="pg-sub">Inventario actual</div></div>
+    <button class="btn btn-gold" onclick="exportarStockExcel()">📊 Exportar Excel</button>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <input class="srch" placeholder="🔍 Buscar producto..." oninput="renderStockTable(this.value)">
+      <select class="fc" style="width:auto" id="stock-filter" onchange="renderStockTable()">
+        <option value="">Todos</option><option value="low">Stock bajo</option><option value="out">Sin stock</option>
+      </select>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th>Producto</th><th>Stock actual</th><th>Mínimo</th><th>Estado</th><th>Actualizar</th></tr></thead>
+    <tbody id="stock-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- INFORMES -->
+<div class="section" id="section-informes">
+  <div class="topbar">
+    <div><div class="pg-title">Informes</div><div class="pg-sub">Documentación APPCC y reportes</div></div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab(this,'tab-appcc')">📋 APPCC / Sanidad</div>
+    <div class="tab" onclick="switchTab(this,'tab-pedidos-hist')">🛒 Pedidos</div>
+    <div class="tab" onclick="switchTab(this,'tab-catalogo')">📦 Catálogo</div>
+  </div>
+  <div id="tab-appcc">
+    <div class="rep-grid">
+      <div class="rep-card" onclick="informe_fichasProducto()"><div class="ic">🗂</div><div><h4>Fichas de producto</h4><p>Producto, proveedor, alergenos, foto</p></div></div>
+      <div class="rep-card" onclick="informe_elaboraciones()"><div class="ic">👨‍🍳</div><div><h4>Fichas de elaboración</h4><p>Receta, ingredientes, alergenos</p></div></div>
+      <div class="rep-card" onclick="informe_alergenos()"><div class="ic">⚠️</div><div><h4>Tabla de alergenos</h4><p>Por elaboración y categoría</p></div></div>
+      <div class="rep-card" onclick="informe_proveedores()"><div class="ic">🏭</div><div><h4>Listado de proveedores</h4><p>Contactos y productos suministrados</p></div></div>
+    </div>
+  </div>
+  <div id="tab-pedidos-hist" style="display:none">
+    <div class="notice info">ℹ Los pedidos generados aparecerán aquí para su historial.</div>
+    <div id="pedidos-hist-list"></div>
+  </div>
+  <div id="tab-catalogo" style="display:none">
+    <div class="rep-grid">
+      <div class="rep-card" onclick="exportarProductosExcel()"><div class="ic">📊</div><div><h4>Productos Excel</h4><p>Catálogo completo de ingredientes</p></div></div>
+      <div class="rep-card" onclick="exportarElaboracionesExcel()"><div class="ic">📊</div><div><h4>Elaboraciones Excel</h4><p>Listado con ingredientes y alergenos</p></div></div>
+      <div class="rep-card" onclick="exportarStockExcel()"><div class="ic">📊</div><div><h4>Stock Excel</h4><p>Inventario actual con niveles</p></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- HOJAS DE SERVICIO -->
+<div class="section" id="section-hojas">
+  <div class="topbar">
+    <div><div class="pg-title">Hojas de Servicio</div><div class="pg-sub">Eventos y control de stock por servicio</div></div>
+    <button class="btn btn-gold" onclick="openHojaModal()">+ Nueva hoja</button>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <input class="srch" placeholder="🔍 Buscar cliente o empresa..." oninput="renderHojasTable(this.value)">
+    </div>
+    <div id="hojas-list"></div>
+  </div>
+</div>
+
+<!-- GASTOS -->
+<div class="section" id="section-gastos">
+  <div class="topbar">
+    <div><div class="pg-title">💰 Gastos</div><div class="pg-sub">Coste por evento y por proveedor</div></div>
+    <button class="btn btn-gold" onclick="exportarGastosExcel()">📊 Exportar Excel</button>
+  </div>
+  <div class="card" style="padding:16px;margin-bottom:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+      <div><label class="fl" style="margin-bottom:4px">Mes/Año</label>
+        <select class="fc" id="gastos-mes" style="width:auto" onchange="renderGastos()">
+          <option value="">Todos los meses</option>
+        </select>
+      </div>
+      <div><label class="fl" style="margin-bottom:4px">Marca</label>
+        <select class="fc" id="gastos-fuente" style="width:auto" onchange="renderGastos()">
+          <option value="">Todos</option>
+          <option value="alaboca">🍽 Alaboca</option>
+          <option value="pv">🌿 Placeres de la Vida</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div id="gastos-stats" class="stats" style="margin-bottom:16px"></div>
+  <div id="gastos-content"></div>
+</div>
+
+
+<!-- APPCC -->
+<div class="section" id="section-appcc">
+  <div class="topbar">
+    <div><div class="pg-title">🧹 APPCC</div><div class="pg-sub">Registros de limpieza e incidencias</div></div>
+    <button class="btn btn-gold" onclick="exportarAppccExcel()">📊 Exportar registros</button>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchAppccTab(this,'appcc-tab-limpieza')">🧹 Limpieza</div>
+    <div class="tab" onclick="switchAppccTab(this,'appcc-tab-incidencias')">⚠️ Incidencias</div>
+  </div>
+
+  <!-- LIMPIEZA -->
+  <div id="appcc-tab-limpieza">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-head"><h3>➕ Registrar limpieza</h3></div>
+      <div style="padding:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">
+          <div class="fg" style="margin:0"><label class="fl">Fecha</label><input class="fc" id="l-fecha" type="date"></div>
+          <div class="fg" style="margin:0"><label class="fl">Zona</label>
+            <select class="fc" id="l-zona">
+              <option>Cocina general</option><option>Cámara frigorífica</option><option>Congelador</option>
+              <option>Superficies de trabajo</option><option>Suelo cocina</option><option>Campana extractora</option>
+              <option>Freidora</option><option>Horno</option><option>Zona almacén</option><option>Baños</option><option>Otro</option>
+            </select>
+          </div>
+          <div class="fg" style="margin:0"><label class="fl">Producto usado</label><input class="fc" id="l-prod" placeholder="Detergente, lejía..."></div>
+          <div class="fg" style="margin:0"><label class="fl">Responsable</label><input class="fc" id="l-resp" placeholder="Nombre"></div>
+        </div>
+        <div class="fg" style="margin-top:10px;margin-bottom:0"><label class="fl">Observaciones</label><input class="fc" id="l-obs" placeholder="Todo correcto..."></div>
+        <button class="btn btn-gold" style="margin-top:10px" onclick="guardarLimpieza()">💾 Guardar registro</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>📋 Historial de limpieza</h3></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Zona</th><th>Producto</th><th>Responsable</th><th>Obs.</th><th></th></tr></thead>
+      <tbody id="limpieza-tbody"></tbody></table></div>
+    </div>
+  </div>
+
+  <!-- INCIDENCIAS -->
+  <div id="appcc-tab-incidencias" style="display:none">
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-head"><h3>➕ Registrar incidencia</h3></div>
+      <div style="padding:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+          <div class="fg" style="margin:0"><label class="fl">Fecha</label><input class="fc" id="i-fecha" type="date"></div>
+          <div class="fg" style="margin:0"><label class="fl">Tipo</label>
+            <select class="fc" id="i-tipo">
+              <option>Temperatura fuera de rango</option><option>Producto en mal estado</option>
+              <option>Contaminación cruzada</option><option>Alérgeno no declarado</option>
+              <option>Fallo equipamiento</option><option>No conformidad proveedor</option>
+              <option>Reclamación cliente</option><option>Accidente</option><option>Otro</option>
+            </select>
+          </div>
+          <div class="fg" style="margin:0"><label class="fl">Responsable</label><input class="fc" id="i-resp" placeholder="Nombre"></div>
+          <div class="fg" style="margin:0"><label class="fl">Estado</label>
+            <select class="fc" id="i-estado"><option value="abierta">Abierta</option><option value="cerrada">Cerrada/Resuelta</option></select>
+          </div>
+        </div>
+        <div class="fg" style="margin-top:10px"><label class="fl">Descripción *</label><textarea class="fc" id="i-desc" placeholder="Describe la incidencia..." rows="2"></textarea></div>
+        <div class="fg" style="margin-bottom:0"><label class="fl">Acción correctora tomada</label><input class="fc" id="i-accion" placeholder="Qué se hizo para resolverlo"></div>
+        <button class="btn btn-gold" style="margin-top:10px" onclick="guardarIncidencia()">💾 Guardar incidencia</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>📋 Registro de incidencias</h3></div>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Acción</th><th>Responsable</th><th>Estado</th><th></th></tr></thead>
+      <tbody id="incidencias-tbody"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- MOBILE NAV -->
+<nav class="mob-nav">
+  <div class="mn-item active" id="mn-dashboard" onclick="nav('dashboard')"><div class="ic">📊</div>Inicio</div>
+  <div class="mn-item" id="mn-productos" onclick="nav('productos')"><div class="ic">📦</div>Productos</div>
+  <div class="mn-item" id="mn-hojas" onclick="nav('hojas')"><div class="ic">📋</div>Servicios</div>
+  <div class="mn-item" id="mn-pedidos" onclick="nav('pedidos')"><div class="ic">🛒</div>Pedido</div>
+  <div class="mn-item" id="mn-informes" onclick="nav('informes')"><div class="ic">📄</div>Informes</div>
+</nav>
+
+<!-- HAMBURGER for mobile -->
+<button id="hamburger" onclick="toggleSidebar()" style="display:none;position:fixed;top:12px;left:12px;z-index:300;background:var(--primary);border:none;color:#fff;border-radius:8px;padding:8px 10px;font-size:18px;cursor:pointer">☰</button>
+
+<!-- MODAL: PROVEEDOR -->
+<div class="overlay" id="modal-prov">
+<div class="modal">
+  <div class="mh"><h2 id="prov-modal-title">Proveedor</h2><button class="mclose" onclick="closeModal('modal-prov')">×</button></div>
+  <input type="hidden" id="prov-id">
+  <div class="fg"><label class="fl">Nombre *</label><input class="fc" id="prov-nombre" placeholder="Nombre del proveedor"></div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Teléfono</label><input class="fc" id="prov-tel" placeholder="666 000 000"></div>
+    <div class="fg"><label class="fl">Email</label><input class="fc" id="prov-email" placeholder="pedidos@proveedor.com"></div>
+  </div>
+  <div class="fg"><label class="fl">Dirección</label><input class="fc" id="prov-dir" placeholder="Calle, ciudad"></div>
+  <div class="fg"><label class="fl">Contacto (persona)</label><input class="fc" id="prov-contacto" placeholder="Nombre del contacto"></div>
+  <div class="frow">
+    <div class="fg"><label class="fl">📦 Días de antelación pedido</label><input class="fc" id="prov-dias-pedido" type="number" min="0" max="30" step="1" value="7" placeholder="2"></div>
+    <div class="fg"><label class="fl">Notas</label><textarea class="fc" id="prov-notas" placeholder="Días de reparto, condiciones..."></textarea></div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+    <button class="btn btn-light" onclick="closeModal('modal-prov')">Cancelar</button>
+    <button class="btn btn-gold" onclick="saveProveedor()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: PRODUCTO -->
+<div class="overlay" id="modal-prod">
+<div class="modal">
+  <div class="mh"><h2 id="prod-modal-title">Producto</h2><button class="mclose" onclick="closeModal('modal-prod')">×</button></div>
+  <input type="hidden" id="prod-id">
+  <div class="frow">
+    <div class="fg" style="grid-column:span 2"><label class="fl">Nombre *</label><input class="fc" id="prod-nombre" placeholder="Nombre del producto"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Categoría</label>
+      <select class="fc" id="prod-cat">
+        <option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option>
+        <option>Lácteos y huevos</option><option>Embutidos</option><option>Pastas y cereales</option>
+        <option>Conservas</option><option>Salsas y condimentos</option><option>Bebidas</option>
+        <option>Productos de limpieza</option><option>Desechables/Envases</option><option>Otros</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Proveedor</label>
+      <select class="fc" id="prod-prov"><option value="">Sin asignar</option></select>
+    </div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Unidad de medida</label>
+      <select class="fc" id="prod-unidad" onchange="updateRendCalc()"><option>kg</option><option>g</option><option>l</option><option>ml</option><option>ud</option><option>caja</option><option>bote</option><option>sobre</option><option>pack</option><option>bolsa</option></select>
+    </div>
+    <div class="fg"><label class="fl">Precio por unidad (€)</label><input class="fc" id="prod-precio" type="number" step="0.01" placeholder="0.00" oninput="updateRendCalc()"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Stock actual</label><input class="fc" id="prod-stock" type="number" step="0.1" placeholder="0"></div>
+    <div class="fg"><label class="fl">Stock mínimo (alerta)</label><input class="fc" id="prod-stock-min" type="number" step="0.1" placeholder="0"></div>
+  </div>
+  <div class="fg" style="margin-top:4px">
+    <label class="fl" style="font-weight:700;color:#166534">🔢 Rendimiento — ¿Cuántas porciones salen de 1 unidad comprada?</label>
+    <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:12px;margin-top:6px">
+      <div style="font-size:12px;color:#166534;margin-bottom:10px">Ej: 1 tortilla entera → 8 pintxos · 1 kg jamón → 20 montaditos · 1 bote salsa → 15 raciones</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:700;color:#166534">De 1</span>
+        <span style="font-size:13px;color:#555">(unidad comprada)</span>
+        <span style="font-size:13px;font-weight:700;color:#166534">salen</span>
+        <input id="prod-rendimiento" type="number" step="1" min="1" style="width:70px;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:15px;font-weight:700;text-align:center;background:#fff" placeholder="0" oninput="updateRendCalc()">
+        <input id="prod-rendimiento-desc" style="flex:1;min-width:120px;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:13px;background:#fff" placeholder="pintxos / porciones / raciones..." oninput="updateRendCalc()">
+      </div>
+      <div id="rend-calc-preview" style="margin-top:10px;font-size:12px;color:#166534;min-height:20px"></div>
+    </div>
+  </div>
+  <div class="fg"><label class="fl">Referencia / código proveedor</label><input class="fc" id="prod-ref" placeholder="REF-001"></div>
+  <div class="fg">
+    <label class="fl">Foto del producto</label>
+    <div class="photo-box" onclick="document.getElementById('prod-foto-input').click()">
+      <div id="prod-foto-preview"><div style="color:var(--muted);font-size:13px">📷 Toca para añadir foto</div></div>
+    </div>
+    <input type="file" id="prod-foto-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(event,'prod-foto-preview','prod-foto-data')">
+    <input type="hidden" id="prod-foto-data">
+  </div>
+  <div class="fg">
+    <label class="fl">Alergenos</label>
+    <div class="al-grid" id="al-grid-prod"></div>
+  </div>
+  <div class="fg"><label class="fl">Notas / condiciones de conservación</label><textarea class="fc" id="prod-notas" placeholder="Conservar en frío, caducidad..."></textarea></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+    <button class="btn btn-light" onclick="closeModal('modal-prod')">Cancelar</button>
+    <button class="btn btn-gold" onclick="saveProducto()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: ELABORACION -->
+<div class="overlay" id="modal-elab">
+<div class="modal" style="max-width:680px">
+  <div class="mh"><h2 id="elab-modal-title">Elaboración</h2><button class="mclose" onclick="closeModal('modal-elab')">×</button></div>
+  <input type="hidden" id="elab-id">
+  <div class="frow">
+    <div class="fg" style="grid-column:span 2"><label class="fl">Nombre *</label><input class="fc" id="elab-nombre" placeholder="Nombre de la elaboración"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Categoría</label>
+      <select class="fc" id="elab-cat">
+        <option value="pintxo_frio">Pintxo frío</option><option value="pintxo_caliente">Pintxo caliente</option>
+        <option value="bocado">Formato bocado</option><option value="entrante">Entrante</option>
+        <option value="primero">Primer plato</option><option value="segundo">Segundo plato</option>
+        <option value="cazuela">Plato de cazuela</option><option value="postre">Postre</option>
+        <option value="coffee">☕ Coffee Break</option><option value="lunch">Lunch / Cóctel</option>
+        <option value="otros">Otros</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Raciones base (receta para)</label><input class="fc" id="elab-raciones" type="number" value="10" min="1"></div>
+  </div>
+  <div class="fg">
+    <label class="fl">Foto de la elaboración</label>
+    <div class="photo-box" onclick="document.getElementById('elab-foto-input').click()">
+      <div id="elab-foto-preview"><div style="color:var(--muted);font-size:13px">📷 Toca para añadir foto</div></div>
+    </div>
+    <input type="file" id="elab-foto-input" accept="image/*" style="display:none" onchange="handlePhotoUpload(event,'elab-foto-preview','elab-foto-data')">
+    <input type="hidden" id="elab-foto-data">
+  </div>
+  <div class="fg">
+    <label class="fl">Ingredientes</label>
+    <div class="ing-list" id="ing-list"></div>
+    <button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="addIngRow()">+ Añadir ingrediente</button>
+  </div>
+  <div class="fg"><label class="fl">Proceso de elaboración</label><textarea class="fc" id="elab-proceso" placeholder="Pasos de elaboración, temperatura, tiempos..."></textarea></div>
+  <div class="fg"><label class="fl">Notas APPCC / alérgenos especiales</label><textarea class="fc" id="elab-notas" placeholder="Alergenos, condiciones especiales..."></textarea></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+    <button class="btn btn-light" onclick="closeModal('modal-elab')">Cancelar</button>
+    <button class="btn btn-gold" onclick="saveElaboracion()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL: HOJA DE SERVICIO -->
+<div class="overlay" id="modal-hoja">
+<div class="modal" style="max-width:720px">
+  <div class="mh"><h2 id="hoja-modal-title">Hoja de Servicio</h2><button class="mclose" onclick="closeModal('modal-hoja')">×</button></div>
+  <input type="hidden" id="hoja-id">
+  <div class="frow">
+    <div class="fg"><label class="fl">Fecha del servicio *</label><input class="fc" id="hoja-fecha" type="date"></div>
+    <div class="fg"><label class="fl">Hora</label><input class="fc" id="hoja-hora" type="time" placeholder="14:00"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Cliente *</label><input class="fc" id="hoja-cliente" placeholder="Nombre del cliente"></div>
+    <div class="fg"><label class="fl">Empresa</label><input class="fc" id="hoja-empresa" placeholder="Empresa o entidad"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">PAX (nº personas) *</label><input class="fc" id="hoja-pax" type="number" min="1" placeholder="0"></div>
+    <div class="fg"><label class="fl">Tipo de servicio</label>
+      <select class="fc" id="hoja-servicio">
+        <option>SERVICIO COMPLETO</option>
+        <option>MONTAJE PRESENTACIÓN Y RECOGIDA</option>
+        <option>SOLO MONTAJE</option>
+        <option>SOLO ENTREGA</option>
+        <option>COCKTAIL</option>
+        <option>CENA DE GALA</option>
+        <option>MENÚ CERRADO</option>
+        <option>OTRO</option>
+      </select>
+    </div>
+  </div>
+  <div class="fg"><label class="fl">Lugar</label><input class="fc" id="hoja-lugar" placeholder="Dirección o nombre del lugar"></div>
+  <div class="fg">
+    <label class="fl">Menú / Elaboraciones</label>
+    <div id="hoja-menu-list"></div>
+    <button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="addMenuItemRow()">+ Añadir elaboración al menú</button>
+  </div>
+  <div class="fg"><label class="fl">Postre</label><input class="fc" id="hoja-postre" placeholder="Descripción del postre"></div>
+  <div class="frow">
+    <div class="fg"><label class="fl">💰 Precio venta total (€) <span style="font-weight:400;color:var(--muted)">(para calcular margen)</span></label><input class="fc" id="hoja-precio-venta" type="number" step="0.01" placeholder="0.00"></div>
+    <div class="fg"><label class="fl">📞 Teléfono cliente</label><input class="fc" id="hoja-tel" placeholder="666 000 000"></div>
+  </div>
+  <div class="fg"><label class="fl">Indicaciones importantes</label><textarea class="fc" id="hoja-indicaciones" placeholder="Alergenos, preferencias especiales, instrucciones de montaje..."></textarea></div>
+  <div class="fg"><label class="fl">Notas internas</label><textarea class="fc" id="hoja-notas" placeholder="Notas para el equipo (no se imprimen)..."></textarea></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+    <button class="btn btn-light" onclick="closeModal('modal-hoja')">Cancelar</button>
+    <button class="btn btn-gold" onclick="saveHoja()">Guardar hoja</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// FIREBASE CONFIG — rellena con tu proyecto Firebase
+// ═══════════════════════════════════════════════════
+const FB_CONFIG={
+  apiKey:"AIzaSyBe7hKPXIanf49ZUgJ3NiXp8CHvjcGsw0M",
+  authDomain:"albaraba-gestion.firebaseapp.com",
+  databaseURL:"https://albaraba-gestion-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"albaraba-gestion",
+  storageBucket:"albaraba-gestion.firebasestorage.app",
+  messagingSenderId:"336714171454",
+  appId:"1:336714171454:web:0ee465fdbd7897da5bbd6f"
+};
+const FB_READY=!FB_CONFIG.apiKey.startsWith('FIREBASE');
+let fbAuth=null,fbDB=null;
+if(FB_READY){
+  try{
+    firebase.initializeApp(FB_CONFIG);
+    fbAuth=firebase.auth();
+    fbDB=firebase.database();
+  }catch(e){console.warn('Firebase init error',e);}
+}
+
+// ═══════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+// ═══════════════════════════════════════════════════
+// ALERGENOS
+// ═══════════════════════════════════════════════════
+const ALERGENOS=['Gluten','Crustáceos','Huevo','Pescado','Cacahuetes','Soja','Leche','Frutos de cáscara','Apio','Mostaza','Sésamo','Sulfitos','Altramuces','Moluscos'];
+
+// ═══════════════════════════════════════════════════
+// INITIAL DATA - Elaboraciones pre-cargadas
+// ═══════════════════════════════════════════════════
+const ELAB_INICIAL=[
+  // // Pintxos fríos
+  {n:'Jamón con pimiento verde',c:'pintxo_frio'},{n:'Jamón ibérico',c:'pintxo_frio'},{n:'Donostiarra',c:'pintxo_frio'},
+  {n:'Vegetal',c:'pintxo_frio'},{n:'Vegetal de pollo al pesto',c:'pintxo_frio'},{n:'Tortilla de patata',c:'pintxo_frio'},
+  {n:'Sándwich mixto',c:'pintxo_frio'},{n:'Sándwich vegetal',c:'pintxo_frio'},{n:'Ensaladilla rusa',c:'pintxo_frio'},
+  {n:'Ensaladilla de txangurro',c:'pintxo_frio'},{n:'Bonito con mayonesa y langostino',c:'pintxo_frio'},{n:'Queso crema con salmón',c:'pintxo_frio'},
+  {n:'Gilda clásica de anchoa y boquerón',c:'pintxo_frio'},{n:'Gilda premium',c:'pintxo_frio'},{n:'Brioche matrimonio de anchoa y boquerón',c:'pintxo_frio'},
+  {n:'Cono con jamón y puerro',c:'pintxo_frio'},{n:'Focaccia con queso crema y salmón',c:'pintxo_frio'},{n:'Focaccia de tomate cherry y aceite de albahaca',c:'pintxo_frio'},
+  {n:'Focaccia tomate cherry y albahaca (V)',c:'pintxo_frio'},{n:'Mini focaccia tomate cherry y albahaca',c:'pintxo_frio'},{n:'Mini focaccia tomate cherry vegana (V)',c:'pintxo_frio'},
+  {n:'Pan de calabaza con salmón',c:'pintxo_frio'},{n:'Pan de calabaza con salmón, queso crema y rúcula',c:'pintxo_frio'},{n:'Pan de calabaza con hummus y rúcula (V)',c:'pintxo_frio'},
+  {n:'Pan de oliva negra con atún, mayonesa y boquerón',c:'pintxo_frio'},{n:'Pan de oliva negra con verduras asadas (V)',c:'pintxo_frio'},{n:'Pan bao negro con costilla y pico de gallo',c:'pintxo_frio'},
+  {n:'Mini bao de rabo de toro con salsa Oishin',c:'pintxo_frio'},{n:'Atún con mayonesa en pan de oliva negra',c:'pintxo_frio'},{n:'Atún con mayonesa y naranja',c:'pintxo_frio'},
+  {n:'Atún mayonesa pan sin gluten (SG)',c:'pintxo_frio'},{n:'Bonito, mayonesa y langostino',c:'pintxo_frio'},{n:'Jamón con tomate',c:'pintxo_frio'},
+  {n:'Jamón con tomate en pan cristal',c:'pintxo_frio'},{n:'Tostada con jamón y tomate',c:'pintxo_frio'},{n:'Tostada con jamón y tomate SG (SG)',c:'pintxo_frio'},
+  {n:'Tostada con aguacate y tomate (V)',c:'pintxo_frio'},{n:'Tostada de brie con miel y nueces',c:'pintxo_frio'},{n:'Queso fresco con pesto y tomate',c:'pintxo_frio'},
+  {n:'Queso fresco, nueces y miel',c:'pintxo_frio'},{n:'Hummus con verduras y pan de pita',c:'pintxo_frio'},{n:'Roast beef sobre pan de queso',c:'pintxo_frio'},
+  {n:'Vegetal de pollo en pan de queso',c:'pintxo_frio'},{n:'Tomate, pavo y guacamole',c:'pintxo_frio'},{n:'Mini payesito guacamole y pavo',c:'pintxo_frio'},
+  {n:'Mini tosta de queso Idiazábal, membrillo y nueces',c:'pintxo_frio'},{n:'Mini tosta de patata rota trufada con pulpo',c:'pintxo_frio'},{n:'Sándwich vegetal vegano',c:'pintxo_frio'},
+  {n:'Bocado nuggets veganos (V)',c:'pintxo_frio'},{n:'Tortita de arroz con hummus (V)',c:'pintxo_frio'},{n:'Delicia crujiente de ensaladilla rusa',c:'pintxo_frio'},
+  // // Pintxos calientes
+  {n:'Morcilla de Burgos con alegría',c:'pintxo_caliente'},{n:'Chistorra a la sidra con pimiento del país',c:'pintxo_caliente'},{n:'Pimiento relleno de carne',c:'pintxo_caliente'},
+  {n:'Pimiento relleno de bacalao',c:'pintxo_caliente'},{n:'Revuelto de bacalao y pimiento verde',c:'pintxo_caliente'},{n:'Mini burger',c:'pintxo_caliente'},
+  {n:'Mini perrito',c:'pintxo_caliente'},{n:'Gyozas vegetales',c:'pintxo_caliente'},{n:'Gyozas de langostino',c:'pintxo_caliente'},
+  {n:'Pintxo de cochinita pibil',c:'pintxo_caliente'},{n:'Morcilla crujiente con alegría',c:'pintxo_caliente'},{n:'Morcilla crujiente con alegría riojana',c:'pintxo_caliente'},
+  {n:'Morcilla crujiente SG (SG)',c:'pintxo_caliente'},{n:'Chistorra a la sidra con pimiento',c:'pintxo_caliente'},{n:'Chistorra a la sidra sin gluten (SG)',c:'pintxo_caliente'},
+  {n:'Pimientos rellenos de carne',c:'pintxo_caliente'},{n:'Pimiento relleno sin gluten (SG)',c:'pintxo_caliente'},{n:'Flor de alcachofa',c:'pintxo_caliente'},
+  {n:'Flor de alcachofa con ajo y jamón',c:'pintxo_caliente'},{n:'Capricho de mejillón sobre patata',c:'pintxo_caliente'},{n:'Chupito de gazpacho tradicional',c:'pintxo_caliente'},
+  {n:'Chupito de gazpacho de remolacha (V)',c:'pintxo_caliente'},{n:'Chupito de gazpacho tradicional SG (SG)',c:'pintxo_caliente'},{n:'Arepa de rabo de toro',c:'pintxo_caliente'},
+  {n:'Arepas rellenas de aguacate',c:'pintxo_caliente'},{n:'Arepas de aguacate (V)',c:'pintxo_caliente'},{n:'Langostino suflado en salsa agridulce',c:'pintxo_caliente'},
+  {n:'Saquito de langostino',c:'pintxo_caliente'},{n:'Saquito crujiente de carrilleras ibéricas',c:'pintxo_caliente'},{n:'Bom bon de foie con higos',c:'pintxo_caliente'},
+  {n:'Revuelto de bacalao y pimiento',c:'pintxo_caliente'},{n:'Moyete de huevos revueltos con pimientos',c:'pintxo_caliente'},{n:'Verduras en tempura',c:'pintxo_caliente'},
+  // // Bocados
+  {n:'Bocadito de jamón ibérico y pimiento verde',c:'bocado'},{n:'Tartaleta de mousse de bonito con piparra, anchoa y gamba',c:'bocado'},{n:'Mini tosta de queso Idiazabal, membrillo y nueces',c:'bocado'},
+  {n:'Mini croqueta de jamón ibérico',c:'bocado'},{n:'Mini croqueta de bacalao',c:'bocado'},{n:'Espiral de langostino con coco y curry',c:'bocado'},
+  {n:'Gyozas de cerdo ibérico y shiitake',c:'bocado'},{n:'Mini pan bao de rabo y salsa hoisin',c:'bocado'},{n:'Ibéricos y quesos seleccionados',c:'bocado'},
+  {n:'Tabla de ibéricos para compartir',c:'bocado'},{n:'Tabla de quesos para compartir',c:'bocado'},{n:'Tabla de degustación de quesos',c:'bocado'},
+  {n:'Empanada de queso de cabra y cebolla caramelizada',c:'bocado'},
+  // // Entrantes
+  {n:'Alitas de pollo marinadas',c:'entrante'},{n:'Champiñones al ajillo',c:'entrante'},{n:'Tabla de ibéricos',c:'entrante'},
+  {n:'Pimiento relleno de marisco',c:'entrante'},{n:'Croquetas variadas',c:'entrante'},{n:'Tabla de embutidos y quesos',c:'entrante'},
+  {n:'Chorizo a la sidra',c:'entrante'},{n:'Ensalada de tomate con ventresca',c:'entrante'},{n:'Langostinos suflados con salsa agridulce',c:'entrante'},
+  {n:'Foie con mermeladas variadas',c:'entrante'},{n:'Ensaladilla de pulpo',c:'entrante'},{n:'Coctel de camarón',c:'entrante'},
+  {n:'Croquetas variadas (jamón, boletus y queso)',c:'entrante'},{n:'Croquetas sin gluten (SG)',c:'entrante'},{n:'Croquetones variados',c:'entrante'},
+  {n:'Ensalada tomate, ventresca y piparra',c:'entrante'},{n:'Ensaladilla rusa sin gluten (SG)',c:'entrante'},{n:'Tortilla de patata sin gluten (SG)',c:'entrante'},
+  // // Primeros
+  {n:'Macarrones con chorizo',c:'primero'},{n:'Menestra de verduras',c:'primero'},{n:'Lasaña de carne',c:'primero'},
+  {n:'Canelones de carne',c:'primero'},{n:'Ensalada ilustrada',c:'primero'},{n:'Alubia roja con sacramentos',c:'primero'},
+  {n:'Ensalada con bacon crujiente, queso fresco y frutos secos',c:'primero'},{n:'Macarrones con tomate y chorizo',c:'primero'},{n:'Pasta carbonara',c:'primero'},
+  {n:'Flor de alcachofa confitada con ajo y jamón',c:'primero'},{n:'Alubias estofadas con chorizo tradicional',c:'primero'},{n:'Patatas guisadas con chorizo',c:'primero'},
+  {n:'Ensaladilla rusa cremosa',c:'primero'},{n:'Lentejas estofadas',c:'primero'},{n:'Gazpacho',c:'primero'},
+  {n:'Tallarines negros con chipirones y camarones',c:'primero'},{n:'Vieiras gratinadas con langostinos',c:'primero'},{n:'Canelones de pato',c:'primero'},
+  {n:'Pasta boloñesa',c:'primero'},{n:'Arroz a la cubana',c:'primero'},{n:'Alubias estofadas con chorizo',c:'primero'},
+  {n:'Raviolis de espinacas y ricota',c:'primero'},{n:'Gazpacho andaluz (vaso)',c:'primero'},
+  // // Segundos
+  {n:'Albóndigas en salsa',c:'segundo'},{n:'Merluza a la romana con panaderas',c:'segundo'},{n:'Pollo asado con patatas',c:'segundo'},
+  {n:'Pimientos rellenos de bacalao',c:'segundo'},{n:'Lomo con pimientos piquillo',c:'segundo'},{n:'Bacalao a la riojana',c:'segundo'},
+  {n:'Codillo asado',c:'segundo'},{n:'Carrilleras de ternera en salsa',c:'segundo'},{n:'Chipirones en su tinta',c:'segundo'},
+  {n:'Muslo de pollo relleno de jamón y queso en salsa',c:'segundo'},{n:'Merluza en salsa verde',c:'segundo'},{n:'Lomo a la riojana',c:'segundo'},
+  {n:'Nuggets de pollo',c:'segundo'},{n:'Hamburguesa',c:'segundo'},{n:'Pollo de corral con boletus al chilindron',c:'segundo'},
+  {n:'Cordero lechal asado',c:'segundo'},{n:'Cochinillo asado',c:'segundo'},{n:'Carrillera ibérica al Oporto con puré trufado',c:'segundo'},
+  {n:'Confit de pato con arándanos y puré de patata',c:'segundo'},{n:'Taco de bacalao al pil pil',c:'segundo'},{n:'Kokotxas de bacalao en salsa verde con almejas',c:'segundo'},
+  {n:'Costillas con miel y mostaza',c:'segundo'},{n:'Ragú de ternera',c:'segundo'},{n:'Carrilleras al vino tinto',c:'segundo'},
+  {n:'Bacalao sobre pisto',c:'segundo'},{n:'Solomillo de ternera',c:'segundo'},{n:'Lubina al horno',c:'segundo'},
+  {n:'Alitas de pollo con patatas fritas',c:'segundo'},{n:'Merluza rebozada',c:'segundo'},{n:'Albóndigas con tomate',c:'segundo'},
+  {n:'Albóndigas en salsa de piquillo',c:'segundo'},{n:'Carrilleras de ternera melosas',c:'segundo'},{n:'Ternera guisada',c:'segundo'},
+  {n:'Callos con tomate',c:'segundo'},{n:'Hamburguesa brioche',c:'segundo'},{n:'Pollo asado en salsa de la casa',c:'segundo'},
+  {n:'Muslo de pollo relleno de jamón y queso',c:'segundo'},{n:'Librito de lomo relleno de bechamel',c:'segundo'},{n:'Ragout de cerdo',c:'segundo'},
+  {n:'Cordero asado',c:'segundo'},{n:'Cordero entero',c:'segundo'},{n:'Cochinillo entero',c:'segundo'},
+  {n:'Medio cochinillo',c:'segundo'},{n:'Medio cordero',c:'segundo'},
+  // // Cazuela
+  {n:'Marmitako tradicional',c:'cazuela'},{n:'Alubiada con sacramentos',c:'cazuela'},{n:'Bacalao al ajoarriero',c:'cazuela'},
+  {n:'Patatas con chorizo',c:'cazuela'},{n:'Cazuela de ensalada de garbanzos (V)',c:'cazuela'},
+  // // Postres
+  {n:'Brownie de chocolate',c:'postre'},{n:'Brownie de chocolate con crema inglesa',c:'postre'},{n:'Arroz con leche',c:'postre'},
+  {n:'Natillas',c:'postre'},{n:'Tarta Oreo',c:'postre'},{n:'Tarta de queso con frutos rojos',c:'postre'},
+  {n:'Flan de café',c:'postre'},{n:'Torrija de brioche caramelizada al Baileys',c:'postre'},{n:'Coulant de chocolate',c:'postre'},
+  {n:'Coulant de queso manchego',c:'postre'},{n:'Cúpula de coco y piña colada',c:'postre'},{n:'Pastel cremoso de nata y fresa',c:'postre'},
+  {n:'Manzana pastel',c:'postre'},{n:'Yogur con mango',c:'postre'},{n:'Brownie',c:'postre'},
+  {n:'Brownie sin gluten (SG)',c:'postre'},{n:'Brownie vegano (V)',c:'postre'},{n:'Brownie Rocky Road de tres texturas',c:'postre'},
+  {n:'Brownie húmedo de pistacho y frambuesa',c:'postre'},{n:'Bizcocho casero de chocolate',c:'postre'},{n:'Bizcocho casero de limón, pasas y nueces',c:'postre'},
+  {n:'Bizcocho de chocolate',c:'postre'},{n:'Bizcocho de limón',c:'postre'},{n:'Bizcocho de mango',c:'postre'},
+  {n:'Bizcocho de canela y nueces',c:'postre'},{n:'Bizcocho de plátano (V)',c:'postre'},{n:'Bizcocho sin gluten (SG)',c:'postre'},
+  {n:'Bizcocho vegano casero (V)',c:'postre'},{n:'Cookies caseras con chispas de chocolate',c:'postre'},{n:'Cookies de chocolate',c:'postre'},
+  {n:'Cookies tres chocolates',c:'postre'},{n:'Coulant de chocolate (postre)',c:'postre'},{n:'Coulant de chocolate (postre infantil)',c:'postre'},
+  {n:'Culant de chocolate',c:'postre'},{n:'Culant de tortilla de patata',c:'postre'},{n:'Culant de tortilla de patata SG (SG)',c:'postre'},
+  {n:'Flan de queso',c:'postre'},{n:'Natillas sin gluten (SG)',c:'postre'},{n:'Natillas (postre infantil)',c:'postre'},
+  {n:'Arroz con leche sin gluten (SG)',c:'postre'},{n:'Mousse de chocolate',c:'postre'},{n:'Mousse de mango (V)',c:'postre'},
+  {n:'Milhoja de nata y crema',c:'postre'},{n:'Tocino de cielo',c:'postre'},{n:'Macedonia (V)',c:'postre'},
+  {n:'Fruta de temporada (V)',c:'postre'},{n:'Fruta de temporada (SG)',c:'postre'},{n:'Pieza de fruta entera',c:'postre'},
+  {n:'Vasito de fruta fresca',c:'postre'},{n:'Vasito de yogur con muesli y fruta',c:'postre'},{n:'Yogur vegano con frutos rojos (V)',c:'postre'},
+  {n:'Pastel de limón',c:'postre'},{n:'Pastel de limón SG (SG)',c:'postre'},{n:'Pastel de mango',c:'postre'},
+  {n:'Pastel de manzana',c:'postre'},{n:'Pastel de nata y bacalao',c:'postre'},{n:'Pasteles de nata',c:'postre'},
+  {n:'Pastelitos de manzana',c:'postre'},{n:'Tarta de fresa y nata estilo chupa chups',c:'postre'},{n:'Torrija Brioche',c:'postre'},
+  {n:'Torrija Brioche al Baileys',c:'postre'},{n:'Tatin de verduras asadas (V)',c:'postre'},
+  // // Coffee Break (☕)
+  {n:'Croissant',c:'coffee'},{n:'Croissant de mantequilla',c:'coffee'},{n:'Croissant de albaricoque',c:'coffee'},
+  {n:'Croissant de cereales',c:'coffee'},{n:'Croissant de frambuesa',c:'coffee'},{n:'Croissant sin gluten (SG)',c:'coffee'},
+  {n:'Croissant vegano (V)',c:'coffee'},{n:'Croissant vegetal de pavo y queso',c:'coffee'},{n:'Mini croissant bikini',c:'coffee'},
+  {n:'Mini croissant de frankfurt',c:'coffee'},{n:'Mini croissant de tortilla',c:'coffee'},{n:'Napolitana',c:'coffee'},
+  {n:'Rolls de canela',c:'coffee'},{n:'Rolls de canela sin gluten (SG)',c:'coffee'},{n:'Donuts clásicos',c:'coffee'},
+  {n:'Donuts de chocolate',c:'coffee'},{n:'Palmeritas sin gluten (SG)',c:'coffee'},{n:'Palmeritas veganas (V)',c:'coffee'},
+  {n:'Pastas de té',c:'coffee'},{n:'Lionesa',c:'coffee'},{n:'Herradurita de chocolate',c:'coffee'},
+  {n:'Mini gofres de chocolate',c:'coffee'},{n:'Pop Dots',c:'coffee'},{n:'Sablé de pistacho y frambuesa',c:'coffee'},
+  {n:'Tartar de atún y mango sobre sablé',c:'coffee'},{n:'Agua aromatizada pepino, lima y menta',c:'coffee'},{n:'Batido detox verde',c:'coffee'},
+  {n:'Batido detox remolacha, naranja y zanahoria',c:'coffee'},{n:'Zumo natural de naranja',c:'coffee'},
+];
+
+
+// ═══════════════════════════════════════════════════
+// PROVEEDORES INICIALES
+// ═══════════════════════════════════════════════════
+const PROVEEDORES_INICIAL=[
+  {nombre:'Makro',telefono:'',email:'',direccion:'',contacto:'',notas:'Mayorista general. Recogida en tienda o reparto.'},
+  {nombre:'Bidfood',telefono:'',email:'',direccion:'',contacto:'',notas:'Distribuidor de hostelería. Pedidos online o por teléfono.'},
+  {nombre:'Mercadona (Embajadores)',telefono:'',email:'',direccion:'',contacto:'',notas:'Supermercado Mercadona – punto Embajadores.'},
+  {nombre:'Agustín López de Arkaute',telefono:'',email:'',direccion:'Arkaute, Álava',contacto:'Agustín',notas:'Proveedor local de productos frescos.'},
+  {nombre:'Vrizzo',telefono:'',email:'',direccion:'',contacto:'',notas:'Proveedor de envases y packaging.'},
+  {nombre:'Proveedor Limpieza',telefono:'',email:'',direccion:'',contacto:'',notas:'Productos de limpieza y desinfección para cocina.'},
+  {nombre:'Proveedor Desechables',telefono:'',email:'',direccion:'',contacto:'',notas:'Platos, cubiertos, servilletas y otros desechables para servicios.'},
+];
+
+// ═══════════════════════════════════════════════════
+// DATABASE
+// ═══════════════════════════════════════════════════
+let DB={proveedores:[],productos:[],elaboraciones:[],pedidos:[],hojas:[],appcc:{temperaturas:[],limpiezas:[],incidencias:[]}};
+
+function saveDB(){
+  localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+  if(fbDB&&fbAuth&&fbAuth.currentUser){
+    setSyncStatus('saving');
+    fbDB.ref('albaraba_v2').set(DB)
+      .then(()=>setSyncStatus('ok'))
+      .catch(()=>setSyncStatus('error'));
+  }
+}
+
+function setSyncStatus(s){
+  const ic=document.getElementById('sync-status');
+  const lb=document.getElementById('sync-label');
+  if(!ic)return;
+  if(s==='saving'){ic.textContent='🔄';if(lb)lb.textContent='Guardando...';}
+  else if(s==='ok'){ic.textContent='✅';if(lb)lb.textContent='Sincronizado';setTimeout(()=>{ic.textContent='☁️';if(lb)lb.textContent='Sincronizado';},2000);}
+  else if(s==='error'){ic.textContent='⚠️';if(lb)lb.textContent='Error sync';}
+  else if(s==='offline'){ic.textContent='💾';if(lb)lb.textContent='Solo local';}
+}
+
+function applyMigrations(){
+  if(!DB.hojas)DB.hojas=[];
+  if(!DB.proveedores)DB.proveedores=[];
+  if(!DB.pedidos)DB.pedidos=[];
+  if(!DB.productos)DB.productos=[];
+  if(!DB.elaboraciones)DB.elaboraciones=[];
+  if(!DB.appcc)DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};
+  if(!DB.appcc.temperaturas)DB.appcc.temperaturas=[];
+  if(!DB.appcc.limpiezas)DB.appcc.limpiezas=[];
+  if(!DB.appcc.incidencias)DB.appcc.incidencias=[];
+  if(DB.proveedores.length===0){
+    DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
+  }
+}
+
+function loadDB(){
+  // 1. Cargar desde localStorage (instantáneo)
+  const raw=localStorage.getItem('albaraba_v2');
+  if(raw){
+    try{DB=JSON.parse(raw)}catch(e){}
+    applyMigrations();
+  } else {
+    // Instalación nueva sin Firebase: cargar datos iniciales
+    if(!FB_READY){
+      DB.elaboraciones=ELAB_INICIAL.map(e=>({id:uid(),nombre:e.n,categoria:e.c,raciones_base:10,ingredientes:[],proceso:'',notas:'',foto:''}));
+      DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
+      DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};
+      saveDB();
+    }
+  }
+
+  // 2. Sincronizar desde Firebase
+  if(fbDB&&fbAuth&&fbAuth.currentUser){
+    setSyncStatus('saving');
+    fbDB.ref('albaraba_v2').once('value').then(snap=>{
+      const data=snap.val();
+      if(data){
+        // Firebase tiene datos → usarlos (verdad absoluta)
+        DB=data;
+        applyMigrations();
+        localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+        setSyncStatus('ok');
+        if(currentSection)nav(currentSection);else nav('dashboard');
+      } else if(raw){
+        // Firebase vacío pero tenemos datos locales → subirlos
+        fbDB.ref('albaraba_v2').set(DB).then(()=>setSyncStatus('ok'));
+      } else {
+        // Todo vacío → inicializar
+        DB.elaboraciones=ELAB_INICIAL.map(e=>({id:uid(),nombre:e.n,categoria:e.c,raciones_base:10,ingredientes:[],proceso:'',notas:'',foto:''}));
+        DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
+        DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};
+        saveDB();
+        setSyncStatus('ok');
+      }
+    }).catch(()=>setSyncStatus('error'));
+  } else if(!FB_READY){
+    setSyncStatus('offline');
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════
+let currentSection='dashboard';
+function nav(s){
+  document.querySelectorAll('.section').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.mn-item').forEach(el=>el.classList.remove('active'));
+  document.getElementById('section-'+s).classList.add('active');
+  const ni=document.getElementById('ni-'+s);if(ni)ni.classList.add('active');
+  const mn=document.getElementById('mn-'+s);if(mn)mn.classList.add('active');
+  currentSection=s;
+  if(s==='dashboard')renderDashboard();
+  else if(s==='proveedores')renderProvTable();
+  else if(s==='productos')renderProdTable();
+  else if(s==='elaboraciones')renderElabTable();
+  else if(s==='hojas')renderHojasTable();
+  else if(s==='pedidos')renderPedidoSection();
+  else if(s==='stock')renderStockTable();
+  else if(s==='informes')renderInformes();
+  else if(s==='gastos')renderGastos();
+  else if(s==='appcc')renderAppcc();
+  closeSidebar();
+  window.scrollTo(0,0);
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('mobOvl').classList.toggle('open')}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobOvl').classList.remove('open')}
+function openModal(id){document.getElementById(id).classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+function switchTab(el,tabId){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const parent=el.closest('.section')||document.getElementById('section-informes');
+  ['tab-appcc','tab-pedidos-hist','tab-catalogo'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display='none'});
+  const target=document.getElementById(tabId);if(target)target.style.display='';
+}
+
+// ═══════════════════════════════════════════════════
+// PHOTO UPLOAD
+// ═══════════════════════════════════════════════════
+function handlePhotoUpload(ev,previewId,dataId){
+  const file=ev.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const data=e.target.result;
+    document.getElementById(dataId).value=data;
+    document.getElementById(previewId).innerHTML=`<img src="${data}" style="max-height:120px;border-radius:8px;object-fit:cover">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ═══════════════════════════════════════════════════
+// ALERGENOS GRID BUILDER
+// ═══════════════════════════════════════════════════
+function buildAlergenGrid(containerId,selected=[]){
+  const c=document.getElementById(containerId);
+  c.innerHTML=ALERGENOS.map(a=>{
+    const chk=selected.includes(a)?'checked':'';;
+    return`<label class="al-item${selected.includes(a)?' checked':''}">
+      <input type="checkbox" value="${a}" ${chk} onchange="this.closest('.al-item').classList.toggle('checked',this.checked)">
+      ${a}</label>`;
+  }).join('');
+}
+function getCheckedAlergenos(containerId){
+  return [...document.getElementById(containerId).querySelectorAll('input:checked')].map(i=>i.value);
+}
+
+// ═══════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════
+const CAT_LABELS={pintxo_frio:'Pintxo frío',pintxo_caliente:'Pintxo caliente',bocado:'Bocado',entrante:'Entrante',primero:'1er plato',segundo:'2º plato',cazuela:'Cazuela',postre:'Postre',coffee:'☕ Coffee Break',otros:'Otros',lunch:'Lunch/Cóctel'};
+function provNombre(id){const p=DB.proveedores.find(x=>x.id===id);return p?p.nombre:'—'}
+function prodNombre(id){const p=DB.productos.find(x=>x.id===id);return p?p.nombre:'—'}
+function numProdsDeProveedor(pid){return DB.productos.filter(p=>p.proveedor_id===pid).length}
+
+// ═══════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════
+function renderDashboard(){
+  const lowStock=DB.productos.filter(p=>p.stock_actual!==undefined&&p.stock_min>0&&p.stock_actual<p.stock_min).length;
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="sc"><div class="sc-ic g">🏭</div><div><div class="sc-v">${DB.proveedores.length}</div><div class="sc-l">Proveedores</div></div></div>
+    <div class="sc"><div class="sc-ic b">📦</div><div><div class="sc-v">${DB.productos.length}</div><div class="sc-l">Productos</div></div></div>
+    <div class="sc"><div class="sc-ic gr">👨‍🍳</div><div><div class="sc-v">${DB.elaboraciones.length}</div><div class="sc-l">Elaboraciones</div></div></div>
+    <div class="sc" style="cursor:pointer" onclick="nav('hojas')"><div class="sc-ic" style="background:rgba(99,102,241,.12)">📋</div><div><div class="sc-v">${DB.hojas.length}</div><div class="sc-l">Servicios</div></div></div>
+    <div class="sc"><div class="sc-ic r">⚠️</div><div><div class="sc-v">${lowStock}</div><div class="sc-l">Stock bajo</div></div></div>`;
+  // Category breakdown
+  const cats={};DB.elaboraciones.forEach(e=>{cats[e.categoria]=(cats[e.categoria]||0)+1});
+  const catHTML=Object.entries(cats).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span>${CAT_LABELS[k]||k}</span><strong>${v}</strong></div>`).join('');
+  const recentProds=DB.productos.slice(-5).reverse();
+  const hojasP=DB.hojas.filter(h=>!h.realizado);
+  const elabSinIng=DB.elaboraciones.filter(e=>!e.ingredientes||e.ingredientes.length===0);
+  const elabAlert=elabSinIng.length?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px" onclick="nav('elaboraciones')">⚠️ <strong>${elabSinIng.length} elaboración${elabSinIng.length>1?'es':''}</strong> sin ingredientes asignados. Necesitas añadir ingredientes para que el control de stock funcione. <u>Ir a Elaboraciones →</u></div>`:'';
+  const hojasAlert=hojasP.length?`<div class="notice warn" style="cursor:pointer" onclick="nav('hojas')">⚠️ Tienes <strong>${hojasP.length} hoja${hojasP.length>1?'s':''} de servicio</strong> pendiente${hojasP.length>1?'s':''} de confirmar como realizadas. <u>Ver hojas →</u></div>`:'';
+  // Pedido alerts
+  const today=new Date();today.setHours(0,0,0,0);
+  const pedidosAlert=[];
+  DB.hojas.filter(h=>!h.realizado&&h.fecha).forEach(h=>{
+    const evDate=new Date(h.fecha+'T00:00:00');
+    const info=getPedidoInfo(h);
+    const diffDays=Math.round((info.fechaPedido-today)/(1000*60*60*24));
+    if(diffDays<=3&&evDate>=today){
+      let cls='pedido-ok',icon='✅';
+      if(diffDays<0){cls='pedido-urgent';icon='🚨';}
+      else if(diffDays<=1){cls='pedido-urgent';icon='🔴';}
+      else if(diffDays<=3){cls='pedido-warn';icon='🟡';}
+      pedidosAlert.push({h,diffDays,cls,icon,fechaPedido:info.fechaPedido});
+    }
+  });
+  const pedAlertHTML=pedidosAlert.length?`<div class="card" style="margin-bottom:16px;grid-column:span 2"><div class="card-head"><h3>📦 Pedidos urgentes</h3><button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver hojas</button></div><div style="padding:12px">${pedidosAlert.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:18px">${a.icon}</span><div style="flex:1"><strong>${esc(a.h.cliente)}</strong> — ${esc(a.h.servicio||'')} · ${new Date(a.h.fecha+'T00:00:00').toLocaleDateString('es-ES')}<div style="font-size:11px;color:var(--muted)">PAX: ${a.h.pax}</div></div><span class="pedido-badge ${a.cls}">${a.diffDays<0?'PEDIDO VENCIDO':a.diffDays===0?'Pedir HOY':'Pedir en '+a.diffDays+' día'+(a.diffDays>1?'s':'')}</span></div>`).join('')}</div></div>`:'';
+  // Agenda próximos 7 días
+  const hoy7=new Date();hoy7.setHours(0,0,0,0);
+  const en7=new Date(hoy7);en7.setDate(en7.getDate()+7);
+  const proximos=DB.hojas.filter(h=>{
+    if(!h.fecha||h.realizado)return false;
+    const d=new Date(h.fecha+'T00:00:00');
+    return d>=hoy7&&d<=en7;
+  }).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+  const todayStr=hoy7.toISOString().slice(0,10);
+  const agendaHTML=proximos.length?proximos.map(h=>{
+    const d=new Date(h.fecha+'T00:00:00');
+    const esHoy=h.fecha===todayStr;
+    const label=esHoy?'HOY':d.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit'});
+    const al=new Set();
+    (h.menu||[]).forEach(m=>{
+      const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);
+      if(elab)calcElabAlergenos(elab).forEach(a=>al.add(a));
+    });
+    return`<div style="display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="min-width:52px;text-align:center;background:${esHoy?'#fef3c7':'#f0f9ff'};border-radius:8px;padding:4px 6px">
+        <div style="font-size:10px;font-weight:700;color:${esHoy?'#b45309':'#0369a1'};text-transform:uppercase">${label}</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:13px">${esc(h.cliente)}${h.empresa?` · ${esc(h.empresa)}`:''}</div>
+        <div style="font-size:11px;color:var(--muted)">👥 ${h.pax} pax · ${esc(h.servicio||'')}${h.hora?' · '+h.hora:''}</div>
+        ${al.size?`<div style="font-size:10px;color:#dc2626;margin-top:2px">⚠️ ${[...al].join(', ')}</div>`:''}
+      </div>
+      <button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver</button>
+    </div>`;
+  }).join(''):'<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">✅ Sin eventos en los próximos 7 días</div>';
+  const appccAlert=DB.appcc.incidencias.filter(i=>i.estado!=='cerrada').length>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('appcc')">⚠️ <strong>${DB.appcc.incidencias.filter(i=>i.estado!=='cerrada').length} incidencia(s) APPCC abiertas.</strong> <u>Ir a APPCC →</u></div>`:'';
+  const sinPrecioCount=DB.productos.filter(p=>!p.precio||parseFloat(p.precio)===0).length;
+  const sinPrecioAlert=sinPrecioCount>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('productos')">💰 <strong>${sinPrecioCount} productos sin precio.</strong> Añade precios para que funcione el cálculo de costes en Gastos. <u>Ir a Productos →</u></div>`:'';
+  document.getElementById('dash-grids').innerHTML=elabAlert+hojasAlert+sinPrecioAlert+appccAlert+pedAlertHTML+`
+    <div class="card" style="grid-column:span 2"><div class="card-head"><h3>📅 Agenda — próximos 7 días</h3><button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver todos</button></div><div style="padding:0 16px 4px">${agendaHTML}</div></div>
+    <div class="card"><div class="card-head"><h3>📊 Elaboraciones por categoría</h3></div><div style="padding:16px">${catHTML||'<div class="empty"><p>Sin elaboraciones</p></div>'}</div></div>
+    <div class="card"><div class="card-head"><h3>📦 Últimos productos añadidos</h3><button class="btn btn-sm btn-gold" onclick="nav('productos')">Ver todos</button></div>
+    <div style="padding:16px">${recentProds.length?recentProds.map(p=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)"><div class="tbl-photo">${p.foto?`<img src="${p.foto}" style="width:36px;height:36px;border-radius:6px;object-fit:cover">`:'📦'}</div><div><div style="font-size:13px;font-weight:500">${esc(p.nombre)}</div><div style="font-size:11px;color:var(--muted)">${provNombre(p.proveedor_id)}</div></div></div>`).join(''):'<div class="empty"><p>Sin productos</p></div>'}</div></div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// PROVEEDORES
+// ═══════════════════════════════════════════════════
+function renderProvTable(q=''){
+  const list=DB.proveedores.filter(p=>!q||p.nombre.toLowerCase().includes(q.toLowerCase()));
+  document.getElementById('prov-tbody').innerHTML=list.length?list.map(p=>`
+    <tr>
+      <td><strong>${esc(p.nombre)}</strong>${p.contacto?`<div style="font-size:11px;color:var(--muted)">${esc(p.contacto)}</div>`:''}</td>
+      <td>${esc(p.telefono||'—')}</td>
+      <td>${esc(p.email||'—')}</td>
+      <td><span class="badge b-cat">${numProdsDeProveedor(p.id)} prods</span></td>
+      <td><button class="btn btn-sm btn-light" onclick="editProveedor('${p.id}')">✏️</button> <button class="btn btn-sm btn-del" onclick="deleteProveedor('${p.id}')">🗑</button></td>
+    </tr>`).join(''):`<tr><td colspan="5"><div class="empty"><div class="ic">🏭</div><p>Sin proveedores. Añade el primero.</p></div></td></tr>`;
+}
+function openProvModal(id){
+  document.getElementById('prov-id').value='';
+  ['nombre','tel','email','dir','contacto','notas'].forEach(f=>document.getElementById('prov-'+f).value='');
+  document.getElementById('prov-dias-pedido').value='7';
+  document.getElementById('prov-modal-title').textContent='Nuevo proveedor';
+  openModal('modal-prov');
+}
+function editProveedor(id){
+  const p=DB.proveedores.find(x=>x.id===id);if(!p)return;
+  document.getElementById('prov-id').value=p.id;
+  document.getElementById('prov-nombre').value=p.nombre||'';
+  document.getElementById('prov-tel').value=p.telefono||'';
+  document.getElementById('prov-email').value=p.email||'';
+  document.getElementById('prov-dir').value=p.direccion||'';
+  document.getElementById('prov-contacto').value=p.contacto||'';
+  document.getElementById('prov-notas').value=p.notas||'';
+  document.getElementById('prov-dias-pedido').value=p.dias_pedido||7;
+  document.getElementById('prov-modal-title').textContent='Editar proveedor';
+  openModal('modal-prov');
+}
+function saveProveedor(){
+  const nombre=document.getElementById('prov-nombre').value.trim();
+  if(!nombre){alert('El nombre es obligatorio');return}
+  const id=document.getElementById('prov-id').value||uid();
+  const obj={id,nombre,telefono:document.getElementById('prov-tel').value,email:document.getElementById('prov-email').value,direccion:document.getElementById('prov-dir').value,contacto:document.getElementById('prov-contacto').value,notas:document.getElementById('prov-notas').value,dias_pedido:parseInt(document.getElementById('prov-dias-pedido').value)||7};
+  const idx=DB.proveedores.findIndex(x=>x.id===id);
+  if(idx>=0)DB.proveedores[idx]=obj;else DB.proveedores.push(obj);
+  saveDB();closeModal('modal-prov');renderProvTable();
+}
+function deleteProveedor(id){
+  if(!confirm('¿Eliminar este proveedor?'))return;
+  DB.proveedores=DB.proveedores.filter(x=>x.id!==id);saveDB();renderProvTable();
+}
+
+// ═══════════════════════════════════════════════════
+// PRODUCTOS
+// ═══════════════════════════════════════════════════
+function renderProdTable(q='',cat=''){
+  let list=DB.productos;
+  if(q)list=list.filter(p=>p.nombre.toLowerCase().includes(q.toLowerCase()));
+  if(cat)list=list.filter(p=>p.categoria===cat);
+  document.getElementById('prod-tbody').innerHTML=list.length?list.map(p=>`
+    <tr>
+      <td><div class="tbl-photo">${p.foto?`<img src="${p.foto}" style="width:36px;height:36px;border-radius:6px;object-fit:cover">`:'📦'}</div></td>
+      <td><strong>${esc(p.nombre)}</strong>${p.referencia?`<div style="font-size:11px;color:var(--muted)">${esc(p.referencia)}</div>`:''}</td>
+      <td><span class="badge b-cat">${esc(p.categoria||'')}</span></td>
+      <td>${esc(provNombre(p.proveedor_id))}</td>
+      <td>${esc(p.unidad||'')}</td>
+      <td>${p.precio?'€'+parseFloat(p.precio).toFixed(2):'—'}</td>
+      <td style="font-size:11px">${p.rendimiento>0?`<span style="color:#166534;font-weight:700">1 ${p.unidad||'ud'} → ${p.rendimiento} ${esc(p.rendimiento_desc||'porciones')}</span>${p.precio?`<div style="color:var(--muted)">€${(parseFloat(p.precio)/p.rendimiento).toFixed(3)}/porc.</div>`:''}` : '<span style="color:#aaa">Sin definir</span>'}</td>
+      <td style="max-width:120px;font-size:11px">${(p.alergenos||[]).join(', ')||'—'}</td>
+      <td><button class="btn btn-sm btn-light" onclick="editProducto('${p.id}')">✏️</button> <button class="btn btn-sm btn-del" onclick="deleteProducto('${p.id}')">🗑</button></td>
+    </tr>`).join(''):`<tr><td colspan="9"><div class="empty"><div class="ic">📦</div><p>Sin productos. Añade el primero.</p></div></td></tr>`;
+}
+// ── CALCULADORA DE RENDIMIENTO ──
+function updateRendCalc(){
+  const rendEl=document.getElementById('prod-rendimiento');
+  const descEl=document.getElementById('prod-rendimiento-desc');
+  const precioEl=document.getElementById('prod-precio');
+  const unidadEl=document.getElementById('prod-unidad');
+  const preview=document.getElementById('rend-calc-preview');
+  if(!preview)return;
+  const rend=parseInt(rendEl?.value)||0;
+  const desc=(descEl?.value||'porciones').trim();
+  const precio=parseFloat(precioEl?.value)||0;
+  const unidad=(unidadEl?.value||'ud').trim();
+  if(rend<=0){preview.innerHTML='<span style="color:#aaa">Introduce un número para ver los cálculos automáticos →</span>';return;}
+  const costePorPorc=precio>0?(precio/rend).toFixed(3):'—';
+  let html=`<div style="font-weight:700;font-size:13px">✅ 1 ${unidad} → <span style="color:#15803d">${rend} ${desc}</span>${precio>0?` · Coste por porción: <strong>${costePorPorc} €</strong>`:''}</div>`;
+  // Tabla de ejemplos
+  const ejemplos=[10,20,30,40,50,60,80,100].filter(n=>Math.ceil(n/rend)>0);
+  html+=`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">`;
+  ejemplos.slice(0,6).forEach(n=>{
+    const uds=Math.ceil(n/rend);
+    html+=`<span style="background:#dcfce7;border:1px solid #86efac;border-radius:15px;padding:3px 10px;font-size:11px;white-space:nowrap"><strong>${n}</strong> ${desc} → <strong>${uds}</strong> ${unidad}</span>`;
+  });
+  html+=`</div>`;
+  preview.innerHTML=html;
+}
+
+function openProdModal(){
+  document.getElementById('prod-id').value='';
+  ['nombre','ref','precio','stock','stock-min','notas','rendimiento','rendimiento-desc'].forEach(f=>document.getElementById('prod-'+f).value='');
+  updateRendCalc();
+  document.getElementById('prod-cat').value='Carnes';
+  document.getElementById('prod-unidad').value='kg';
+  document.getElementById('prod-prov').innerHTML='<option value="">Sin asignar</option>'+DB.proveedores.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
+  document.getElementById('prod-foto-data').value='';
+  document.getElementById('prod-foto-preview').innerHTML='<div style="color:var(--muted);font-size:13px">📷 Toca para añadir foto</div>';
+  buildAlergenGrid('al-grid-prod',[]);
+  document.getElementById('prod-modal-title').textContent='Nuevo producto';
+  openModal('modal-prod');
+}
+function editProducto(id){
+  const p=DB.productos.find(x=>x.id===id);if(!p)return;
+  document.getElementById('prod-id').value=p.id;
+  document.getElementById('prod-nombre').value=p.nombre||'';
+  document.getElementById('prod-cat').value=p.categoria||'Carnes';
+  document.getElementById('prod-ref').value=p.referencia||'';
+  document.getElementById('prod-precio').value=p.precio||'';
+  document.getElementById('prod-stock').value=p.stock_actual!==undefined?p.stock_actual:'';
+  document.getElementById('prod-stock-min').value=p.stock_min||'';
+  document.getElementById('prod-notas').value=p.notas||'';
+  document.getElementById('prod-unidad').value=p.unidad||'kg';
+  document.getElementById('prod-prov').innerHTML='<option value="">Sin asignar</option>'+DB.proveedores.map(pv=>`<option value="${pv.id}"${pv.id===p.proveedor_id?' selected':''}>${esc(pv.nombre)}</option>`).join('');
+  document.getElementById('prod-foto-data').value=p.foto||'';
+  document.getElementById('prod-foto-preview').innerHTML=p.foto?`<img src="${p.foto}" style="max-height:120px;border-radius:8px">`:'<div style="color:var(--muted);font-size:13px">📷 Toca para añadir foto</div>';
+  buildAlergenGrid('al-grid-prod',p.alergenos||[]);
+  document.getElementById('prod-rendimiento').value=p.rendimiento||'';
+  document.getElementById('prod-rendimiento-desc').value=p.rendimiento_desc||'';
+  document.getElementById('prod-modal-title').textContent='Editar producto';
+  openModal('modal-prod');
+  setTimeout(updateRendCalc,50);
+}
+function saveProducto(){
+  const nombre=document.getElementById('prod-nombre').value.trim();
+  if(!nombre){alert('El nombre es obligatorio');return}
+  const id=document.getElementById('prod-id').value||uid();
+  const rendVal=parseInt(document.getElementById('prod-rendimiento').value)||0;
+  const obj={id,nombre,categoria:document.getElementById('prod-cat').value,proveedor_id:document.getElementById('prod-prov').value,unidad:document.getElementById('prod-unidad').value,precio:document.getElementById('prod-precio').value,stock_actual:parseFloat(document.getElementById('prod-stock').value)||0,stock_min:parseFloat(document.getElementById('prod-stock-min').value)||0,referencia:document.getElementById('prod-ref').value,notas:document.getElementById('prod-notas').value,foto:document.getElementById('prod-foto-data').value,alergenos:getCheckedAlergenos('al-grid-prod'),rendimiento:rendVal,rendimiento_desc:document.getElementById('prod-rendimiento-desc').value};
+  const idx=DB.productos.findIndex(x=>x.id===id);
+  if(idx>=0)DB.productos[idx]=obj;else DB.productos.push(obj);
+  saveDB();closeModal('modal-prod');renderProdTable();
+}
+function deleteProducto(id){
+  if(!confirm('¿Eliminar este producto?'))return;
+  DB.productos=DB.productos.filter(x=>x.id!==id);saveDB();renderProdTable();
+}
+
+// ═══════════════════════════════════════════════════
+// ELABORACIONES
+// ═══════════════════════════════════════════════════
+function renderElabTable(q='',cat=''){
+  let list=DB.elaboraciones;
+  if(q)list=list.filter(e=>e.nombre.toLowerCase().includes(q.toLowerCase()));
+  if(cat)list=list.filter(e=>e.categoria===cat);
+  document.getElementById('elab-tbody').innerHTML=list.length?list.map(e=>{
+    const al=calcElabAlergenos(e);
+    return`<tr>
+      <td><strong>${esc(e.nombre)}</strong>${e.foto?`<span style="margin-left:6px;font-size:11px;color:var(--muted)">📷</span>`:''}</td>
+      <td><span class="badge b-cat">${CAT_LABELS[e.categoria]||e.categoria}</span></td>
+      <td style="text-align:center">${e.raciones_base||10}</td>
+      <td>${e.ingredientes&&e.ingredientes.length?`<span class="badge b-prov">${e.ingredientes.length} ing.</span>`:'<span style="color:var(--muted);font-size:12px">Sin añadir</span>'}</td>
+      <td style="font-size:11px;max-width:140px">${al.length?al.join(', '):'—'}</td>
+      <td><button class="btn btn-sm btn-light" onclick="editElaboracion('${e.id}')">✏️</button> <button class="btn btn-sm btn-del" onclick="deleteElaboracion('${e.id}')">🗑</button></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="6"><div class="empty"><div class="ic">👨‍🍳</div><p>Sin elaboraciones</p></div></td></tr>`;
+}
+function calcElabAlergenos(elab){
+  const set=new Set();
+  (elab.ingredientes||[]).forEach(ing=>{
+    const p=DB.productos.find(x=>x.id===ing.producto_id);
+    if(p)(p.alergenos||[]).forEach(a=>set.add(a));
+  });
+  return [...set];
+}
+let ingCounter=0;
+function addIngRow(ing=null){
+  const list=document.getElementById('ing-list');
+  const rowId='ing-'+Date.now()+ingCounter++;
+  const prodOpts=DB.productos.length?DB.productos.map(p=>`<option value="${p.id}"${ing&&ing.producto_id===p.id?' selected':''}>${esc(p.nombre)}${p.rendimiento>0?' (1'+( p.unidad||'ud')+' → '+p.rendimiento+' '+(p.rendimiento_desc||'porc.')+')'  :''}</option>`).join(''):'<option value="">Sin productos añadidos</option>';
+  const div=document.createElement('div');div.className='ing-row';div.id=rowId;
+  div.innerHTML=`<div style="display:flex;flex-direction:column;flex:2;gap:3px">
+    <select onchange="actualizarHintIng('${rowId}',this.value)"><option value="">Seleccionar producto...</option>${prodOpts}</select>
+    <div id="hint-${rowId}" style="font-size:10px;color:#166534;font-weight:600;min-height:13px;padding:0 2px"></div>
+  </div>
+    <input class="qty" type="number" step="0.01" placeholder="Cant." value="${ing?ing.cantidad:''}">
+    <select class="unit">
+      ${['ud','kg','g','l','ml','caja','rac'].map(u=>`<option${ing&&ing.unidad===u?' selected':''}>${u}</option>`).join('')}
+    </select>
+    <button class="ing-del" onclick="this.closest('.ing-row').remove()">✕</button>`;
+  list.appendChild(div);
+  // Show hint for pre-loaded ingredient
+  if(ing&&ing.producto_id) actualizarHintIng(rowId,ing.producto_id);
+}
+function actualizarHintIng(rowId,prodId){
+  const hint=document.getElementById('hint-'+rowId);
+  if(!hint)return;
+  if(!prodId){hint.textContent='';return;}
+  const p=DB.productos.find(x=>x.id===prodId);
+  if(!p){hint.textContent='';return;}
+  if(p.rendimiento>0){
+    const desc=p.rendimiento_desc||'porciones';
+    const unidad=p.unidad||'ud';
+    const precio=parseFloat(p.precio)||0;
+    const costePorPorc=precio>0?` · €${(precio/p.rendimiento).toFixed(3)}/porc.`:'';
+    // Mostrar tabla rápida de referencia
+    const ejemplos=[10,20,40].map(n=>`${n}→${Math.ceil(n/p.rendimiento)}`).join(' | ');
+    hint.innerHTML=`🔢 1 ${unidad} → ${p.rendimiento} ${desc}${costePorPorc} <span style="color:#aaa">[${desc}: ${ejemplos} ${unidad}]</span>`;
+  } else {
+    hint.innerHTML=`<span style="color:#f59e0b">⚠️ Rendimiento no definido — define cuántas porciones salen de 1 ${p.unidad||'unidad'} en Productos</span>`;
+  }
+}
+function getIngredientes(){
+  return [...document.getElementById('ing-list').querySelectorAll('.ing-row')].map(row=>{
+    const selects=row.querySelectorAll('select');const inputs=row.querySelectorAll('input');
+    return{producto_id:selects[0].value,cantidad:parseFloat(inputs[0].value)||0,unidad:selects[1].value};
+  }).filter(i=>i.producto_id);
+}
+function openElabModal(){
+  document.getElementById('elab-id').value='';
+  document.getElementById('elab-nombre').value='';
+  document.getElementById('elab-cat').value='pintxo_frio';
+  document.getElementById('elab-raciones').value='10';
+  document.getElementById('elab-proceso').value='';
+  document.getElementById('elab-notas').value='';
+  document.getElementById('elab-foto-data').value='';
+  document.getElementById('elab-foto-preview').innerHTML='<div style="color:var(--muted);font-size:13px">📷 Toca para añadir foto</div>';
+  document.getElementById('ing-list').innerHTML='';
+  document.getElementById('elab-modal-title').textContent='Nueva elaboración';
+  openModal('modal-elab');
+}
+function editElaboracion(id){
+  const e=DB.elaboraciones.find(x=>x.id===id);if(!e)return;
+  document.getElementById('elab-id').value=e.id;
+  document.getElementById('elab-nombre').value=e.nombre||'';
+  document.getElementById('elab-cat').value=e.categoria||'pintxo_frio';
+  document.getElementById('elab-raciones').value=e.raciones_base||10;
+  document.getElementById('elab-proceso').value=e.proceso||'';
+  document.getElementById('elab-notas').value=e.notas||'';
+  document.getElementById('elab-foto-data').value=e.foto||'';
+  document.getElementById('elab-foto-preview').innerHTML=e.foto?`<img src="${e.foto}" style="max-height:120px;border-radius:8px">`:'<div style="color:var(--muted);font-size:13px">📷 Toca para añadir foto</div>';
+  document.getElementById('ing-list').innerHTML='';
+  (e.ingredientes||[]).forEach(i=>addIngRow(i));
+  document.getElementById('elab-modal-title').textContent='Editar elaboración';
+  openModal('modal-elab');
+}
+function saveElaboracion(){
+  const nombre=document.getElementById('elab-nombre').value.trim();
+  if(!nombre){alert('El nombre es obligatorio');return}
+  const id=document.getElementById('elab-id').value||uid();
+  const obj={id,nombre,categoria:document.getElementById('elab-cat').value,raciones_base:parseInt(document.getElementById('elab-raciones').value)||10,ingredientes:getIngredientes(),proceso:document.getElementById('elab-proceso').value,notas:document.getElementById('elab-notas').value,foto:document.getElementById('elab-foto-data').value};
+  const idx=DB.elaboraciones.findIndex(x=>x.id===id);
+  if(idx>=0)DB.elaboraciones[idx]=obj;else DB.elaboraciones.push(obj);
+  saveDB();closeModal('modal-elab');renderElabTable();
+}
+function deleteElaboracion(id){
+  if(!confirm('¿Eliminar esta elaboración?'))return;
+  DB.elaboraciones=DB.elaboraciones.filter(x=>x.id!==id);saveDB();renderElabTable();
+}
+
+// ═══════════════════════════════════════════════════
+// PEDIDOS
+// ═══════════════════════════════════════════════════
+const pedidoSeleccionadas={};
+function renderPedidoSection(){
+  renderElabSelect();
+  renderSelectedList();
+}
+function renderElabSelect(q=''){
+  let list=DB.elaboraciones;
+  if(q)list=list.filter(e=>e.nombre.toLowerCase().includes(q.toLowerCase()));
+  const grouped={};list.forEach(e=>{if(!grouped[e.categoria])grouped[e.categoria]=[];grouped[e.categoria].push(e)});
+  let html='';
+  Object.entries(grouped).forEach(([cat,items])=>{
+    html+=`<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;margin:8px 0 4px">${CAT_LABELS[cat]||cat}</div>`;
+    items.forEach(e=>{
+      const sel=pedidoSeleccionadas[e.id];
+      html+=`<div class="order-row" style="${sel?'background:#f0fdf4;border:1px solid #86efac':''}">
+        <span>${esc(e.nombre)}</span>
+        <button class="btn btn-sm ${sel?'btn-del':'btn-gold'}" onclick="toggleElabPedido('${e.id}')">${sel?'✕':'+'}</button>
+      </div>`;
+    });
+  });
+  document.getElementById('elab-select-list').innerHTML=html||'<div class="empty"><p>Sin elaboraciones</p></div>';
+}
+function toggleElabPedido(id){
+  if(pedidoSeleccionadas[id])delete pedidoSeleccionadas[id];
+  else pedidoSeleccionadas[id]={elaboracion_id:id,raciones:10};
+  renderElabSelect();renderSelectedList();
+}
+function renderSelectedList(){
+  const keys=Object.keys(pedidoSeleccionadas);
+  if(!keys.length){document.getElementById('elab-selected-list').innerHTML='<div class="empty"><p>Selecciona elaboraciones de la lista</p></div>';return}
+  document.getElementById('elab-selected-list').innerHTML=keys.map(id=>{
+    const e=DB.elaboraciones.find(x=>x.id===id);if(!e)return'';
+    const sel=pedidoSeleccionadas[id];
+    return`<div class="order-row"><span>${esc(e.nombre)}<br><small style="color:var(--muted)">Base: ${e.raciones_base||10} rac.</small></span>
+      <input class="order-qty" type="number" min="1" value="${sel.raciones}" onchange="pedidoSeleccionadas['${id}'].raciones=parseInt(this.value)||1">
+      <small style="color:var(--muted)">rac.</small>
+    </div>`;
+  }).join('');
+}
+function calcularPedido(){
+  const keys=Object.keys(pedidoSeleccionadas);
+  if(!keys.length){alert('Selecciona al menos una elaboración');return}
+  // Calculate totals by product
+  const totales={};
+  keys.forEach(id=>{
+    const e=DB.elaboraciones.find(x=>x.id===id);if(!e||!e.ingredientes)return;
+    const factor=(pedidoSeleccionadas[id].raciones||10)/(e.raciones_base||10);
+    e.ingredientes.forEach(ing=>{
+      if(!ing.producto_id)return;
+      const prod=DB.productos.find(x=>x.id===ing.producto_id);
+      // If product has rendimiento, convert: units_needed = (raciones_needed / rendimiento_per_unit)
+      let cantidadNecesaria=ing.cantidad*factor;
+      if(prod&&prod.rendimiento>0){cantidadNecesaria=Math.ceil((ing.cantidad*factor)/prod.rendimiento);}
+      if(!totales[ing.producto_id])totales[ing.producto_id]={cantidad:0,unidad:ing.unidad,elaboraciones:[]};
+      totales[ing.producto_id].cantidad+=cantidadNecesaria;
+      totales[ing.producto_id].elaboraciones.push(e.nombre);
+    });
+  });
+  // Group by supplier
+  const byProv={};
+  Object.entries(totales).forEach(([prodId,data])=>{
+    const prod=DB.productos.find(x=>x.id===prodId);if(!prod)return;
+    const provId=prod.proveedor_id||'__none__';
+    if(!byProv[provId])byProv[provId]=[];
+    byProv[provId].push({...data,producto:prod.nombre,prodId});
+  });
+  // Render
+  let html='';
+  if(Object.keys(byProv).length===0){
+    html='<div class="notice warn">⚠️ Las elaboraciones seleccionadas no tienen ingredientes asignados. Ve a <strong>Elaboraciones</strong> y añade los ingredientes primero.</div>';
+  } else {
+    Object.entries(byProv).forEach(([provId,items])=>{
+      const prov=DB.proveedores.find(x=>x.id===provId);
+      html+=`<div style="margin-bottom:16px"><div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--primary)">🏭 ${prov?esc(prov.nombre):'Sin proveedor asignado'}</div>`;
+      html+=`<table style="width:100%"><thead><tr><th>Producto</th><th>Cantidad</th><th>Unidad</th></tr></thead><tbody>`;
+      items.forEach(it=>{
+        const qty=Math.ceil(it.cantidad*100)/100;
+        html+=`<tr><td>${esc(it.producto)}</td><td><strong>${qty}</strong></td><td>${esc(it.unidad||'')}</td></tr>`;
+      });
+      html+=`</tbody></table></div>`;
+    });
+  }
+  // Save to history
+  const pedidoObj={id:uid(),fecha:new Date().toISOString(),elaboraciones:Object.entries(pedidoSeleccionadas).map(([id,v])=>({id,raciones:v.raciones,nombre:DB.elaboraciones.find(x=>x.id===id)?.nombre||''})),byProv,totales};
+  DB.pedidos.push(pedidoObj);saveDB();
+  document.getElementById('pedido-result-content').innerHTML=html;
+  document.getElementById('pedido-result').style.display='';
+  document.getElementById('pedido-result').scrollIntoView({behavior:'smooth'});
+}
+
+// ═══════════════════════════════════════════════════
+// STOCK
+// ═══════════════════════════════════════════════════
+function renderStockTable(q=''){
+  const filter=document.getElementById('stock-filter')?.value||'';
+  let list=DB.productos;
+  if(q)list=list.filter(p=>p.nombre.toLowerCase().includes(q.toLowerCase()));
+  if(filter==='low')list=list.filter(p=>p.stock_min>0&&p.stock_actual<p.stock_min&&p.stock_actual>0);
+  if(filter==='out')list=list.filter(p=>p.stock_actual<=0);
+  document.getElementById('stock-tbody').innerHTML=list.length?list.map(p=>{
+    const pct=p.stock_min>0?Math.min(100,Math.round(p.stock_actual/p.stock_min*100)):100;
+    const cls=p.stock_actual<=0?'s-out':pct<100?'s-low':'s-ok';
+    const badge=p.stock_actual<=0?'b-red':pct<100?'b-warn':'b-ok';
+    const label=p.stock_actual<=0?'Sin stock':pct<100?'Bajo':'OK';
+    return`<tr>
+      <td><strong>${esc(p.nombre)}</strong><div style="font-size:11px;color:var(--muted)">${esc(p.categoria||'')}</div></td>
+      <td>${p.stock_actual} ${esc(p.unidad||'')}<div class="stock-bar"><div class="stock-fill ${cls}" style="width:${pct}%"></div></div></td>
+      <td>${p.stock_min||0} ${esc(p.unidad||'')}</td>
+      <td><span class="badge ${badge}">${label}</span></td>
+      <td><div style="display:flex;gap:6px;align-items:center">
+        <input type="number" step="0.1" placeholder="Nuevo stock" id="st-${p.id}" style="width:90px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
+        <button class="btn btn-sm btn-gold" onclick="actualizarStock('${p.id}')">✓</button>
+      </div></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="5"><div class="empty"><div class="ic">📋</div><p>Sin productos</p></div></td></tr>`;
+}
+function actualizarStock(id){
+  const val=parseFloat(document.getElementById('st-'+id).value);
+  if(isNaN(val)){alert('Introduce una cantidad válida');return}
+  const idx=DB.productos.findIndex(x=>x.id===id);
+  if(idx>=0){DB.productos[idx].stock_actual=val;saveDB();renderStockTable();}
+}
+
+// ═══════════════════════════════════════════════════
+// INFORMES
+// ═══════════════════════════════════════════════════
+function renderInformes(){
+  const hist=DB.pedidos.slice().reverse().slice(0,10);
+  document.getElementById('pedidos-hist-list').innerHTML=hist.length?hist.map(p=>{
+    const d=new Date(p.fecha);
+    return`<div class="card" style="margin-bottom:10px"><div style="padding:14px;display:flex;justify-content:space-between;align-items:center">
+      <div><strong>${d.toLocaleDateString('es-ES')}</strong> · ${p.elaboraciones.length} elaboraciones</div>
+      <button class="btn btn-sm btn-outline" onclick="reexportarPedido('${p.id}')">📄 PDF</button>
+    </div></div>`;
+  }).join(''):'<div class="notice info">ℹ Aún no has generado pedidos.</div>';
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORTS - PDF
+// ═══════════════════════════════════════════════════
+function exportarPedidoPDF(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFont('helvetica','bold');doc.setFontSize(16);doc.text('ALBARABA SL - LISTA DE PEDIDO',14,20);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text('Fecha: '+new Date().toLocaleDateString('es-ES'),14,28);
+  let y=38;
+  const content=document.getElementById('pedido-result-content');
+  const tables=content.querySelectorAll('table');
+  const headers=content.querySelectorAll('div>div');
+  tables.forEach((tbl,ti)=>{
+    const provTitle=tbl.previousElementSibling?.textContent||'';
+    doc.setFont('helvetica','bold');doc.setFontSize(11);
+    if(y>260){doc.addPage();y=20}
+    doc.text(provTitle.trim(),14,y);y+=7;
+    doc.setFontSize(9);doc.setFont('helvetica','normal');
+    tbl.querySelectorAll('tbody tr').forEach(tr=>{
+      const tds=[...tr.querySelectorAll('td')];
+      if(tds.length>=2){
+        if(y>270){doc.addPage();y=20}
+        doc.text(tds[0].textContent.trim().slice(0,50),14,y);
+        doc.text(tds[1].textContent.trim(),130,y);
+        if(tds[2])doc.text(tds[2].textContent.trim(),160,y);
+        y+=6;
+      }
+    });
+    y+=6;
+  });
+  doc.save('pedido_albaraba_'+new Date().toISOString().slice(0,10)+'.pdf');
+}
+function exportarPedidoExcel(){
+  const ws=XLSX.utils.aoa_to_sheet([['Producto','Cantidad','Unidad','Proveedor']]);
+  const content=document.getElementById('pedido-result-content');
+  const rows=[['Producto','Cantidad','Unidad','Proveedor']];
+  content.querySelectorAll('table').forEach((tbl)=>{
+    const provTitle=tbl.previousElementSibling?.textContent?.trim()||'';
+    tbl.querySelectorAll('tbody tr').forEach(tr=>{
+      const tds=[...tr.querySelectorAll('td')];
+      if(tds.length>=2)rows.push([tds[0].textContent.trim(),tds[1].textContent.trim(),tds[2]?.textContent.trim()||'',provTitle]);
+    });
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws2,'Pedido');
+  XLSX.writeFile(wb,'pedido_albaraba_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+function informe_fichasProducto(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text('ALBARABA SL - FICHAS DE PRODUCTO',14,20);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Generado: '+new Date().toLocaleDateString('es-ES'),14,27);
+  let y=35;
+  DB.productos.forEach((p,i)=>{
+    if(y>250){doc.addPage();y=20}
+    doc.setFillColor(248,249,250);doc.rect(12,y-4,185,28,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text((i+1)+'. '+p.nombre.slice(0,60),14,y+2);
+    doc.setFont('helvetica','normal');doc.setFontSize(9);
+    doc.text('Categoría: '+p.categoria,14,y+9);
+    doc.text('Proveedor: '+provNombre(p.proveedor_id),14,y+15);
+    doc.text('Unidad: '+p.unidad+' · Precio: '+(p.precio?'€'+parseFloat(p.precio).toFixed(2):'—'),90,y+9);
+    doc.text('Alergenos: '+((p.alergenos||[]).join(', ')||'Ninguno'),90,y+15);
+    y+=32;
+  });
+  if(!DB.productos.length){doc.setFont('helvetica','italic');doc.setFontSize(10);doc.text('Sin productos añadidos',14,40)}
+  doc.save('fichas_producto_albaraba.pdf');
+}
+function informe_elaboraciones(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text('ALBARABA SL - FICHAS DE ELABORACIÓN',14,20);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.text('Generado: '+new Date().toLocaleDateString('es-ES'),14,27);
+  let y=35;
+  DB.elaboraciones.forEach((e,i)=>{
+    const al=calcElabAlergenos(e);
+    if(y>235){doc.addPage();y=20}
+    doc.setFillColor(248,249,250);
+    const boxH=20+(e.ingredientes&&e.ingredientes.length?e.ingredientes.length*5:0)+(e.proceso?10:0);
+    doc.rect(12,y-4,185,Math.min(boxH,55),'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text((i+1)+'. '+e.nombre.slice(0,60),14,y+2);
+    doc.setFont('helvetica','normal');doc.setFontSize(8);
+    doc.text('Categoría: '+(CAT_LABELS[e.categoria]||e.categoria)+' · Raciones base: '+(e.raciones_base||10),14,y+8);
+    doc.text('Alergenos: '+(al.join(', ')||'Ninguno'),14,y+14);
+    if(e.ingredientes&&e.ingredientes.length){
+      doc.text('Ingredientes: '+e.ingredientes.map(ing=>prodNombre(ing.producto_id)+' '+ing.cantidad+ing.unidad).join(', ').slice(0,120),14,y+20);
+    }
+    y+=Math.min(boxH,55)+4;
+  });
+  doc.save('fichas_elaboracion_albaraba.pdf');
+}
+function informe_alergenos(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF('landscape');
+  doc.setFont('helvetica','bold');doc.setFontSize(13);doc.text('ALBARABA SL - TABLA DE ALERGENOS',14,15);
+  let y=25;
+  doc.setFontSize(7);
+  // Header
+  doc.setFont('helvetica','bold');
+  doc.text('ELABORACIÓN',14,y);
+  ALERGENOS.forEach((a,i)=>doc.text(a.slice(0,8),90+i*15,y));
+  y+=4;doc.line(14,y,280,y);y+=4;
+  doc.setFont('helvetica','normal');
+  DB.elaboraciones.forEach(e=>{
+    if(y>190){doc.addPage('landscape');y=20}
+    const al=new Set(calcElabAlergenos(e));
+    doc.text(e.nombre.slice(0,45),14,y);
+    ALERGENOS.forEach((a,i)=>doc.text(al.has(a)?'■':'·',90+i*15,y));
+    y+=5;
+  });
+  doc.save('tabla_alergenos_albaraba.pdf');
+}
+function informe_proveedores(){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text('ALBARABA SL - LISTADO DE PROVEEDORES',14,20);
+  let y=32;
+  DB.proveedores.forEach((p,i)=>{
+    if(y>260){doc.addPage();y=20}
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text((i+1)+'. '+p.nombre,14,y);
+    doc.setFont('helvetica','normal');doc.setFontSize(9);
+    if(p.contacto)doc.text('Contacto: '+p.contacto,14,y+6);
+    if(p.telefono)doc.text('Tel: '+p.telefono,100,y+6);
+    if(p.email)doc.text('Email: '+p.email,14,y+12);
+    if(p.direccion)doc.text('Dir: '+p.direccion,14,y+18);
+    const prods=DB.productos.filter(x=>x.proveedor_id===p.id).map(x=>x.nombre).join(', ');
+    if(prods)doc.text('Productos: '+prods.slice(0,90),14,y+24);
+    y+=30+(prods?6:0);
+  });
+  if(!DB.proveedores.length){doc.setFont('helvetica','italic');doc.text('Sin proveedores añadidos',14,40)}
+  doc.save('proveedores_albaraba.pdf');
+}
+function reexportarPedido(id){
+  const ped=DB.pedidos.find(x=>x.id===id);if(!ped)return;
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text('ALBARABA SL - PEDIDO',14,20);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text('Fecha: '+new Date(ped.fecha).toLocaleDateString('es-ES'),14,28);
+  doc.text('Elaboraciones: '+ped.elaboraciones.map(e=>e.nombre+'('+e.raciones+'rac)').join(', ').slice(0,150),14,35);
+  let y=45;
+  Object.entries(ped.byProv||{}).forEach(([provId,items])=>{
+    const prov=DB.proveedores.find(x=>x.id===provId);
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(prov?prov.nombre:'Sin proveedor',14,y);y+=6;
+    doc.setFont('helvetica','normal');doc.setFontSize(9);
+    items.forEach(it=>{if(y>270){doc.addPage();y=20}doc.text('· '+it.producto+': '+Math.ceil(it.cantidad*100)/100+' '+it.unidad,16,y);y+=5});
+    y+=4;
+  });
+  doc.save('pedido_'+new Date(ped.fecha).toISOString().slice(0,10)+'.pdf');
+}
+
+// ═══════════════════════════════════════════════════
+// EXPORTS - EXCEL
+// ═══════════════════════════════════════════════════
+function exportarProductosExcel(){
+  const rows=[['Nombre','Categoría','Proveedor','Unidad','Precio','Stock actual','Stock mínimo','Alergenos','Referencia','Notas']];
+  DB.productos.forEach(p=>rows.push([p.nombre,p.categoria,provNombre(p.proveedor_id),p.unidad,p.precio||'',p.stock_actual||0,p.stock_min||0,(p.alergenos||[]).join(', '),p.referencia||'',p.notas||'']));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Productos');
+  XLSX.writeFile(wb,'productos_albaraba.xlsx');
+}
+function exportarElaboracionesExcel(){
+  const rows=[['Nombre','Categoría','Raciones base','Ingredientes','Alergenos','Proceso','Notas']];
+  DB.elaboraciones.forEach(e=>{
+    const al=calcElabAlergenos(e);
+    const ings=(e.ingredientes||[]).map(i=>prodNombre(i.producto_id)+' '+i.cantidad+i.unidad).join('; ');
+    rows.push([e.nombre,CAT_LABELS[e.categoria]||e.categoria,e.raciones_base||10,ings,al.join(', '),e.proceso||'',e.notas||'']);
+  });
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Elaboraciones');
+  XLSX.writeFile(wb,'elaboraciones_albaraba.xlsx');
+}
+function exportarStockExcel(){
+  const rows=[['Producto','Categoría','Stock actual','Stock mínimo','Unidad','Estado']];
+  DB.productos.forEach(p=>{
+    const estado=p.stock_actual<=0?'Sin stock':p.stock_min>0&&p.stock_actual<p.stock_min?'Bajo':'OK';
+    rows.push([p.nombre,p.categoria||'',p.stock_actual||0,p.stock_min||0,p.unidad||'',estado]);
+  });
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Stock');
+  XLSX.writeFile(wb,'stock_albaraba.xlsx');
+}
+
+// ═══════════════════════════════════════════════════
+// HOJAS DE SERVICIO
+// ═══════════════════════════════════════════════════
+let hojaMenuCounter=0;
+
+function renderHojasTable(q=''){
+  const list=DB.hojas.filter(h=>!q||h.cliente.toLowerCase().includes(q.toLowerCase())||((h.empresa||'').toLowerCase().includes(q.toLowerCase())));
+  const cont=document.getElementById('hojas-list');
+  if(!list.length){cont.innerHTML='<div class="empty" style="padding:40px"><div class="ic">📋</div><p>Sin hojas de servicio. Crea la primera.</p></div>';return}
+  const sorted=[...list].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  cont.innerHTML=sorted.map(h=>{
+    const d=new Date(h.fecha+'T00:00:00');
+    const dateStr=d.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+    return`<div class="hoja-card">
+      <div class="hoja-header" onclick="toggleHojaBody('${h.id}')">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:700">${esc(h.cliente)}${h.empresa?` · <span style="color:var(--muted);font-weight:400">${esc(h.empresa)}</span>`:''}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr}${h.hora?` · ${esc(h.hora)}`:''}${h.lugar?` · 📍${esc(h.lugar)}`:''}</div>
+        </div>
+        <span class="badge b-cat" style="font-size:13px">👥 ${h.pax} PAX</span>
+        <span class="badge b-prov">${esc(h.servicio||'')}</span>
+        ${h.fuente?`<span class="badge" style="background:rgba(99,102,241,.1);color:#4338ca;font-size:10px">${h.fuente==='alaboca'?'🍽 Alaboca':'🌿 PV'}</span>`:''}
+        ${h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`}
+        <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')">📄 PDF</button>
+        <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();listaComprasDesdeHoja('${h.id}')">🛒 Lista compras</button>
+        <button class="btn btn-sm" style="background:#fff3e0;color:#e65100;font-weight:600" onclick="event.stopPropagation();generarPresupuesto_G('${h.id}')">📋 Presupuesto</button>
+        <button class="btn btn-sm btn-light" onclick="event.stopPropagation();editHoja('${h.id}')">✏️</button>
+        <button class="btn btn-sm btn-del" onclick="event.stopPropagation();deleteHoja('${h.id}')">🗑</button>
+      </div>
+      <div class="hoja-body" id="body-${h.id}">
+        ${renderHojaBody(h)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleHojaBody(id){
+  const el=document.getElementById('body-'+id);
+  el.classList.toggle('open');
+}
+
+function renderHojaBody(h){
+  // Stock check
+  const check=checkStockHoja(h);
+  const menuItems=(h.menu||[]).map(m=>`<li style="margin-bottom:4px">${esc(m.nombre)}${m.pax_override?` <span class="badge b-cat">${m.pax_override} rac.</span>`:''}</li>`).join('');
+  const stockHTML=check.length?`
+    <div style="margin-bottom:14px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px">📊 Estado de stock para este servicio</div>
+      ${check.map(item=>`
+        <div class="stock-check-item ${item.status}">
+          <span style="font-size:16px">${item.status==='stock-ok'?'✅':item.status==='stock-low'?'⚠️':'❌'}</span>
+          <span style="flex:1"><strong>${esc(item.nombre)}</strong> — Necesito: <strong>${item.necesario} ${esc(item.unidad)}</strong> · Tengo: ${item.actual} ${esc(item.unidad)}</span>
+          ${item.status!=='stock-ok'?`<span class="badge ${item.status==='stock-low'?'b-warn':'b-red'}">Faltan ${item.faltan} ${esc(item.unidad)}</span>`:''}
+        </div>`).join('')}
+    </div>`:'<div class="notice info" style="margin-bottom:14px">ℹ Asigna ingredientes a las elaboraciones del menú para ver el check de stock.</div>';
+  // Pedido info
+  const pedInfo=getPedidoInfo(h);
+  const today2=new Date();today2.setHours(0,0,0,0);
+  const evDate2=h.fecha?new Date(h.fecha+'T00:00:00'):null;
+  let pedBadge='';
+  if(evDate2&&evDate2>=today2&&!h.realizado){
+    const diff=Math.round((pedInfo.fechaPedido-today2)/(1000*60*60*24));
+    let cls='pedido-ok',txt='Pedido: '+pedInfo.fechaPedido.toLocaleDateString('es-ES');
+    if(diff<0){cls='pedido-urgent';txt='⚠️ PEDIDO VENCIDO ('+pedInfo.fechaPedido.toLocaleDateString('es-ES')+')';}
+    else if(diff===0){cls='pedido-urgent';txt='🔴 Pedir HOY';}
+    else if(diff<=2){cls='pedido-warn';txt='🟡 Pedir en '+diff+' día'+(diff>1?'s':'')+'('+pedInfo.fechaPedido.toLocaleDateString('es-ES')+')';}
+    pedBadge=`<div style="margin-bottom:12px"><span class="pedido-badge ${cls}">${txt}</span> <span style="font-size:11px;color:var(--muted)">Antelación: ${pedInfo.dias} día${pedInfo.dias!==1?'s':''}</span></div>`;
+  }
+  return`
+    ${pedBadge}
+    <div class="hoja-meta">
+      <div class="hoja-meta-item"><div class="lbl">PAX</div><div class="val">👥 ${h.pax}</div></div>
+      <div class="hoja-meta-item"><div class="lbl">Servicio</div><div class="val">${esc(h.servicio||'—')}</div></div>
+      ${h.hora?`<div class="hoja-meta-item"><div class="lbl">Hora</div><div class="val">🕐 ${esc(h.hora)}</div></div>`:''}
+      ${h.lugar?`<div class="hoja-meta-item"><div class="lbl">Lugar</div><div class="val">📍 ${esc(h.lugar)}</div></div>`:''}
+    </div>
+    ${menuItems?`<div style="margin-bottom:14px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">🍽 Menú</div><ul style="padding-left:18px;font-size:13px">${menuItems}</ul></div>`:''}
+    ${h.postre?`<div style="margin-bottom:10px;font-size:13px"><strong>Postre:</strong> ${esc(h.postre)}</div>`:''}
+    ${(()=>{
+      const alSet=new Set();
+      (h.menu||[]).forEach(m=>{const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);if(elab)calcElabAlergenos(elab).forEach(a=>alSet.add(a));});
+      return alSet.size?`<div style="margin-bottom:14px;padding:10px 14px;background:#fef2f2;border-radius:8px;border:1px solid #fecaca"><div style="font-weight:700;font-size:13px;color:#dc2626;margin-bottom:4px">⚠️ Alérgenos presentes en este menú</div><div style="font-size:12px;color:#7f1d1d">${[...alSet].join(' · ')}</div></div>`:'<div style="margin-bottom:10px;padding:8px 12px;background:#f0fdf4;border-radius:8px;font-size:12px;color:#15803d">✅ No se han detectado alérgenos comunes en las elaboraciones seleccionadas</div>';
+    })()}
+    ${h.indicaciones?`<div style="margin-bottom:14px"><div style="font-weight:600;font-size:13px;margin-bottom:4px">⚠️ Indicaciones importantes</div><div style="font-size:13px;color:var(--muted);white-space:pre-line">${esc(h.indicaciones)}</div></div>`:''}
+    ${stockHTML}`;
+}
+
+function checkStockHoja(h){
+  const pax=parseInt(h.pax)||0;
+  const result=[];
+  const totalesProd={};
+  (h.menu||[]).forEach(m=>{
+    const elabId=m.elab_id;if(!elabId)return;
+    const elab=DB.elaboraciones.find(x=>x.id===elabId);if(!elab||!elab.ingredientes)return;
+    const racPedidas=m.pax_override||pax;
+    const factor=racPedidas/(elab.raciones_base||10);
+    elab.ingredientes.forEach(ing=>{
+      if(!ing.producto_id)return;
+      const prod=DB.productos.find(x=>x.id===ing.producto_id);
+      let cantNec=ing.cantidad*factor;
+      if(prod&&prod.rendimiento>0)cantNec=Math.ceil(cantNec/prod.rendimiento);
+      if(!totalesProd[ing.producto_id])totalesProd[ing.producto_id]={necesario:0,unidad:ing.unidad};
+      totalesProd[ing.producto_id].necesario+=cantNec;
+    });
+  });
+  Object.entries(totalesProd).forEach(([prodId,data])=>{
+    const prod=DB.productos.find(x=>x.id===prodId);if(!prod)return;
+    const actual=prod.stock_actual||0;
+    const nec=Math.ceil(data.necesario*100)/100;
+    const faltan=Math.max(0,Math.ceil((nec-actual)*100)/100);
+    let status='stock-ok';
+    if(actual<=0||actual<nec)status='stock-out';
+    else if(actual<nec*1.2)status='stock-low';
+    result.push({nombre:prod.nombre,necesario:nec,actual,faltan,unidad:prod.unidad||'',status});
+  });
+  return result;
+}
+
+function openHojaModal(){
+  document.getElementById('hoja-id').value='';
+  ['cliente','empresa','hora','lugar','postre','indicaciones','notas','precio-venta','tel'].forEach(f=>{const el=document.getElementById('hoja-'+f);if(el)el.value=''});
+  document.getElementById('hoja-fecha').value=new Date().toISOString().slice(0,10);
+  document.getElementById('hoja-pax').value='';
+  document.getElementById('hoja-servicio').value='SERVICIO COMPLETO';
+  document.getElementById('hoja-menu-list').innerHTML='';
+  document.getElementById('hoja-modal-title').textContent='Nueva Hoja de Servicio';
+  openModal('modal-hoja');
+}
+
+function editHoja(id){
+  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  document.getElementById('hoja-id').value=h.id;
+  document.getElementById('hoja-fecha').value=h.fecha||'';
+  document.getElementById('hoja-hora').value=h.hora||'';
+  document.getElementById('hoja-cliente').value=h.cliente||'';
+  document.getElementById('hoja-empresa').value=h.empresa||'';
+  document.getElementById('hoja-pax').value=h.pax||'';
+  document.getElementById('hoja-servicio').value=h.servicio||'SERVICIO COMPLETO';
+  document.getElementById('hoja-lugar').value=h.lugar||'';
+  document.getElementById('hoja-postre').value=h.postre||'';
+  document.getElementById('hoja-precio-venta').value=h.precio_venta||'';
+  document.getElementById('hoja-tel').value=h.tel||'';
+  document.getElementById('hoja-indicaciones').value=h.indicaciones||'';
+  document.getElementById('hoja-notas').value=h.notas||'';
+  const list=document.getElementById('hoja-menu-list');
+  list.innerHTML='';
+  (h.menu||[]).forEach(m=>addMenuItemRow(m));
+  document.getElementById('hoja-modal-title').textContent='Editar Hoja de Servicio';
+  openModal('modal-hoja');
+}
+
+function addMenuItemRow(item=null){
+  const list=document.getElementById('hoja-menu-list');
+  const rowId='hm-'+Date.now()+hojaMenuCounter++;
+  const opts=`<option value="">— Texto libre —</option>`+DB.elaboraciones.map(e=>`<option value="${e.id}"${item&&item.elab_id===e.id?' selected':''}>${esc(e.nombre)} (${CAT_LABELS[e.categoria]||e.categoria})</option>`).join('');
+  const div=document.createElement('div');div.className='menu-item-row';div.id=rowId;
+  div.innerHTML=`<select onchange="updateMenuItemName(this)">${opts}</select>
+    <input placeholder="o escribe nombre libre" value="${item&&!item.elab_id?esc(item.nombre):''}" style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none" id="${rowId}-txt">
+    <input class="pax-qty" type="number" placeholder="rac." title="Raciones (dejar vacío = usar PAX del servicio)" value="${item&&item.pax_override?item.pax_override:''}" style="width:70px;padding:7px 8px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;text-align:center">
+    <button class="ing-del" onclick="this.closest('.menu-item-row').remove()">✕</button>`;
+  list.appendChild(div);
+}
+
+function updateMenuItemName(sel){
+  const row=sel.closest('.menu-item-row');
+  const txtInput=row.querySelector('input[type=text],input:not([type])');
+  if(sel.value){
+    const elab=DB.elaboraciones.find(x=>x.id===sel.value);
+    if(elab&&txtInput)txtInput.value=elab.nombre;
+  }
+}
+
+function getMenuItems(){
+  return [...document.getElementById('hoja-menu-list').querySelectorAll('.menu-item-row')].map(row=>{
+    const sel=row.querySelector('select');
+    const inputs=row.querySelectorAll('input');
+    const txt=inputs[0]?inputs[0].value.trim():'';
+    const paxOvr=inputs[1]?parseInt(inputs[1].value)||0:0;
+    const elabId=sel?sel.value:'';
+    const elab=elabId?DB.elaboraciones.find(x=>x.id===elabId):null;
+    const nombre=txt||(elab?elab.nombre:'');
+    return{elab_id:elabId,nombre,pax_override:paxOvr||0};
+  }).filter(m=>m.nombre);
+}
+
+function saveHoja(){
+  const cliente=document.getElementById('hoja-cliente').value.trim();
+  const pax=parseInt(document.getElementById('hoja-pax').value);
+  if(!cliente){alert('El nombre del cliente es obligatorio');return}
+  if(!pax||pax<1){alert('Indica el número de PAX');return}
+  const id=document.getElementById('hoja-id').value||uid();
+  const obj={id,fecha:document.getElementById('hoja-fecha').value,hora:document.getElementById('hoja-hora').value,cliente,empresa:document.getElementById('hoja-empresa').value,tel:document.getElementById('hoja-tel').value,pax,servicio:document.getElementById('hoja-servicio').value,lugar:document.getElementById('hoja-lugar').value,menu:getMenuItems(),postre:document.getElementById('hoja-postre').value,precio_venta:parseFloat(document.getElementById('hoja-precio-venta').value)||0,indicaciones:document.getElementById('hoja-indicaciones').value,notas:document.getElementById('hoja-notas').value};
+  const idx=DB.hojas.findIndex(x=>x.id===id);
+  if(idx>=0)DB.hojas[idx]=obj;else DB.hojas.push(obj);
+  saveDB();closeModal('modal-hoja');renderHojasTable();
+}
+
+function deleteHoja(id){
+  if(!confirm('¿Eliminar esta hoja de servicio?'))return;
+  DB.hojas=DB.hojas.filter(x=>x.id!==id);saveDB();renderHojasTable();
+}
+
+function generarPresupuesto_G(id){
+  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  // Mapear label de servicio → clave de tipo para presupuesto
+  const SRV_MAP={
+    'Lunch / Cóctel':'LUNCH','Coffee Break':'COFFEE',
+    'Menú Blusas':'MENU_BLUSAS','Menú Degustación':'MENU_DEGUSTACION',
+    'Cajas pintxos':'CAJAS','Raciones / Carta':'RACIONES',
+    'Menú Popular':'MENU_POPULAR','Menú Celebración':'MENU_CELEBRACION',
+    'Menú Infantil':'MENU_INFANTIL','Menú Cazuela':'MENU_CAZUELA',
+    'Menú Envasado':'MENU_ENVASADO'
+  };
+  const tipo=SRV_MAP[h.servicio]||(h.fuente==='pv'?'LUNCH':'LUNCH');
+  const d={
+    marca:h.fuente==='pv'?'PV':'AB',
+    cliente:h.cliente||'',
+    tel:h.tel||'',
+    fecha_evento:h.fecha||'',
+    lugar:h.lugar||'',
+    pax:h.pax||0,
+    tipo:tipo,
+    desc_evento:(h.servicio||'')+(h.pax?' — '+h.pax+' pax':'')
+  };
+  localStorage.setItem('catering_presup_preload_v1',JSON.stringify(d));
+  window.open('Presupuesto_Catering.html','_blank');
+}
+
+function confirmarServicioRealizado(id){
+  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const pax=parseInt(h.pax)||0;
+  // Calculate totals to deduct
+  const descuentos={};
+  (h.menu||[]).forEach(m=>{
+    const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);if(!elab||!elab.ingredientes)return;
+    const racPedidas=m.pax_override||pax;
+    const factor=racPedidas/(elab.raciones_base||10);
+    elab.ingredientes.forEach(ing=>{
+      if(!ing.producto_id)return;
+      const prod=DB.productos.find(x=>x.id===ing.producto_id);
+      let cantNec=ing.cantidad*factor;
+      if(prod&&prod.rendimiento>0)cantNec=Math.ceil(cantNec/prod.rendimiento);
+      if(!descuentos[ing.producto_id])descuentos[ing.producto_id]=0;
+      descuentos[ing.producto_id]+=cantNec;
+    });
+  });
+  const nProds=Object.keys(descuentos).length;
+  if(!nProds){
+    if(!confirm(`Este servicio no tiene ingredientes asignados en las elaboraciones.\n\n¿Marcar como realizado de todas formas?`))return;
+  } else {
+    const resumen=Object.entries(descuentos).map(([pid,cant])=>{
+      const p=DB.productos.find(x=>x.id===pid);
+      return p?`· ${p.nombre}: -${Math.ceil(cant*100)/100} ${p.unidad||''}`:null;
+    }).filter(Boolean).join('\n');
+    if(!confirm(`✅ CONFIRMAR SERVICIO REALIZADO\n\nSe descontará del stock:\n${resumen||'(sin ingredientes)'}\n\n¿Confirmar?`))return;
+  }
+  // Deduct stock
+  Object.entries(descuentos).forEach(([pid,cant])=>{
+    const idx=DB.productos.findIndex(x=>x.id===pid);
+    if(idx>=0){
+      DB.productos[idx].stock_actual=Math.max(0,(DB.productos[idx].stock_actual||0)-Math.ceil(cant*100)/100);
+    }
+  });
+  // Mark as done
+  const idx=DB.hojas.findIndex(x=>x.id===id);
+  if(idx>=0){DB.hojas[idx].realizado=true;DB.hojas[idx].fecha_realizado=new Date().toISOString();}
+  saveDB();
+  renderHojasTable();
+  alert(`✅ Servicio confirmado. Stock actualizado${nProds?` (${nProds} productos descontados)`:''}.`);
+}
+
+function listaComprasDesdeHoja(id){
+  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const pax=parseInt(h.pax)||0;
+  const totalesProd={};
+  (h.menu||[]).forEach(m=>{
+    const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);if(!elab||!elab.ingredientes)return;
+    const racPedidas=m.pax_override||pax;
+    const factor=racPedidas/(elab.raciones_base||10);
+    elab.ingredientes.forEach(ing=>{
+      if(!ing.producto_id)return;
+      const prod=DB.productos.find(x=>x.id===ing.producto_id);
+      let cantNec=ing.cantidad*factor;
+      if(prod&&prod.rendimiento>0)cantNec=Math.ceil(cantNec/prod.rendimiento);
+      if(!totalesProd[ing.producto_id])totalesProd[ing.producto_id]={necesario:0,unidad:ing.unidad};
+      totalesProd[ing.producto_id].necesario+=cantNec;
+    });
+  });
+  // Group by supplier
+  const byProv={};
+  Object.entries(totalesProd).forEach(([prodId,data])=>{
+    const prod=DB.productos.find(x=>x.id===prodId);if(!prod)return;
+    const actual=prod.stock_actual||0;
+    const nec=Math.ceil(data.necesario*100)/100;
+    const aComprar=Math.max(0,nec-actual);
+    const provId=prod.proveedor_id||'__none__';
+    if(!byProv[provId])byProv[provId]=[];
+    byProv[provId].push({nombre:prod.nombre,necesario:nec,actual,aComprar,unidad:prod.unidad||'',ok:aComprar<=0});
+  });
+  // Navigate to pedidos section and show result there, or generate PDF
+  exportarListaComprasPDF(h,byProv);
+}
+
+function exportarListaComprasPDF(h,byProv){
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text('ALBARABA SL - LISTA DE COMPRAS',14,18);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  const d=new Date(h.fecha+'T00:00:00');
+  doc.text('Servicio: '+h.cliente+(h.empresa?' ('+h.empresa+')':''),14,26);
+  doc.text('Fecha: '+d.toLocaleDateString('es-ES')+(h.hora?' · '+h.hora:''),14,32);
+  doc.text('PAX: '+h.pax+' · '+h.servicio,14,38);
+  let y=48;
+  if(Object.keys(byProv).length===0){
+    doc.text('No hay ingredientes asignados a las elaboraciones de esta hoja.',14,y);
+  } else {
+    Object.entries(byProv).forEach(([provId,items])=>{
+      const prov=DB.proveedores.find(x=>x.id===provId);
+      if(y>265){doc.addPage();y=20}
+      doc.setFont('helvetica','bold');doc.setFontSize(11);
+      doc.text('🏭 '+(prov?prov.nombre:'Sin proveedor'),14,y);y+=2;
+      doc.setDrawColor(200,200,200);doc.line(14,y+2,196,y+2);y+=7;
+      doc.setFont('helvetica','normal');doc.setFontSize(9);
+      items.forEach(it=>{
+        if(y>270){doc.addPage();y=20}
+        const estado=it.ok?'✓ OK':'➤ COMPRAR: '+it.aComprar+' '+it.unidad;
+        doc.text('· '+it.nombre,16,y);
+        doc.text('Necesario: '+it.necesario+' '+it.unidad,100,y);
+        doc.text('Stock: '+it.actual,150,y);
+        doc.setFont('helvetica',it.ok?'normal':'bold');
+        doc.text(estado,it.ok?180:100,y+5);
+        doc.setFont('helvetica','normal');
+        y+=11;
+      });
+      y+=4;
+    });
+  }
+  doc.save('lista_compras_'+h.cliente.replace(/\s/g,'_')+'_'+h.fecha+'.pdf');
+}
+
+function exportarHojaPDF(id){
+  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const {jsPDF}=window.jspdf;const doc=new jsPDF();
+  const d=new Date(h.fecha+'T00:00:00');
+  doc.setFont('helvetica','bold');doc.setFontSize(14);
+  doc.text('ALBARABA SL',105,16,{align:'center'});
+  doc.setFontSize(10);doc.text('Hoja de Servicio',105,23,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  const fields=[['CLIENTE',h.cliente||''],['EMPRESA',h.empresa||''],['PAX',String(h.pax||'')],['HORA',h.hora||''],['SERVICIO',h.servicio||''],['LUGAR',h.lugar||''],['FECHA',d.toLocaleDateString('es-ES')]];
+  let y=32;
+  doc.setDrawColor(180,180,180);
+  fields.forEach((f,i)=>{
+    const x=i%2===0?14:108;
+    if(i%2===0&&i>0)y+=10;
+    doc.setFont('helvetica','bold');doc.text(f[0]+':',x,y);
+    doc.setFont('helvetica','normal');doc.text(String(f[1]).slice(0,55),x+26,y);
+  });
+  y+=16;
+  doc.setDrawColor(180,180,180);doc.line(14,y,196,y);y+=8;
+  // Menu
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('MENU',14,y);y+=7;
+  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  (h.menu||[]).forEach(m=>{
+    if(y>270){doc.addPage();y=20;}
+    const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);
+    const paxItem=m.pax_override||h.pax;
+    doc.text('  • '+(elab?elab.nombre:m.nombre)+' — '+paxItem+' pax',14,y);y+=6;
+  });
+  if(h.postre){y+=2;doc.setFont('helvetica','italic');doc.text('Postre: '+h.postre,14,y);doc.setFont('helvetica','normal');y+=7;}
+  y+=4;
+  // Stock check
+  const stockCheck=checkStockHoja(h);
+  if(stockCheck.length){
+    if(y>240){doc.addPage();y=20;}
+    doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('CONTROL DE STOCK',14,y);y+=7;
+    doc.setFont('helvetica','normal');doc.setFontSize(8);
+    stockCheck.forEach(s=>{
+      if(y>270){doc.addPage();y=20;}
+      const ok=s.status==='stock-ok';
+      doc.setFont('helvetica',ok?'normal':'bold');
+      const txt=(ok?'OK  ':'⚠   ')+s.nombre+' — Necesario: '+s.necesario+' '+s.unidad+' | Stock actual: '+s.actual+(ok?'':' | FALTAN: '+s.faltan+' '+s.unidad);
+      const lines=doc.splitTextToSize(txt,180);
+      doc.text(lines,14,y);y+=5*lines.length+2;
+    });
+    doc.setFont('helvetica','normal');y+=4;
+  }
+  // Indicaciones / Notas
+  if(h.indicaciones||h.notas){
+    if(y>240){doc.addPage();y=20;}
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('INDICACIONES',14,y);y+=6;
+    doc.setFont('helvetica','normal');doc.setFontSize(9);
+    if(h.indicaciones){const ls=doc.splitTextToSize(h.indicaciones,180);doc.text(ls,14,y);y+=5*ls.length+3;}
+    if(h.notas){doc.setFont('helvetica','italic');const ls=doc.splitTextToSize('Notas: '+h.notas,180);doc.text(ls,14,y);y+=5*ls.length+3;doc.setFont('helvetica','normal');}
+  }
+  // Footer
+  doc.setFontSize(8);doc.setTextColor(150);
+  doc.text('ALBARABA SL  ·  '+new Date().toLocaleString('es-ES'),105,290,{align:'center'});
+  doc.save('hoja_servicio_'+(h.cliente||'servicio').replace(/\s/g,'_')+'_'+h.fecha+'.pdf');
+}
+
+
+// ═══════════════════════════════════════════════════
+// PEDIDO INFO HELPER
+// ═══════════════════════════════════════════════════
+function getPedidoInfo(h){
+  // Find all suppliers involved in this hoja
+  let maxDias=7;
+  (h.menu||[]).forEach(m=>{
+    const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);
+    if(!elab||!elab.ingredientes)return;
+    elab.ingredientes.forEach(ing=>{
+      const prod=DB.productos.find(x=>x.id===ing.producto_id);
+      if(!prod)return;
+      const prov=DB.proveedores.find(x=>x.id===prod.proveedor_id);
+      if(prov&&(prov.dias_pedido||7)>maxDias)maxDias=prov.dias_pedido||7;
+    });
+  });
+  const evDate=h.fecha?new Date(h.fecha+'T00:00:00'):new Date();
+  const pedDate=new Date(evDate);
+  pedDate.setDate(pedDate.getDate()-maxDias);
+  return{fechaPedido:pedDate,dias:maxDias};
+}
+
+// ═══════════════════════════════════════════════════
+// COSTE HOJA HELPER
+// ═══════════════════════════════════════════════════
+function calcCostoHoja(h){
+  const pax=parseInt(h.pax)||0;
+  const byProv={};let total=0;
+  (h.menu||[]).forEach(m=>{
+    const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);if(!elab||!elab.ingredientes)return;
+    const racPedidas=m.pax_override||pax;
+    const factor=racPedidas/(elab.raciones_base||10);
+    elab.ingredientes.forEach(ing=>{
+      if(!ing.producto_id)return;
+      const prod=DB.productos.find(x=>x.id===ing.producto_id);if(!prod)return;
+      let cantNec=ing.cantidad*factor;
+      if(prod.rendimiento>0)cantNec=Math.ceil(cantNec/prod.rendimiento);
+      const precio=parseFloat(prod.precio)||0;
+      const coste=cantNec*precio;
+      total+=coste;
+      const provId=prod.proveedor_id||'__none__';
+      if(!byProv[provId])byProv[provId]={nombre:provId==='__none__'?'Sin proveedor':(DB.proveedores.find(x=>x.id===provId)||{nombre:'Desconocido'}).nombre,coste:0};
+      byProv[provId].coste+=coste;
+    });
+  });
+  return{total,byProv};
+}
+
+// ═══════════════════════════════════════════════════
+// GASTOS
+// ═══════════════════════════════════════════════════
+function renderGastos(){
+  // Populate month filter
+  const meses=new Set();
+  DB.hojas.forEach(h=>{if(h.fecha)meses.add(h.fecha.slice(0,7));});
+  const selMes=document.getElementById('gastos-mes');
+  const curVal=selMes.value;
+  selMes.innerHTML='<option value="">Todos los meses</option>'+[...meses].sort().reverse().map(m=>{
+    const [y,mo]=m.split('-');
+    const lbl=new Date(y,parseInt(mo)-1,1).toLocaleString('es-ES',{month:'long',year:'numeric'});
+    return`<option value="${m}">${lbl}</option>`;
+  }).join('');
+  if(curVal)selMes.value=curVal;
+
+  const filtroMes=document.getElementById('gastos-mes').value;
+  const filtroFuente=document.getElementById('gastos-fuente').value;
+  let hojas=DB.hojas;
+  if(filtroMes)hojas=hojas.filter(h=>h.fecha&&h.fecha.startsWith(filtroMes));
+  if(filtroFuente)hojas=hojas.filter(h=>h.fuente===filtroFuente);
+
+  // Aggregate
+  let totalGlobal=0;const byProvGlobal={};
+  hojas.forEach(h=>{
+    const r=calcCostoHoja(h);
+    totalGlobal+=r.total;
+    Object.entries(r.byProv).forEach(([pid,d])=>{
+      if(!byProvGlobal[pid])byProvGlobal[pid]={nombre:d.nombre,coste:0};
+      byProvGlobal[pid].coste+=d.coste;
+    });
+  });
+
+  const fmtEur=n=>n.toFixed(2).replace('.',',')+'€';
+  // Stats
+  const sinPrecio=DB.hojas.length?DB.productos.filter(p=>!p.precio||parseFloat(p.precio)===0).length:0;
+  document.getElementById('gastos-stats').innerHTML=`
+    <div class="sc"><div class="sc-ic g">💰</div><div><div class="sc-v">${fmtEur(totalGlobal)}</div><div class="sc-l">Coste total periodo</div></div></div>
+    <div class="sc"><div class="sc-ic b">📋</div><div><div class="sc-v">${hojas.length}</div><div class="sc-l">Eventos</div></div></div>
+    <div class="sc"><div class="sc-ic gr">👥</div><div><div class="sc-v">${hojas.length?fmtEur(totalGlobal/hojas.length):'0,00€'}</div><div class="sc-l">Coste medio/evento</div></div></div>
+    ${sinPrecio?`<div class="sc"><div class="sc-ic r">⚠️</div><div><div class="sc-v">${sinPrecio}</div><div class="sc-l">Prods sin precio</div></div></div>`:''}`;
+
+  // By supplier summary
+  const provRows=Object.values(byProvGlobal).sort((a,b)=>b.coste-a.coste).map(p=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">🏭 ${esc(p.nombre)}</span>
+      <strong style="color:var(--primary)">${fmtEur(p.coste)}</strong>
+    </div>`).join('');
+
+  // Per-event cards
+  const eventCards=hojas.length?hojas.map(h=>{
+    const r=calcCostoHoja(h);
+    const d=h.fecha?new Date(h.fecha+'T00:00:00').toLocaleDateString('es-ES'):'—';
+    const badge=h.fuente==='pv'?'🌿 PV':'🍽 Alaboca';
+    const provLines=Object.values(r.byProv).sort((a,b)=>b.coste-a.coste).map(p=>`
+      <div class="ev-row"><span>🏭 ${esc(p.nombre)}</span><span>${fmtEur(p.coste)}</span></div>`).join('');
+    const costePax=h.pax>0?(r.total/h.pax):0;
+    const venta=parseFloat(h.precio_venta)||0;
+    const margen=venta>0?venta-r.total:0;
+    const margenPct=venta>0?Math.round(margen/venta*100):0;
+    return`<div class="gastos-ev">
+      <div class="ev-title">${esc(h.cliente)} <span style="font-size:11px;color:var(--muted);font-weight:400">${badge}</span></div>
+      <div class="ev-sub">${d} · ${h.pax} pax · ${esc(h.servicio||'')}</div>
+      ${provLines||'<div style="font-size:12px;color:var(--muted)">Sin ingredientes asignados</div>'}
+      <div class="ev-total"><span>Coste materia prima</span><span style="color:var(--primary)">${fmtEur(r.total)}</span></div>
+      ${costePax>0?`<div style="font-size:11px;color:var(--muted);margin-top:2px">Coste: ${fmtEur(costePax)} / persona</div>`:''}
+      ${venta>0?`<div style="margin-top:8px;padding:8px;background:${margen>=0?'#dcfce7':'#fee2e2'};border-radius:8px">
+        <div style="display:flex;justify-content:space-between;font-size:13px"><span>💰 Precio venta</span><strong>${fmtEur(venta)}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px"><span>📈 Margen bruto</span><strong style="color:${margen>=0?'#15803d':'#dc2626'}">${fmtEur(margen)} (${margenPct}%)</strong></div>
+      </div>`:'<div style="font-size:11px;color:var(--muted);margin-top:4px">Añade precio de venta en la hoja para ver el margen</div>'}
+    </div>`;
+  }).join(''):'<div class="empty"><div class="ic">💰</div><p>No hay eventos en este periodo.<br>Asegúrate de añadir precios a los productos.</p></div>';
+
+  document.getElementById('gastos-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="card"><div class="card-head"><h3>🏭 Gasto por proveedor</h3></div>
+        <div style="padding:16px">${provRows||'<div class="empty"><p>Sin datos. Añade precios a los productos.</p></div>'}</div>
+      </div>
+      <div class="card"><div class="card-head"><h3>ℹ️ Ayuda</h3></div>
+        <div style="padding:16px;font-size:13px;color:var(--muted);line-height:1.6">
+          Los costes se calculan automáticamente a partir del <strong>precio por unidad</strong> de cada producto y los ingredientes de cada elaboración.<br><br>
+          Para ver datos: asegúrate de que los productos tienen <strong>precio</strong> y las elaboraciones tienen <strong>ingredientes</strong> asignados.
+        </div>
+      </div>
+    </div>
+    <div class="card"><div class="card-head"><h3>📋 Coste por evento</h3></div>
+      <div style="padding:16px"><div class="gastos-grid">${eventCards}</div></div>
+    </div>`;
+}
+
+function exportarGastosExcel(){
+  if(!window.XLSX){alert('Espera a que cargue la librería Excel.');return;}
+  const filtroMes=document.getElementById('gastos-mes').value;
+  const filtroFuente=document.getElementById('gastos-fuente').value;
+  let hojas=DB.hojas;
+  if(filtroMes)hojas=hojas.filter(h=>h.fecha&&h.fecha.startsWith(filtroMes));
+  if(filtroFuente)hojas=hojas.filter(h=>h.fuente===filtroFuente);
+  const rows=[['Fecha','Cliente','Marca','PAX','Servicio','Lugar','Proveedor','Coste(€)','Coste/pax(€)']];
+  hojas.forEach(h=>{
+    const r=calcCostoHoja(h);
+    const d=h.fecha||'';
+    const marca=h.fuente==='pv'?'Placeres de la Vida':'Alaboca Catering';
+    const costePax=h.pax>0?parseFloat((r.total/h.pax).toFixed(2)):0;
+    if(Object.keys(r.byProv).length===0){
+      rows.push([d,h.cliente,marca,h.pax,h.servicio||'',h.lugar||'','—',0,costePax]);
+    } else {
+      Object.values(r.byProv).forEach(p=>{
+        rows.push([d,h.cliente,marca,h.pax,h.servicio||'',h.lugar||'',p.nombre,parseFloat(p.coste.toFixed(2)),costePax]);
+      });
+    }
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Gastos');
+  XLSX.writeFile(wb,'gastos_albaraba_'+(filtroMes||'todos')+'.xlsx');
+}
+
+// ═══════════════════════════════════════════════════
+// BACKUP — EXPORTAR / IMPORTAR
+// ═══════════════════════════════════════════════════
+function exportData(){
+  const ahora=new Date();
+  const fechaStr=ahora.toISOString().slice(0,10);
+  const horaStr=ahora.toTimeString().slice(0,5).replace(':','h');
+  const backup={
+    _version:'albaraba_v2',
+    _app:'Albaraba Gestión — Alaboca Catering',
+    _fecha_exportacion:ahora.toISOString(),
+    _resumen:{
+      proveedores:DB.proveedores.length,
+      productos:DB.productos.length,
+      elaboraciones:DB.elaboraciones.length,
+      pedidos:DB.pedidos.length,
+      hojas:DB.hojas.length
+    },
+    proveedores:DB.proveedores,
+    productos:DB.productos,
+    elaboraciones:DB.elaboraciones,
+    pedidos:DB.pedidos,
+    hojas:DB.hojas,
+    appcc:DB.appcc
+  };
+  // Incluir también precios del presupuesto si existen
+  const preciosRaw=localStorage.getItem('catering_precios_v1');
+  if(preciosRaw) try{backup._precios_presupuesto=JSON.parse(preciosRaw);}catch(e){}
+
+  const json=JSON.stringify(backup,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`Albaraba_Backup_${fechaStr}_${horaStr}.json`;
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+
+  // Feedback visual en el nav
+  const btns=[...document.querySelectorAll('.ni')].filter(n=>n.textContent.includes('Exportar'));
+  if(btns[0]){
+    const orig=btns[0].innerHTML;
+    btns[0].innerHTML='<span class="ic">✅</span> ¡Backup guardado!';
+    btns[0].style.color='#22c55e';
+    setTimeout(()=>{btns[0].innerHTML=orig;btns[0].style.color='';},2500);
+  }
+}
+
+function importData(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  event.target.value=''; // reset so same file can be re-imported
+  const reader=new FileReader();
+  reader.onload=function(e){
+    let data;
+    try{data=JSON.parse(e.target.result);}
+    catch(err){alert('❌ El archivo no es un JSON válido.\n\nAsegúrate de seleccionar un backup generado por esta aplicación.');return;}
+
+    // Validar estructura básica
+    if(!data.proveedores&&!data.productos&&!data.elaboraciones){
+      alert('❌ Este archivo no parece un backup de Albaraba Gestión.\n\nSolo se pueden importar backups exportados desde esta aplicación.');return;
+    }
+
+    const res=data._resumen||{};
+    const nprov=data.proveedores?.length||0;
+    const nprod=data.productos?.length||0;
+    const nelab=data.elaboraciones?.length||0;
+    const nped=data.pedidos?.length||0;
+    const nhojas=data.hojas?.length||0;
+    const fechaExp=data._fecha_exportacion?new Date(data._fecha_exportacion).toLocaleString('es-ES'):'Desconocida';
+
+    const msg=`📦 IMPORTAR BACKUP\n\nFecha del backup: ${fechaExp}\n\nContenido:\n• ${nprov} proveedores\n• ${nprod} productos\n• ${nelab} elaboraciones\n• ${nped} pedidos\n• ${nhojas} hojas de servicio\n\n⚠️ ATENCIÓN: Esto REEMPLAZARÁ todos los datos actuales.\n\n¿Confirmar importación?`;
+
+    if(!confirm(msg))return;
+
+    // Importar
+    if(data.proveedores) DB.proveedores=data.proveedores;
+    if(data.productos) DB.productos=data.productos;
+    if(data.elaboraciones) DB.elaboraciones=data.elaboraciones;
+    if(data.pedidos) DB.pedidos=data.pedidos;
+    if(data.hojas) DB.hojas=data.hojas;
+    saveDB();
+
+    // Restaurar precios de presupuesto si vienen en el backup
+    if(data._precios_presupuesto){
+      localStorage.setItem('catering_precios_v1',JSON.stringify(data._precios_presupuesto));
+    }
+
+    if(data.appcc)DB.appcc=data.appcc;
+    saveDB();
+    alert(`✅ Backup importado correctamente.\n\n${nprov} proveedores · ${nprod} productos · ${nelab} elaboraciones · ${nped} pedidos · ${nhojas} servicios`);
+    nav('dashboard');
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+// ═══════════════════════════════════════════════════
+// APPCC
+// ═══════════════════════════════════════════════════
+function switchAppccTab(el,tabId){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['appcc-tab-limpieza','appcc-tab-incidencias'].forEach(id=>{
+    const t=document.getElementById(id);if(t)t.style.display='none';
+  });
+  const target=document.getElementById(tabId);if(target)target.style.display='';
+}
+function renderAppcc(){
+  const hoy=new Date().toISOString().slice(0,10);
+  ['l-fecha','i-fecha'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=hoy;});
+  renderLimpieza();renderIncidencias();
+}
+function guardarLimpieza(){
+  const fecha=document.getElementById('l-fecha').value;
+  if(!fecha){alert('Indica la fecha');return;}
+  const obj={id:uid(),fecha,zona:document.getElementById('l-zona').value,producto:document.getElementById('l-prod').value,responsable:document.getElementById('l-resp').value,obs:document.getElementById('l-obs').value};
+  DB.appcc.limpiezas.unshift(obj);saveDB();renderLimpieza();
+  ['l-prod','l-resp','l-obs'].forEach(id=>document.getElementById(id).value='');
+}
+function renderLimpieza(){
+  const tbody=document.getElementById('limpieza-tbody');if(!tbody)return;
+  const list=DB.appcc.limpiezas;
+  tbody.innerHTML=list.length?list.map(l=>`<tr>
+    <td>${l.fecha}</td><td>${esc(l.zona)}</td><td>${esc(l.producto||'—')}</td>
+    <td>${esc(l.responsable||'—')}</td><td style="font-size:12px">${esc(l.obs||'')}</td>
+    <td><button class="btn btn-sm btn-del" onclick="deleteLimpieza('${l.id}')">🗑</button></td>
+  </tr>`).join(''):`<tr><td colspan="6"><div class="empty"><p>Sin registros de limpieza</p></div></td></tr>`;
+}
+function deleteLimpieza(id){
+  if(!confirm('¿Eliminar este registro?'))return;
+  DB.appcc.limpiezas=DB.appcc.limpiezas.filter(l=>l.id!==id);saveDB();renderLimpieza();
+}
+function guardarIncidencia(){
+  const fecha=document.getElementById('i-fecha').value;
+  const desc=document.getElementById('i-desc').value.trim();
+  if(!fecha||!desc){alert('Fecha y descripción son obligatorias');return;}
+  const obj={id:uid(),fecha,tipo:document.getElementById('i-tipo').value,descripcion:desc,accion:document.getElementById('i-accion').value,responsable:document.getElementById('i-resp').value,estado:document.getElementById('i-estado').value};
+  DB.appcc.incidencias.unshift(obj);saveDB();renderIncidencias();
+  ['i-desc','i-accion','i-resp'].forEach(id=>document.getElementById(id).value='');
+}
+function renderIncidencias(){
+  const tbody=document.getElementById('incidencias-tbody');if(!tbody)return;
+  const list=DB.appcc.incidencias;
+  tbody.innerHTML=list.length?list.map(i=>`<tr>
+    <td>${i.fecha}</td><td><span class="badge b-warn">${esc(i.tipo)}</span></td>
+    <td style="font-size:12px;max-width:180px">${esc(i.descripcion)}</td>
+    <td style="font-size:12px">${esc(i.accion||'—')}</td>
+    <td>${esc(i.responsable||'—')}</td>
+    <td><span class="badge ${i.estado==='cerrada'?'b-ok':'b-red'}">${i.estado==='cerrada'?'✅ Resuelta':'🔴 Abierta'}</span></td>
+    <td><button class="btn btn-sm btn-del" onclick="deleteIncidencia('${i.id}')">🗑</button></td>
+  </tr>`).join(''):`<tr><td colspan="7"><div class="empty"><p>Sin incidencias registradas ✅</p></div></td></tr>`;
+}
+function deleteIncidencia(id){
+  if(!confirm('¿Eliminar esta incidencia?'))return;
+  DB.appcc.incidencias=DB.appcc.incidencias.filter(i=>i.id!==id);saveDB();renderIncidencias();
+}
+function exportarAppccExcel(){
+  if(!window.XLSX){alert('Espera a que cargue la librería Excel.');return;}
+  const wb=XLSX.utils.book_new();
+  const rowsL=[['Fecha','Zona','Producto','Responsable','Observaciones']];
+  DB.appcc.limpiezas.forEach(l=>rowsL.push([l.fecha,l.zona,l.producto,l.responsable,l.obs]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rowsL),'Limpieza');
+  const rowsI=[['Fecha','Tipo','Descripción','Acción correctora','Responsable','Estado']];
+  DB.appcc.incidencias.forEach(i=>rowsI.push([i.fecha,i.tipo,i.descripcion,i.accion,i.responsable,i.estado]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rowsI),'Incidencias');
+  XLSX.writeFile(wb,'APPCC_Albaraba_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+function cerrarSesion(){
+  if(fbAuth){fbAuth.signOut().then(()=>{localStorage.removeItem('albaraba_v2_user');location.reload();});}
+}
+
+function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pwd=document.getElementById('login-pwd').value;
+  const err=document.getElementById('login-error');
+  if(!email||!pwd){err.textContent='Rellena email y contraseña';return;}
+  err.textContent='Conectando...';
+  const btn=document.getElementById('login-btn');
+  if(btn)btn.disabled=true;
+  fbAuth.signInWithEmailAndPassword(email,pwd)
+    .then(()=>{/* onAuthStateChanged lo maneja */})
+    .catch(e=>{
+      err.textContent='Usuario o contraseña incorrectos';
+      if(btn)btn.disabled=false;
+    });
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  if(FB_READY&&fbAuth){
+    // Con Firebase: esperar a que el estado de auth esté listo
+    fbAuth.onAuthStateChanged(user=>{
+      const overlay=document.getElementById('login-overlay');
+      if(user){
+        if(overlay)overlay.style.display='none';
+        loadDB();
+        nav('dashboard');
+      } else {
+        if(overlay)overlay.style.display='flex';
+      }
+    });
+  } else {
+    // Sin Firebase configurado: entrar directamente (modo local)
+    const overlay=document.getElementById('login-overlay');
+    if(overlay)overlay.style.display='none';
+    loadDB();
+    nav('dashboard');
+  }
+});
+</script>
+
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay" style="position:fixed;inset:0;background:var(--primary);z-index:9999;display:none;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:48px;margin-bottom:8px">🍽</div>
+      <h2 style="font-size:20px;font-weight:700;color:var(--primary)">Albaraba SL</h2>
+      <p style="font-size:13px;color:var(--muted);margin-top:4px">Gestión de Catering · APPCC</p>
+    </div>
+    <div class="fg"><label class="fl">Email</label>
+      <input id="login-email" type="email" class="fc" placeholder="contacto@alaboca.es" onkeydown="if(event.key==='Enter')document.getElementById('login-pwd').focus()">
+    </div>
+    <div class="fg"><label class="fl">Contraseña</label>
+      <input id="login-pwd" type="password" class="fc" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button id="login-btn" class="btn btn-gold" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:4px" onclick="doLogin()">Entrar →</button>
+    <div id="login-error" style="color:#dc2626;font-size:12px;text-align:center;margin-top:10px;min-height:18px"></div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--muted)">🔒 Acceso seguro con Firebase</div>
+  </div>
+</div>
+</body>
+</html>

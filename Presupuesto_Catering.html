@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generador de Presupuestos — Catering</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+:root{--c1:#00695c;--c2:#E8651A;--c3:#b2dfdb;--clight:#e0f2f1;--cfont:#00695c;}
+.pv :root,body.pv{--c1:#2e7d32;--c2:#a07830;--c3:#c8e6c9;--clight:#e8f5e9;--cfont:#2e7d32;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f4f6f4;color:#222;font-size:14px;padding-bottom:40px}
+header{background:var(--c1);color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+header h1{font-size:1.1em;letter-spacing:.5px}
+.brand-btns{display:flex;gap:6px}
+.brand-btn{padding:7px 16px;border:2px solid rgba(255,255,255,.5);border-radius:20px;color:#fff;background:transparent;cursor:pointer;font-size:.85em;font-weight:700}
+.brand-btn.activo{background:#fff;color:var(--c1)}
+.card{background:#fff;margin:10px;border-radius:10px;padding:14px;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.card-tit{font-size:.82em;font-weight:700;color:var(--c1);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.card-tit .tog{margin-left:auto;font-size:1em;transition:transform .2s}
+.card-tit.cerrado .tog{transform:rotate(-90deg)}
+.card-body.oculto{display:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.full{grid-column:1/-1}
+label{font-size:.76em;font-weight:700;color:#555;display:block;margin-bottom:3px}
+input[type=text],input[type=number],input[type=date],input[type=email],select,textarea{width:100%;padding:8px 10px;border:1.5px solid #ddd;border-radius:7px;font-size:.95em;background:#fafafa}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--c1)}
+textarea{resize:vertical;min-height:60px}
+
+/* SERVICIOS */
+.srv-bloque{border:1.5px solid #e0e0e0;border-radius:8px;margin-bottom:8px;overflow:hidden}
+.srv-cabecera{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f9f9f9;cursor:pointer}
+.srv-cabecera input[type=checkbox]{width:17px;height:17px;accent-color:var(--c1);cursor:pointer;flex-shrink:0}
+.srv-cabecera span{font-weight:700;font-size:.88em;flex:1}
+.srv-cabecera .srv-preview{font-size:.78em;color:#888;margin-left:auto}
+.srv-body{padding:12px;display:none;border-top:1px solid #eee;background:#fff}
+.srv-body.visible{display:block}
+.radio-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.radio-opt{padding:5px 11px;border:1.5px solid #ddd;border-radius:15px;font-size:.8em;cursor:pointer;background:#fafafa}
+.radio-opt.sel{background:var(--c1);color:#fff;border-color:var(--c1)}
+.radio-opt-naranja.sel{background:var(--c2);border-color:var(--c2)}
+.linea-extra{display:grid;grid-template-columns:auto 1fr 90px;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:.85em}
+.linea-extra:last-child{border-bottom:none}
+.linea-extra input[type=checkbox]{width:16px;height:16px;accent-color:var(--c1)}
+.linea-extra input[type=number]{width:80px;padding:5px 7px;border:1.5px solid #ddd;border-radius:6px;font-size:.9em;text-align:center}
+.extra-precio{font-size:.78em;color:#888}
+.nota-srv{background:#fff8e1;border-left:3px solid #ffc107;padding:7px 10px;border-radius:4px;font-size:.8em;color:#5d4037;margin-top:8px}
+
+/* RACIONES GRID */
+.raciones-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.racion-item{display:flex;align-items:center;gap:6px;font-size:.82em;padding:3px 0}
+.racion-item input[type=number]{width:55px;padding:4px 6px;border:1.5px solid #ddd;border-radius:5px;text-align:center}
+
+/* TOTALES */
+.totales-box{background:var(--clight);border-radius:8px;padding:12px;margin-top:8px}
+.tot-fila{display:flex;justify-content:space-between;padding:4px 0;font-size:.9em;border-bottom:1px solid rgba(0,0,0,.06)}
+.tot-fila:last-child{border-bottom:none;font-weight:700;font-size:1.05em;color:var(--c1);padding-top:8px}
+.lineas-preview{margin-top:8px}
+.linea-prev{display:flex;justify-content:space-between;font-size:.8em;padding:3px 0;border-bottom:1px solid #f0f0f0;color:#444}
+
+/* BOTONES */
+.btns-main{display:flex;gap:8px;margin:10px;flex-wrap:wrap}
+.btn-gen{flex:1;background:var(--c1);color:#fff;border:none;padding:13px;border-radius:10px;font-size:.95em;font-weight:700;cursor:pointer;min-width:140px}
+.btn-impr{flex:1;background:#444;color:#fff;border:none;padding:13px;border-radius:10px;font-size:.95em;cursor:pointer;min-width:140px}
+.btn-gen:active,.btn-impr:active{filter:brightness(.85)}
+
+/* EDITOR DE PRECIOS */
+.precio-editor{background:#fff;border:1.5px solid var(--c1);border-radius:8px;padding:10px;margin-bottom:12px}
+.precio-tabs{display:flex;gap:4px;margin-bottom:10px}
+.precio-tab{padding:5px 14px;border:1.5px solid #ddd;border-radius:15px;font-size:.78em;font-weight:700;cursor:pointer;background:#f5f5f5}
+.precio-tab.activo{background:var(--c1);color:#fff;border-color:var(--c1)}
+.precio-panel{display:none}
+.precio-panel.visible{display:block}
+.precio-seccion{margin-bottom:10px}
+.precio-seccion h4{font-size:.78em;font-weight:700;color:var(--c1);text-transform:uppercase;margin-bottom:6px;border-bottom:1px solid var(--c3);padding-bottom:3px}
+.precio-grid{display:grid;grid-template-columns:1fr 80px;gap:5px 8px;align-items:center}
+.precio-grid label{font-size:.78em;color:#555;margin:0}
+.precio-grid input{padding:5px 7px;border:1.5px solid #ddd;border-radius:5px;font-size:.85em;text-align:right}
+.btn-save-precios{background:var(--c2);color:#fff;border:none;padding:8px 18px;border-radius:20px;font-size:.82em;font-weight:700;cursor:pointer;margin-top:8px}
+
+/* ── RESULTADO PDF ── */
+#resultado{display:none;margin:10px}
+.pres-wrap{background:#fff;padding:20px;border-radius:8px;font-family:Arial,sans-serif;font-size:13px;color:#222}
+.pres-header-ab{background:#1a3a2a;color:#fff;padding:14px 18px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start}
+.pres-header-pv{background:#1b3a1b;color:#fff;padding:14px 18px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start}
+.pres-logo-txt{font-size:1.5em;font-weight:900;letter-spacing:1px}
+.pres-logo-sub{font-size:.75em;opacity:.8;margin-top:2px}
+.pres-contact{font-size:.72em;opacity:.8;text-align:right;line-height:1.6}
+.pres-num-box{background:#f5f5f5;border:1px solid #e0e0e0;border-radius:0 0 6px 6px;padding:10px 18px;display:flex;justify-content:space-between;font-size:.82em;color:#555;margin-bottom:12px}
+.pres-cliente-box{border:1px solid #e0e0e0;border-radius:6px;padding:10px 14px;margin-bottom:12px;background:#fafafa}
+.pres-cliente-box h3{font-size:.78em;font-weight:700;text-transform:uppercase;color:#888;margin-bottom:6px;letter-spacing:.5px}
+.pres-cliente-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:.85em}
+.pres-cliente-grid strong{color:#555;font-size:.9em}
+table.pres-tabla{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:.85em}
+table.pres-tabla th{background:var(--c1);color:#fff;padding:7px 10px;text-align:left;font-weight:700}
+table.pres-tabla th:last-child,table.pres-tabla td:last-child{text-align:right}
+table.pres-tabla th:nth-child(2),table.pres-tabla td:nth-child(2){text-align:center;width:60px}
+table.pres-tabla th:nth-child(3),table.pres-tabla td:nth-child(3){text-align:right;width:90px}
+table.pres-tabla td{padding:6px 10px;border-bottom:1px solid #f0f0f0}
+table.pres-tabla tr:nth-child(even) td{background:#fafafa}
+table.pres-tabla tr.grupo td{background:var(--clight);font-weight:700;font-size:.8em;color:var(--c1);text-transform:uppercase;letter-spacing:.5px}
+.pres-totales{margin-left:auto;width:280px;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;margin-bottom:12px}
+.pres-tot-fila{display:flex;justify-content:space-between;padding:6px 12px;font-size:.88em;border-bottom:1px solid #f0f0f0}
+.pres-tot-fila.total{background:var(--c1);color:#fff;font-weight:700;font-size:1em;border:none}
+.pres-condiciones{border:1px solid #e0e0e0;border-radius:6px;padding:10px 14px;font-size:.8em;color:#555;margin-bottom:12px;background:#fafafa}
+.pres-condiciones h4{font-weight:700;margin-bottom:5px;color:#333;font-size:.9em}
+.pres-pie{text-align:center;font-size:.72em;color:#999;margin-top:16px;border-top:1px solid #e0e0e0;padding-top:8px}
+.pres-firma{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px}
+.pres-firma-box{border-top:1.5px solid #ccc;padding-top:8px;font-size:.8em;color:#666;text-align:center}
+
+/* SAVE BAR */
+#save-bar{position:fixed;bottom:0;left:0;right:0;background:#263238;color:#b2dfdb;font-size:.75em;padding:5px 12px;display:flex;justify-content:space-between;align-items:center;z-index:999}
+
+@media print{
+  header,.card,.btns-main,#save-bar{display:none!important}
+  #resultado{display:block!important;margin:0}
+  .pres-wrap{padding:10mm;box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📋 GENERADOR DE PRESUPUESTOS</h1>
+  <div class="brand-btns">
+    <button class="brand-btn activo" id="btn-ab" onclick="cambiarMarca('AB')">🍽 A LA BOCA</button>
+    <button class="brand-btn" id="btn-pv" onclick="cambiarMarca('PV')">🌿 PLACERES DE LA VIDA</button>
+  </div>
+</header>
+
+<!-- ══ EDITOR DE PRECIOS ══ -->
+<div class="card" id="card-precios">
+  <div class="card-tit cerrado" onclick="toggleCard('card-precios')">
+    ⚙ Configurar precios <small style="font-weight:400;text-transform:none;color:#888">(guardar aquí cuando cambies tarifas)</small>
+    <span class="tog">▼</span>
+  </div>
+  <div class="card-body oculto" id="body-precios">
+    <div class="precio-tabs">
+      <button class="precio-tab activo" onclick="showPrecioTab('AB')">A La Boca</button>
+      <button class="precio-tab" onclick="showPrecioTab('PV')">Placeres de la Vida</button>
+    </div>
+    <!-- ALABOCA PRECIOS -->
+    <div class="precio-panel visible" id="ptab-AB">
+      <div class="precio-seccion">
+        <h4>🥂 Cóctel Gourmet (€/pax + IVA)</h4>
+        <div class="precio-grid">
+          <label>Experiencia Gourmet</label><input type="number" id="p_ab_gourmet" step="0.01">
+          <label>Experiencia Selección</label><input type="number" id="p_ab_seleccion" step="0.01">
+          <label>Experiencia Signature</label><input type="number" id="p_ab_signature" step="0.01">
+          <label>Experiencia Premium</label><input type="number" id="p_ab_premium" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>🥪 Combo Pinchos (€/pax + IVA)</h4>
+        <div class="precio-grid">
+          <label>Opción 1 (4 pinchos + 1 beb)</label><input type="number" id="p_ab_combo1" step="0.01">
+          <label>Opción 2 (6 pinchos + 2 beb)</label><input type="number" id="p_ab_combo2" step="0.01">
+          <label>Opción 3 (6 pinchos + dulce + 2 beb)</label><input type="number" id="p_ab_combo3" step="0.01">
+          <label>Opción 4 (8 pinchos + dulce + 2 beb)</label><input type="number" id="p_ab_combo4" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>📦 Cajas de Pintxos (€/caja)</h4>
+        <div class="precio-grid">
+          <label>Caja 1</label><input type="number" id="p_ab_caja1" step="0.01">
+          <label>Caja 2</label><input type="number" id="p_ab_caja2" step="0.01">
+          <label>Caja 3</label><input type="number" id="p_ab_caja3" step="0.01">
+          <label>Caja 4</label><input type="number" id="p_ab_caja4" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>☕ Coffee Break (€/pax + IVA)</h4>
+        <div class="precio-grid">
+          <label>Opción 1 (café + 2 dulces)</label><input type="number" id="p_ab_cb1" step="0.01">
+          <label>Opción 2 (+ 1 salado)</label><input type="number" id="p_ab_cb2" step="0.01">
+          <label>Opción 3 (+ 2 salados)</label><input type="number" id="p_ab_cb3" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>🍽 Menús Blusas (€/pax + IVA)</h4>
+        <div class="precio-grid">
+          <label>Menú 1</label><input type="number" id="p_ab_blusa1" step="0.01">
+          <label>Menú 2</label><input type="number" id="p_ab_blusa2" step="0.01">
+          <label>Menú 3</label><input type="number" id="p_ab_blusa3" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>🎉 Menús Cuadrillas (€/pax + IVA)</h4>
+        <div class="precio-grid">
+          <label>Menú Celedón</label><input type="number" id="p_ab_celedon" step="0.01">
+          <label>Menú La Blanca</label><input type="number" id="p_ab_blanca" step="0.01">
+          <label>Menú San Prudencio</label><input type="number" id="p_ab_sanpru" step="0.01">
+          <label>Menú Olarizu</label><input type="number" id="p_ab_olarizu" step="0.01">
+          <label>Menú Umeak (infantil)</label><input type="number" id="p_ab_umeak" step="0.01">
+          <label>Bebidas (vino+gaseosa+pan)</label><input type="number" id="p_ab_beb" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>🍖 Upgrades 2º Plato (+€/pax)</h4>
+        <div class="precio-grid">
+          <label>Pollo de corral con boletus</label><input type="number" id="p_ab_up_pollo" step="0.01">
+          <label>Cordero lechal asado</label><input type="number" id="p_ab_up_cordero" step="0.01">
+          <label>Cochinillo asado</label><input type="number" id="p_ab_up_cochi" step="0.01">
+          <label>Carrillera ibérica al Oporto</label><input type="number" id="p_ab_up_carrillera" step="0.01">
+          <label>Confit de pato con arándanos</label><input type="number" id="p_ab_up_pato" step="0.01">
+          <label>Taco de bacalao</label><input type="number" id="p_ab_up_bacalao" step="0.01">
+          <label>Kokotxas en salsa verde</label><input type="number" id="p_ab_up_kokotxas" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>➕ Extras y Servicios</h4>
+        <div class="precio-grid">
+          <label>Camarero (€/hora)</label><input type="number" id="p_ab_camarero" step="0.01">
+          <label>Copa/vaso cristal (€/uds)</label><input type="number" id="p_ab_cristal" step="0.01">
+          <label>Mesa alta/baja (€/uds)</label><input type="number" id="p_ab_mesa" step="0.01">
+          <label>Recargo &lt;40 pax (€ fijo)</label><input type="number" id="p_ab_recargo" step="0.01">
+        </div>
+      </div>
+    </div>
+    <!-- PV PRECIOS -->
+    <div class="precio-panel" id="ptab-PV">
+      <div class="precio-seccion">
+        <h4>🍢 Lunch &amp; Cóctel (€/pax + IVA)</h4>
+        <div class="precio-grid">
+          <label>3 pinchos + bebida</label><input type="number" id="p_pv_l1" step="0.01">
+          <label>5 pinchos + bebida</label><input type="number" id="p_pv_l2" step="0.01">
+          <label>6 pinchos + postre + bebida</label><input type="number" id="p_pv_l3" step="0.01">
+          <label>7 pinchos + 2 postres + bebida</label><input type="number" id="p_pv_l4" step="0.01">
+          <label>Descuento sin bebidas (€/pax)</label><input type="number" id="p_pv_sinbeb" step="0.01">
+          <label>Vinos + tablas (€/pax extra)</label><input type="number" id="p_pv_vinos" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>☕ Coffee Break (€/pax + IVA)</h4>
+        <div class="precio-grid">
+          <label>Coffee Break Básico</label><input type="number" id="p_pv_cb1" step="0.01">
+          <label>Menú Completo</label><input type="number" id="p_pv_cb2" step="0.01">
+          <label>Menú Completo 2</label><input type="number" id="p_pv_cb3" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>🍽 Menús (€/pax + IVA)</h4>
+        <div class="precio-grid">
+          <label>Menú Popular</label><input type="number" id="p_pv_popular" step="0.01">
+          <label>Menú Celebración</label><input type="number" id="p_pv_celebracion" step="0.01">
+          <label>Menú Infantil</label><input type="number" id="p_pv_infantil" step="0.01">
+          <label>Platos Cazuela (desde)</label><input type="number" id="p_pv_cazuela" step="0.01">
+          <label>Extra Mesas+Sillas (€/pax)</label><input type="number" id="p_pv_msillas" step="0.01">
+          <label>Extra Vajilla porcelana (€/pax)</label><input type="number" id="p_pv_vajilla" step="0.01">
+          <label>Extra Café (€/pax)</label><input type="number" id="p_pv_cafe" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>📦 Menú Envasado Popular</h4>
+        <div class="precio-grid">
+          <label>Precio base (€/pax)</label><input type="number" id="p_pv_envasado" step="0.01">
+          <label>Extra bebidas+manteles (€/pax)</label><input type="number" id="p_pv_env_beb" step="0.01">
+        </div>
+      </div>
+      <div class="precio-seccion">
+        <h4>➕ Extras y Servicios</h4>
+        <div class="precio-grid">
+          <label>Camarero (€/hora)</label><input type="number" id="p_pv_camarero" step="0.01">
+          <label>Mesa con mantel (€/uds)</label><input type="number" id="p_pv_mesa" step="0.01">
+          <label>Silla (€/uds)</label><input type="number" id="p_pv_silla" step="0.01">
+          <label>Cristalería normal (€/uds)</label><input type="number" id="p_pv_cristal" step="0.01">
+          <label>Pincho extra (€/uds)</label><input type="number" id="p_pv_pinchoext" step="0.01">
+          <label>Postre extra (€/uds)</label><input type="number" id="p_pv_postreext" step="0.01">
+        </div>
+      </div>
+    </div>
+    <button class="btn-save-precios" onclick="guardarPrecios()">💾 Guardar precios</button>
+  </div>
+</div>
+
+<!-- ══ DATOS DEL PRESUPUESTO ══ -->
+<div class="card">
+  <div class="card-tit">📝 Datos del presupuesto</div>
+  <div class="grid2">
+    <div><label>Nº Presupuesto</label><input type="text" id="num-pres" placeholder="P2026001"></div>
+    <div><label>Fecha</label><input type="date" id="fecha-pres"></div>
+    <div class="full"><label>Cliente / Empresa</label><input type="text" id="cliente" placeholder="Nombre del cliente o empresa"></div>
+    <div><label>Teléfono</label><input type="text" id="tel-cliente" placeholder="600 000 000"></div>
+    <div><label>Email</label><input type="email" id="email-cliente" placeholder="cliente@email.com"></div>
+    <div class="full"><label>Descripción del evento</label><input type="text" id="desc-evento" placeholder="Ej: Coctel de empresa, graduación..."></div>
+    <div><label>Fecha del evento</label><input type="date" id="fecha-evento"></div>
+    <div><label>Nº Comensales</label><input type="number" id="pax-total" placeholder="50" min="1"></div>
+    <div class="full"><label>Ubicación del evento</label><input type="text" id="ubic-evento" placeholder="Dirección o nombre del espacio"></div>
+  </div>
+</div>
+
+<!-- ══ SERVICIOS ALABOCA ══ -->
+<div class="card" id="card-ab">
+  <div class="card-tit">🍽 Servicios A La Boca</div>
+
+  <!-- Cóctel Gourmet -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('ab-coctel')">
+      <input type="checkbox" id="cb-ab-coctel" onchange="calcular()">
+      <span>🥂 Cóctel Gourmet</span>
+      <span class="srv-preview" id="prev-ab-coctel"></span>
+    </div>
+    <div class="srv-body" id="ab-coctel">
+      <label>Experiencia</label>
+      <div class="radio-row" id="radio-ab-coctel">
+        <div class="radio-opt sel" onclick="selRadio('radio-ab-coctel',this,'gourmet')">Gourmet</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-coctel',this,'seleccion')">Selección</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-coctel',this,'signature')">Signature</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-coctel',this,'premium')">Premium</div>
+      </div>
+      <div class="grid2">
+        <div><label>Nº Comensales</label><input type="number" id="pax-ab-coctel" placeholder="40" min="1" oninput="calcular()"></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:2px"><span id="info-ab-coctel" style="font-size:.8em;color:#888"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Combo Pinchos -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('ab-pinchos')">
+      <input type="checkbox" id="cb-ab-pinchos" onchange="calcular()">
+      <span>🥪 Combo Pinchos</span>
+      <span class="srv-preview" id="prev-ab-pinchos"></span>
+    </div>
+    <div class="srv-body" id="ab-pinchos">
+      <div class="radio-row" id="radio-ab-pinchos">
+        <div class="radio-opt sel" onclick="selRadio('radio-ab-pinchos',this,'combo1')">Opción 1</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-pinchos',this,'combo2')">Opción 2</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-pinchos',this,'combo3')">Opción 3</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-pinchos',this,'combo4')">Opción 4</div>
+      </div>
+      <div class="grid2">
+        <div><label>Nº Comensales</label><input type="number" id="pax-ab-pinchos" placeholder="40" min="1" oninput="calcular()"></div>
+        <div style="display:flex;align-items:flex-end;padding-bottom:2px"><span id="info-ab-pinchos" style="font-size:.8em;color:#888"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cajas Pintxos -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('ab-cajas')">
+      <input type="checkbox" id="cb-ab-cajas" onchange="calcular()">
+      <span>📦 Cajas de Pintxos</span>
+      <span class="srv-preview" id="prev-ab-cajas"></span>
+    </div>
+    <div class="srv-body" id="ab-cajas">
+      <div class="grid2">
+        <div><label>Caja 1 (clásica)</label><input type="number" id="q-ab-caja1" placeholder="0" min="0" oninput="calcular()"></div>
+        <div><label>Caja 2 (gourmet)</label><input type="number" id="q-ab-caja2" placeholder="0" min="0" oninput="calcular()"></div>
+        <div><label>Caja 3 (especial)</label><input type="number" id="q-ab-caja3" placeholder="0" min="0" oninput="calcular()"></div>
+        <div><label>Caja 4 (popular)</label><input type="number" id="q-ab-caja4" placeholder="0" min="0" oninput="calcular()"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coffee Break -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('ab-coffee')">
+      <input type="checkbox" id="cb-ab-coffee" onchange="calcular()">
+      <span>☕ Coffee Break</span>
+      <span class="srv-preview" id="prev-ab-coffee"></span>
+    </div>
+    <div class="srv-body" id="ab-coffee">
+      <div class="radio-row" id="radio-ab-coffee">
+        <div class="radio-opt sel" onclick="selRadio('radio-ab-coffee',this,'cb1')">Opción 1</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-coffee',this,'cb2')">Opción 2</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-coffee',this,'cb3')">Opción 3</div>
+      </div>
+      <div><label>Nº Comensales</label><input type="number" id="pax-ab-coffee" placeholder="40" min="1" oninput="calcular()"></div>
+    </div>
+  </div>
+
+  <!-- Menús Blusas -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('ab-blusas')">
+      <input type="checkbox" id="cb-ab-blusas" onchange="calcular()">
+      <span>🍽 Menús Blusas</span>
+      <span class="srv-preview" id="prev-ab-blusas"></span>
+    </div>
+    <div class="srv-body" id="ab-blusas">
+      <div class="radio-row" id="radio-ab-blusas">
+        <div class="radio-opt sel" onclick="selRadio('radio-ab-blusas',this,'blusa1')">Menú 1 (16€)</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-blusas',this,'blusa2')">Menú 2 (16€)</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-blusas',this,'blusa3')">Menú 3 (18€)</div>
+      </div>
+      <div class="grid2">
+        <div><label>Nº Comensales</label><input type="number" id="pax-ab-blusas" placeholder="40" min="1" oninput="calcular()"></div>
+      </div>
+      <div class="linea-extra" style="margin-top:8px">
+        <input type="checkbox" id="cb-ab-beb-blusas" onchange="calcular()">
+        <span>Bebidas incluidas (vino + gaseosa + pan + chupito)</span>
+        <input type="number" id="pax-ab-beb-blusas" placeholder="pax" min="0" oninput="calcular()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Menús Cuadrillas -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('ab-cuad')">
+      <input type="checkbox" id="cb-ab-cuad" onchange="calcular()">
+      <span>🎉 Menús Cuadrillas/Grupos</span>
+      <span class="srv-preview" id="prev-ab-cuad"></span>
+    </div>
+    <div class="srv-body" id="ab-cuad">
+      <div class="radio-row" id="radio-ab-cuad">
+        <div class="radio-opt sel" onclick="selRadio('radio-ab-cuad',this,'celedon')">Celedón</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-cuad',this,'blanca')">La Blanca</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-cuad',this,'sanpru')">San Prudencio</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-cuad',this,'olarizu')">Olarizu</div>
+        <div class="radio-opt" onclick="selRadio('radio-ab-cuad',this,'umeak')">Umeak (infantil)</div>
+      </div>
+      <div class="grid2">
+        <div><label>Nº Comensales</label><input type="number" id="pax-ab-cuad" placeholder="40" min="1" oninput="calcular()"></div>
+      </div>
+      <div class="linea-extra" style="margin-top:8px">
+        <input type="checkbox" id="cb-ab-beb-cuad" onchange="calcular()">
+        <span>Bebidas (vino + gaseosa + pan + chupito)</span>
+        <input type="number" id="pax-ab-beb-cuad" placeholder="pax" min="0" oninput="calcular()">
+      </div>
+      <div style="margin-top:8px">
+        <label>Upgrade 2º plato (opcional)</label>
+        <select id="up-ab-cuad" onchange="calcular()">
+          <option value="">— Sin upgrade —</option>
+          <option value="up_pollo">Pollo de corral con boletus al chilindrón</option>
+          <option value="up_cordero">Cordero lechal asado</option>
+          <option value="up_cochi">Cochinillo asado</option>
+          <option value="up_carrillera">Carrillera ibérica al Oporto con puré trufado</option>
+          <option value="up_pato">Confit de pato con arándanos y puré de patata</option>
+          <option value="up_bacalao">Taco de bacalao (pil pil / vizcaína / hongos)</option>
+          <option value="up_kokotxas">Kokotxas de bacalao en salsa verde con almejas</option>
+        </select>
+      </div>
+      <div class="linea-extra">
+        <input type="checkbox" id="cb-ab-recargo" onchange="calcular()">
+        <span>Recargo &lt; 40 comensales (75€ fijo)</span>
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Raciones -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('ab-raciones')">
+      <input type="checkbox" id="cb-ab-raciones" onchange="calcular()">
+      <span>🍖 Raciones sueltas</span>
+      <span class="srv-preview" id="prev-ab-raciones"></span>
+    </div>
+    <div class="srv-body" id="ab-raciones">
+      <div style="font-size:.78em;color:#888;margin-bottom:8px">Introduce la cantidad de raciones para cada plato. Dejar en 0 los que no se pidan.</div>
+      <div class="raciones-grid" id="raciones-inputs-ab"></div>
+    </div>
+  </div>
+
+  <!-- Extras ALABOCA -->
+  <div class="card" style="background:#fff8f5;border:1.5px solid #ffd0b8;margin:8px 0 0 0">
+    <div style="font-size:.82em;font-weight:700;color:var(--c2);margin-bottom:8px">➕ Extras y servicios</div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-ab-cam" onchange="calcular()">
+      <span>Servicio de camareros</span>
+      <input type="number" id="h-ab-cam" placeholder="horas" min="0" oninput="calcular()">
+    </div>
+    <div class="extra-precio" style="grid-column:2/4;padding-left:25px;margin-top:-4px;margin-bottom:4px" id="info-ab-cam"></div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-ab-cris" onchange="calcular()">
+      <span>Copa / vaso de cristal</span>
+      <input type="number" id="q-ab-cris" placeholder="uds" min="0" oninput="calcular()">
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-ab-mesa" onchange="calcular()">
+      <span>Alquiler mesa alta/baja</span>
+      <input type="number" id="q-ab-mesa" placeholder="uds" min="0" oninput="calcular()">
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-ab-despl" onchange="calcular()">
+      <span>Desplazamiento — <input type="number" id="km-ab" placeholder="km" style="width:55px;display:inline;padding:3px 5px;border:1px solid #ddd;border-radius:5px" oninput="calcular()"> km × <input type="number" id="eur-km-ab" placeholder="€/km" style="width:60px;display:inline;padding:3px 5px;border:1px solid #ddd;border-radius:5px" oninput="calcular()"> €</span>
+      <span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SERVICIOS PV ══ -->
+<div class="card" id="card-pv" style="display:none">
+  <div class="card-tit">🌿 Servicios Placeres de la Vida</div>
+
+  <!-- Lunch Cóctel -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('pv-lunch')">
+      <input type="checkbox" id="cb-pv-lunch" onchange="calcular()">
+      <span>🍢 Lunch &amp; Cóctel</span>
+      <span class="srv-preview" id="prev-pv-lunch"></span>
+    </div>
+    <div class="srv-body" id="pv-lunch">
+      <div class="radio-row" id="radio-pv-lunch">
+        <div class="radio-opt sel" onclick="selRadio('radio-pv-lunch',this,'l1')">3 pinchos + beb</div>
+        <div class="radio-opt" onclick="selRadio('radio-pv-lunch',this,'l2')">5 pinchos + beb</div>
+        <div class="radio-opt" onclick="selRadio('radio-pv-lunch',this,'l3')">6 px + postre + beb</div>
+        <div class="radio-opt" onclick="selRadio('radio-pv-lunch',this,'l4')">7 px + 2 postres + beb</div>
+      </div>
+      <div><label>Nº Comensales</label><input type="number" id="pax-pv-lunch" placeholder="40" min="1" oninput="calcular()"></div>
+      <div class="linea-extra" style="margin-top:8px">
+        <input type="checkbox" id="cb-pv-sinbeb" onchange="calcular()">
+        <span>Sin bebidas (-2€/pax)</span><span></span>
+      </div>
+      <div class="linea-extra">
+        <input type="checkbox" id="cb-pv-vinos" onchange="calcular()">
+        <span>+ Vinos y tablas de quesos/ibéricos</span>
+        <input type="number" id="pax-pv-vinos" placeholder="pax" min="0" oninput="calcular()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Coffee Break PV -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('pv-coffee')">
+      <input type="checkbox" id="cb-pv-coffee" onchange="calcular()">
+      <span>☕ Coffee Break</span>
+      <span class="srv-preview" id="prev-pv-coffee"></span>
+    </div>
+    <div class="srv-body" id="pv-coffee">
+      <div class="radio-row" id="radio-pv-coffee">
+        <div class="radio-opt sel" onclick="selRadio('radio-pv-coffee',this,'cb1')">Básico (7€)</div>
+        <div class="radio-opt" onclick="selRadio('radio-pv-coffee',this,'cb2')">Menú Completo (11€)</div>
+        <div class="radio-opt" onclick="selRadio('radio-pv-coffee',this,'cb3')">Menú Completo 2 (12€)</div>
+      </div>
+      <div><label>Nº Comensales</label><input type="number" id="pax-pv-coffee" placeholder="40" min="1" oninput="calcular()"></div>
+    </div>
+  </div>
+
+  <!-- Menús PV -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('pv-menu')">
+      <input type="checkbox" id="cb-pv-menu" onchange="calcular()">
+      <span>🍽 Menú (Popular / Celebración / Infantil / Cazuela)</span>
+      <span class="srv-preview" id="prev-pv-menu"></span>
+    </div>
+    <div class="srv-body" id="pv-menu">
+      <div class="radio-row" id="radio-pv-menu">
+        <div class="radio-opt sel" onclick="selRadio('radio-pv-menu',this,'popular')">Popular</div>
+        <div class="radio-opt" onclick="selRadio('radio-pv-menu',this,'celebracion')">Celebración</div>
+        <div class="radio-opt" onclick="selRadio('radio-pv-menu',this,'infantil')">Infantil</div>
+        <div class="radio-opt" onclick="selRadio('radio-pv-menu',this,'cazuela')">Cazuela</div>
+      </div>
+      <div><label>Nº Comensales</label><input type="number" id="pax-pv-menu" placeholder="40" min="1" oninput="calcular()"></div>
+      <div class="linea-extra" style="margin-top:8px">
+        <input type="checkbox" id="cb-pv-msillas" onchange="calcular()">
+        <span>+ Mesas y sillas (+4€/pax)</span><span></span>
+      </div>
+      <div class="linea-extra">
+        <input type="checkbox" id="cb-pv-vajilla" onchange="calcular()">
+        <span>+ Vajilla de porcelana y cristalería (+5€/pax)</span><span></span>
+      </div>
+      <div class="linea-extra">
+        <input type="checkbox" id="cb-pv-cafe" onchange="calcular()">
+        <span>+ Café (+1€/pax)</span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Menú Envasado PV -->
+  <div class="srv-bloque">
+    <div class="srv-cabecera" onclick="toggleSrv('pv-envasado')">
+      <input type="checkbox" id="cb-pv-envasado" onchange="calcular()">
+      <span>📦 Menú Popular Envasado</span>
+      <span class="srv-preview" id="prev-pv-envasado"></span>
+    </div>
+    <div class="srv-body" id="pv-envasado">
+      <div><label>Nº Comensales</label><input type="number" id="pax-pv-envasado" placeholder="40" min="1" oninput="calcular()"></div>
+      <div class="linea-extra" style="margin-top:8px">
+        <input type="checkbox" id="cb-pv-envbeb" onchange="calcular()">
+        <span>+ Bebidas, casera, manteles y vajilla (+3,50€/pax)</span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Extras PV -->
+  <div class="card" style="background:#f1f8e9;border:1.5px solid #a5d6a7;margin:8px 0 0 0">
+    <div style="font-size:.82em;font-weight:700;color:#2e7d32;margin-bottom:8px">➕ Extras y servicios</div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-pv-cam" onchange="calcular()">
+      <span>Servicio de camareros</span>
+      <input type="number" id="h-pv-cam" placeholder="horas" min="0" oninput="calcular()">
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-pv-mesa" onchange="calcular()">
+      <span>Mesas con mantel</span>
+      <input type="number" id="q-pv-mesa" placeholder="uds" min="0" oninput="calcular()">
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-pv-silla" onchange="calcular()">
+      <span>Sillas</span>
+      <input type="number" id="q-pv-silla" placeholder="uds" min="0" oninput="calcular()">
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-pv-cris" onchange="calcular()">
+      <span>Cristalería normal</span>
+      <input type="number" id="q-pv-cris" placeholder="uds" min="0" oninput="calcular()">
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-pv-pinchoext" onchange="calcular()">
+      <span>Pinchos extra</span>
+      <input type="number" id="q-pv-pinchoext" placeholder="uds" min="0" oninput="calcular()">
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-pv-postreext" onchange="calcular()">
+      <span>Postres extra</span>
+      <input type="number" id="q-pv-postreext" placeholder="uds" min="0" oninput="calcular()">
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-pv-intol" onchange="calcular()">
+      <span>Intolerancias y alergias (+20% sobre menú)</span><span></span>
+    </div>
+    <div class="linea-extra">
+      <input type="checkbox" id="cb-pv-despl" onchange="calcular()">
+      <span>Desplazamiento — <input type="number" id="km-pv" placeholder="km" style="width:55px;display:inline;padding:3px 5px;border:1px solid #ddd;border-radius:5px" oninput="calcular()"> km × <input type="number" id="eur-km-pv" placeholder="€/km" style="width:60px;display:inline;padding:3px 5px;border:1px solid #ddd;border-radius:5px" oninput="calcular()"> €</span>
+      <span></span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LÍNEAS PERSONALIZADAS ══ -->
+<div class="card">
+  <div class="card-tit">✏ Líneas personalizadas / descuentos</div>
+  <div id="lineas-custom"></div>
+  <button onclick="addLineaCustom()" style="background:none;border:1.5px dashed #bbb;color:#888;padding:7px 14px;border-radius:7px;cursor:pointer;font-size:.83em;margin-top:8px;width:100%">+ Añadir línea</button>
+</div>
+
+<!-- ══ CONDICIONES ══ -->
+<div class="card">
+  <div class="card-tit">📄 Condiciones y observaciones</div>
+  <div class="grid2">
+    <div><label>Validez del presupuesto (días)</label><input type="number" id="validez" value="15" min="1"></div>
+    <div><label>IVA aplicado (%)</label><input type="number" id="iva-pct" value="10" min="0" max="100" oninput="calcular()"></div>
+    <div class="full"><label>Forma de pago</label><input type="text" id="forma-pago" value="50% a la aceptación del presupuesto · 50% al finalizar el servicio"></div>
+    <div class="full"><label>Observaciones / notas adicionales</label><textarea id="obs-pres" placeholder="Incluye entrega, montaje, mantelería, vajilla biodegradable y recogida.&#10;Para menos de 40 comensales se aplicará un recargo de 75€."></textarea></div>
+  </div>
+</div>
+
+<!-- ══ RESUMEN ══ -->
+<div class="card">
+  <div class="card-tit">💶 Resumen</div>
+  <div class="lineas-preview" id="lineas-preview"></div>
+  <div class="totales-box" id="totales-box">
+    <div class="tot-fila"><span>Base imponible</span><span id="tot-base">0,00 €</span></div>
+    <div class="tot-fila"><span id="tot-iva-lbl">IVA (10%)</span><span id="tot-iva">0,00 €</span></div>
+    <div class="tot-fila"><span>TOTAL</span><span id="tot-total">0,00 €</span></div>
+  </div>
+</div>
+
+<div class="btns-main">
+  <button class="btn-gen" onclick="generarPDF()">⬇ Descargar PDF</button>
+  <button class="btn-impr" onclick="generarPDF(true)">🖨 Imprimir</button>
+</div>
+
+<!-- ══ RESULTADO (para PDF) ══ -->
+<div id="resultado"></div>
+
+<div id="save-bar">
+  <span id="save-ind" style="opacity:.4">💾 Auto-guardado activo</span>
+  <button onclick="limpiarFormulario()" style="background:#e53935;color:#fff;border:none;padding:3px 10px;border-radius:10px;cursor:pointer;font-size:1em">🗑 Nuevo presupuesto</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  PRECIOS POR DEFECTO
+// ══════════════════════════════════════════
+const PRECIOS_DEFAULT = {
+  // ALABOCA
+  ab_gourmet:32, ab_seleccion:36, ab_signature:41, ab_premium:48,
+  ab_combo1:12.40, ab_combo2:16.40, ab_combo3:18.40, ab_combo4:20.40,
+  ab_caja1:22, ab_caja2:27, ab_caja3:27, ab_caja4:22,
+  ab_cb1:7.50, ab_cb2:9.45, ab_cb3:11.45,
+  ab_blusa1:16, ab_blusa2:16, ab_blusa3:18,
+  ab_celedon:24, ab_blanca:22, ab_sanpru:20, ab_olarizu:18, ab_umeak:13.95,
+  ab_beb:6.50,
+  ab_up_pollo:4.50, ab_up_cordero:10, ab_up_cochi:7,
+  ab_up_carrillera:6, ab_up_pato:7, ab_up_bacalao:6, ab_up_kokotxas:9,
+  ab_camarero:29, ab_cristal:1.30, ab_mesa:13, ab_recargo:75,
+  // PV
+  pv_l1:13.50, pv_l2:16.50, pv_l3:18.50, pv_l4:22.50,
+  pv_sinbeb:2, pv_vinos:10,
+  pv_cb1:7, pv_cb2:11, pv_cb3:12,
+  pv_popular:20.50, pv_celebracion:28.50, pv_infantil:16, pv_cazuela:16,
+  pv_msillas:4, pv_vajilla:5, pv_cafe:1,
+  pv_envasado:15, pv_env_beb:3.50,
+  pv_camarero:27, pv_mesa:11, pv_silla:2, pv_cristal:0.80,
+  pv_pinchoext:2.50, pv_postreext:2.25
+};
+
+let P = {};
+const LS_PRECIOS = 'catering_precios_v1';
+const LS_FORM = 'catering_presup_v1';
+
+// Raciones ALABOCA con precios
+const RACIONES_AB = [
+  ['Tabla de ibéricos (4 pax)',19,'ración'],['Tabla de quesos',16,'ración'],['Mousse de oca',12,'ración'],
+  ['Champiñones al ajillo',7,'ración'],['Chorizo a la sidra',8,'ración'],['Patatas bravas / ali-oli',6.50,'ración'],
+  ['Alitas de pollo (8 uds)',9,'ración'],['Morcilla con tomate',7.50,'ración'],
+  ['Revuelto de bacalao',10.50,'ración'],['Revuelto de boletus y jamón',10.50,'ración'],
+  ['Tortilla de patatas',17,'ración'],['Caracoles',15,'ración'],
+  ['Pimientos rellenos bacalao (3 uds)',7.50,'ración'],['Pimientos rellenos carne (3 uds)',7.50,'ración'],
+  ['Ensaladilla rusa',7,'ración'],['Ensalada ilustrada',8.30,'ración'],
+  ['Ensalada de txaka',7.50,'ración'],['Ensalada queso cabra y nueces',8.90,'ración'],
+  ['Albóndigas en salsa',8.90,'ración'],['Carne guisada',10.40,'ración'],
+  ['Lomo con pimientos',8.10,'ración'],['Pollo guisado',9.40,'ración'],
+  ['Carrillera en salsa',13.60,'ración'],['Callos en salsa',8.50,'ración'],
+  ['Pollo asado',12.90,'ración'],['Codillo asado',13.50,'ración'],
+  ['Bacalao a la riojana',13.50,'ración'],['Bacalao al pil pil',13.50,'ración'],
+  ['Merluza en salsa verde',10.50,'ración'],['Pulpo a la gallega',17,'ración'],
+  ['Mejillones con tomate',7.40,'ración'],['Chipirones en su tinta',13.50,'ración'],
+  ['Espaguetis boloñesa',7.30,'ración'],['Lasaña de carne',8.30,'ración'],
+  ['Macarrones con txorizo',7.30,'ración']
+];
+
+let MARCA = 'AB';
+let lineasCustom = [];
+let _saveTimer = null;
+
+// ── Utilidades ──
+function eur(n){ return n.toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' €'; }
+function v(id){ const el=document.getElementById(id); return el ? (el.value||'') : ''; }
+function n(id){ return parseFloat(document.getElementById(id)?.value)||0; }
+function checked(id){ return document.getElementById(id)?.checked||false; }
+function sel(grpId){ const g=document.getElementById(grpId); if(!g) return ''; const s=g.querySelector('.radio-opt.sel'); return s?s.dataset.val:''; }
+
+// ── Marca ──
+function cambiarMarca(m){
+  MARCA=m;
+  document.getElementById('card-ab').style.display = m==='AB'?'block':'none';
+  document.getElementById('card-pv').style.display = m==='PV'?'block':'none';
+  document.getElementById('btn-ab').classList.toggle('activo',m==='AB');
+  document.getElementById('btn-pv').classList.toggle('activo',m==='PV');
+  document.body.classList.toggle('pv',m==='PV');
+  calcular();
+  programarGuardado();
+}
+
+// ── Precios ──
+function cargarPrecios(){
+  const raw=localStorage.getItem(LS_PRECIOS);
+  P = raw ? {...PRECIOS_DEFAULT,...JSON.parse(raw)} : {...PRECIOS_DEFAULT};
+  Object.keys(P).forEach(k=>{
+    const el=document.getElementById('p_'+k);
+    if(el) el.value=P[k];
+  });
+}
+function guardarPrecios(){
+  const data={};
+  Object.keys(PRECIOS_DEFAULT).forEach(k=>{
+    const el=document.getElementById('p_'+k);
+    if(el) data[k]=parseFloat(el.value)||0;
+  });
+  P={...data};
+  localStorage.setItem(LS_PRECIOS,JSON.stringify(data));
+  const btn=document.querySelector('.btn-save-precios');
+  btn.textContent='✅ Guardado';
+  setTimeout(()=>btn.textContent='💾 Guardar precios',2000);
+  calcular();
+}
+
+// ── Tabs precios ──
+function showPrecioTab(t){
+  document.querySelectorAll('.precio-panel').forEach(p=>p.classList.remove('visible'));
+  document.querySelectorAll('.precio-tab').forEach(b=>b.classList.remove('activo'));
+  document.getElementById('ptab-'+t).classList.add('visible');
+  event.target.classList.add('activo');
+}
+
+// ── Toggle card ──
+function toggleCard(id){
+  const c=document.getElementById(id);
+  const tit=c.querySelector('.card-tit');
+  const body=c.querySelector('.card-body');
+  tit.classList.toggle('cerrado');
+  body.classList.toggle('oculto');
+}
+
+// ── Toggle servicio ──
+function toggleSrv(id){
+  document.getElementById(id)?.classList.toggle('visible');
+}
+
+// ── Radio opts ──
+function selRadio(grpId, el, val){
+  document.getElementById(grpId)?.querySelectorAll('.radio-opt').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  el.dataset.val=val;
+  calcular();
+  programarGuardado();
+}
+
+// ── Raciones inputs ──
+function buildRacionesInputs(){
+  const cont=document.getElementById('raciones-inputs-ab');
+  if(!cont) return;
+  cont.innerHTML=RACIONES_AB.map((r,i)=>`
+    <div class="racion-item">
+      <input type="number" id="r_ab_${i}" min="0" placeholder="0" oninput="calcular()" style="width:50px">
+      <span>${r[0]} <span style="color:#888;font-size:.85em">(${eur(r[1])})</span></span>
+    </div>`).join('');
+}
+
+// ── Líneas personalizadas ──
+let _lcIdx=0;
+function addLineaCustom(desc='',qty=1,precio=0){
+  const id=_lcIdx++;
+  const div=document.createElement('div');
+  div.id='lc-'+id;
+  div.style.cssText='display:grid;grid-template-columns:1fr 70px 90px 30px;gap:6px;align-items:center;margin-bottom:6px';
+  div.innerHTML=`
+    <input type="text" placeholder="Descripción del concepto" value="${desc}" oninput="calcular()" style="padding:7px">
+    <input type="number" placeholder="Cant." min="1" value="${qty}" oninput="calcular()" style="padding:7px;text-align:center">
+    <input type="number" placeholder="€/uds" step="0.01" value="${precio||''}" oninput="calcular()" style="padding:7px;text-align:right">
+    <button onclick="document.getElementById('lc-${id}').remove();calcular()" style="background:#f44336;color:#fff;border:none;border-radius:5px;cursor:pointer;padding:6px">✕</button>`;
+  document.getElementById('lineas-custom').appendChild(div);
+  lineasCustom.push(id);
+}
+function getLineasCustom(){
+  return [...document.querySelectorAll('#lineas-custom > div')].map(div=>{
+    const inps=div.querySelectorAll('input');
+    return {desc:inps[0].value,qty:parseFloat(inps[1].value)||1,precio:parseFloat(inps[2].value)||0};
+  }).filter(l=>l.desc&&l.precio>0);
+}
+
+// ── CALCULAR ──
+function calcular(){
+  const lineas=[];
+  const iva=n('iva-pct')/100;
+
+  if(MARCA==='AB'){
+    // Cóctel Gourmet
+    if(checked('cb-ab-coctel')){
+      const tipo=sel('radio-ab-coctel')||'gourmet';
+      const pax=n('pax-ab-coctel');
+      const pr=P['ab_'+tipo]||P.ab_gourmet;
+      const nombres={gourmet:'Gourmet',seleccion:'Selección',signature:'Signature',premium:'Premium'};
+      if(pax>0) lineas.push({g:'Cóctel Gourmet',desc:'Experiencia '+nombres[tipo],uds:pax,precio:pr});
+      document.getElementById('info-ab-coctel').textContent=pr+'€/pax';
+    }
+    // Combo Pinchos
+    if(checked('cb-ab-pinchos')){
+      const tipo=sel('radio-ab-pinchos')||'combo1';
+      const pax=n('pax-ab-pinchos');
+      const pr=P['ab_'+tipo]||P.ab_combo1;
+      const desc={combo1:'Opción 1 — 4 pinchos + bebida',combo2:'Opción 2 — 6 pinchos + 2 bebidas',combo3:'Opción 3 — 6 pinchos + dulce + 2 bebidas',combo4:'Opción 4 — 8 pinchos + dulce + 2 bebidas'};
+      if(pax>0) lineas.push({g:'Combo Pinchos',desc:desc[tipo],uds:pax,precio:pr});
+      document.getElementById('info-ab-pinchos').textContent=pr+'€/pax';
+    }
+    // Cajas
+    if(checked('cb-ab-cajas')){
+      [1,2,3,4].forEach(i=>{
+        const q=n('q-ab-caja'+i);
+        if(q>0) lineas.push({g:'Cajas de Pintxos',desc:'Caja '+i+' (10 pintxos)',uds:q,precio:P['ab_caja'+i]});
+      });
+    }
+    // Coffee Break
+    if(checked('cb-ab-coffee')){
+      const tipo=sel('radio-ab-coffee')||'cb1';
+      const pax=n('pax-ab-coffee');
+      const pr=P['ab_'+tipo];
+      const desc={cb1:'Coffee Break Opción 1',cb2:'Coffee Break Opción 2',cb3:'Coffee Break Opción 3'};
+      if(pax>0) lineas.push({g:'Coffee Break',desc:desc[tipo],uds:pax,precio:pr});
+    }
+    // Menús Blusas
+    if(checked('cb-ab-blusas')){
+      const tipo=sel('radio-ab-blusas')||'blusa1';
+      const pax=n('pax-ab-blusas');
+      const pr=P['ab_'+tipo];
+      const desc={blusa1:'Menú Blusas 1',blusa2:'Menú Blusas 2',blusa3:'Menú Blusas 3'};
+      if(pax>0) lineas.push({g:'Menús Blusas',desc:desc[tipo],uds:pax,precio:pr});
+      if(checked('cb-ab-beb-blusas')){
+        const pbeb=n('pax-ab-beb-blusas')||pax;
+        if(pbeb>0) lineas.push({g:'Menús Blusas',desc:'Bebidas (vino + gaseosa + pan + chupito)',uds:pbeb,precio:P.ab_beb});
+      }
+    }
+    // Menús Cuadrillas
+    if(checked('cb-ab-cuad')){
+      const tipo=sel('radio-ab-cuad')||'celedon';
+      const pax=n('pax-ab-cuad');
+      const pr=P['ab_'+tipo];
+      const desc={celedon:'Menú Celedón',blanca:'Menú La Blanca',sanpru:'Menú San Prudencio',olarizu:'Menú Olarizu',umeak:'Menú Umeak (infantil)'};
+      if(pax>0) lineas.push({g:'Menús Cuadrillas',desc:desc[tipo],uds:pax,precio:pr});
+      if(checked('cb-ab-beb-cuad')){
+        const pbeb=n('pax-ab-beb-cuad')||pax;
+        if(pbeb>0) lineas.push({g:'Menús Cuadrillas',desc:'Bebidas (vino + gaseosa + pan + chupito)',uds:pbeb,precio:P.ab_beb});
+      }
+      const up=v('up-ab-cuad');
+      if(up && pax>0){
+        const upNames={up_pollo:'Upgrade: Pollo de corral con boletus',up_cordero:'Upgrade: Cordero lechal asado',up_cochi:'Upgrade: Cochinillo asado',up_carrillera:'Upgrade: Carrillera ibérica al Oporto',up_pato:'Upgrade: Confit de pato con arándanos',up_bacalao:'Upgrade: Taco de bacalao',up_kokotxas:'Upgrade: Kokotxas en salsa verde'};
+        lineas.push({g:'Menús Cuadrillas',desc:upNames[up]||'Upgrade 2º plato',uds:pax,precio:P['ab_'+up]||0});
+      }
+      if(checked('cb-ab-recargo')) lineas.push({g:'Extras',desc:'Recargo servicio < 40 comensales',uds:1,precio:P.ab_recargo});
+    }
+    // Raciones
+    if(checked('cb-ab-raciones')){
+      RACIONES_AB.forEach((r,i)=>{
+        const q=n('r_ab_'+i);
+        if(q>0) lineas.push({g:'Raciones',desc:r[0],uds:q,precio:r[1]});
+      });
+    }
+    // Extras ALABOCA
+    if(checked('cb-ab-cam')){const h=n('h-ab-cam');if(h>0){lineas.push({g:'Extras y Servicios',desc:'Servicio de camareros',uds:h,precio:P.ab_camarero,unit:'horas'});document.getElementById('info-ab-cam').textContent=P.ab_camarero+'€/hora';}}
+    if(checked('cb-ab-cris')){const q=n('q-ab-cris');if(q>0) lineas.push({g:'Extras y Servicios',desc:'Copa / vaso de cristal',uds:q,precio:P.ab_cristal,unit:'uds'});}
+    if(checked('cb-ab-mesa')){const q=n('q-ab-mesa');if(q>0) lineas.push({g:'Extras y Servicios',desc:'Alquiler mesa alta/baja',uds:q,precio:P.ab_mesa,unit:'uds'});}
+    if(checked('cb-ab-despl')){const km=n('km-ab'),eKm=n('eur-km-ab');if(km>0&&eKm>0) lineas.push({g:'Extras y Servicios',desc:'Desplazamiento ('+km+' km)',uds:1,precio:km*eKm});}
+  } else {
+    // PV
+    // Lunch
+    if(checked('cb-pv-lunch')){
+      const tipo=sel('radio-pv-lunch')||'l1';
+      const pax=n('pax-pv-lunch');
+      const prBase=P['pv_'+tipo];
+      const desc={l1:'Lunch — 3 pinchos + bebida',l2:'Lunch — 5 pinchos + bebida',l3:'Lunch — 6 pinchos + postre + bebida',l4:'Lunch — 7 pinchos + 2 postres + bebida'};
+      const sinBeb=checked('cb-pv-sinbeb')?-P.pv_sinbeb:0;
+      if(pax>0) lineas.push({g:'Lunch & Cóctel',desc:desc[tipo]+(sinBeb?' (sin bebidas)':''),uds:pax,precio:prBase+sinBeb});
+      if(checked('cb-pv-vinos')){const pv=n('pax-pv-vinos')||pax;if(pv>0) lineas.push({g:'Lunch & Cóctel',desc:'Opción vinos + tablas quesos/ibéricos',uds:pv,precio:P.pv_vinos});}
+    }
+    // Coffee Break PV
+    if(checked('cb-pv-coffee')){
+      const tipo=sel('radio-pv-coffee')||'cb1';
+      const pax=n('pax-pv-coffee');
+      const pr=P['pv_'+tipo];
+      const desc={cb1:'Coffee Break Básico',cb2:'Coffee Break Menú Completo',cb3:'Coffee Break Menú Completo 2'};
+      if(pax>0) lineas.push({g:'Coffee Break',desc:desc[tipo],uds:pax,precio:pr});
+    }
+    // Menús PV
+    if(checked('cb-pv-menu')){
+      const tipo=sel('radio-pv-menu')||'popular';
+      const pax=n('pax-pv-menu');
+      const pr=P['pv_'+tipo];
+      const desc={popular:'Menú Popular',celebracion:'Menú Celebración',infantil:'Menú Infantil',cazuela:'Platos Tradicionales de Cazuela'};
+      let base=pr;
+      if(pax>0){
+        lineas.push({g:'Menú',desc:desc[tipo],uds:pax,precio:base});
+        if(checked('cb-pv-msillas')) lineas.push({g:'Menú',desc:'Extra: Mesas y sillas',uds:pax,precio:P.pv_msillas});
+        if(checked('cb-pv-vajilla')) lineas.push({g:'Menú',desc:'Extra: Vajilla porcelana y cristalería',uds:pax,precio:P.pv_vajilla});
+        if(checked('cb-pv-cafe')) lineas.push({g:'Menú',desc:'Extra: Café',uds:pax,precio:P.pv_cafe});
+        if(checked('cb-pv-intol')) lineas.push({g:'Menú',desc:'Suplemento intolerancias/alergias (+20%)',uds:pax,precio:base*0.20});
+      }
+    }
+    // Envasado PV
+    if(checked('cb-pv-envasado')){
+      const pax=n('pax-pv-envasado');
+      if(pax>0){
+        lineas.push({g:'Menú Envasado',desc:'Menú Popular Envasado',uds:pax,precio:P.pv_envasado});
+        if(checked('cb-pv-envbeb')) lineas.push({g:'Menú Envasado',desc:'Extra bebidas, casera, manteles y vajilla',uds:pax,precio:P.pv_env_beb});
+      }
+    }
+    // Extras PV
+    if(checked('cb-pv-cam')){const h=n('h-pv-cam');if(h>0) lineas.push({g:'Extras y Servicios',desc:'Servicio de camareros',uds:h,precio:P.pv_camarero,unit:'horas'});}
+    if(checked('cb-pv-mesa')){const q=n('q-pv-mesa');if(q>0) lineas.push({g:'Extras y Servicios',desc:'Mesas con mantel',uds:q,precio:P.pv_mesa});}
+    if(checked('cb-pv-silla')){const q=n('q-pv-silla');if(q>0) lineas.push({g:'Extras y Servicios',desc:'Sillas',uds:q,precio:P.pv_silla});}
+    if(checked('cb-pv-cris')){const q=n('q-pv-cris');if(q>0) lineas.push({g:'Extras y Servicios',desc:'Cristalería normal',uds:q,precio:P.pv_cristal});}
+    if(checked('cb-pv-pinchoext')){const q=n('q-pv-pinchoext');if(q>0) lineas.push({g:'Extras y Servicios',desc:'Pinchos extra',uds:q,precio:P.pv_pinchoext});}
+    if(checked('cb-pv-postreext')){const q=n('q-pv-postreext');if(q>0) lineas.push({g:'Extras y Servicios',desc:'Postres extra',uds:q,precio:P.pv_postreext});}
+    if(checked('cb-pv-despl')){const km=n('km-pv'),eKm=n('eur-km-pv');if(km>0&&eKm>0) lineas.push({g:'Extras y Servicios',desc:'Desplazamiento ('+km+' km)',uds:1,precio:km*eKm});}
+  }
+
+  // Líneas personalizadas
+  getLineasCustom().forEach(l=>{
+    lineas.push({g:'Personalizado',desc:l.desc,uds:l.qty,precio:l.precio});
+  });
+
+  // Calcular totales
+  const base=lineas.reduce((s,l)=>s+(l.uds*l.precio),0);
+  const ivaAmt=base*iva;
+  const total=base+ivaAmt;
+  const pct=n('iva-pct');
+
+  document.getElementById('tot-base').textContent=eur(base);
+  document.getElementById('tot-iva').textContent=eur(ivaAmt);
+  document.getElementById('tot-iva-lbl').textContent='IVA ('+pct+'%)';
+  document.getElementById('tot-total').textContent=eur(total);
+
+  // Preview de líneas
+  const prev=document.getElementById('lineas-preview');
+  if(lineas.length===0){prev.innerHTML='<div style="color:#aaa;font-size:.85em;text-align:center;padding:8px">Selecciona servicios para ver el desglose</div>';return;}
+  let curG='';
+  prev.innerHTML=lineas.map(l=>{
+    let out='';
+    if(l.g!==curG){curG=l.g;out+=`<div style="font-size:.75em;font-weight:700;color:var(--c1);text-transform:uppercase;padding:6px 0 2px;letter-spacing:.5px">${l.g}</div>`;}
+    out+=`<div class="linea-prev"><span>${l.desc}</span><span>${l.uds} × ${eur(l.precio)} = <b>${eur(l.uds*l.precio)}</b></span></div>`;
+    return out;
+  }).join('');
+
+  // Cache for PDF
+  window._lineasPDF = lineas;
+  window._baseImponible = base;
+  window._ivaAmt = ivaAmt;
+  window._totalFinal = total;
+}
+
+// ── GENERAR PDF ──
+function generarPDF(imprimir=false){
+  calcular();
+  const lineas=window._lineasPDF||[];
+  const base=window._baseImponible||0;
+  const ivaAmt=window._ivaAmt||0;
+  const total=window._totalFinal||0;
+  const pct=n('iva-pct');
+
+  const cliente=v('cliente')||'—';
+  const tel=v('tel-cliente');
+  const email=v('email-cliente');
+  const evento=v('desc-evento');
+  const fechaEvento=v('fecha-evento');
+  const ubic=v('ubic-evento');
+  const numPres=v('num-pres')||'—';
+  const fechaPresEl=document.getElementById('fecha-pres');
+  const fechaPres=fechaPresEl.value ? new Date(fechaPresEl.value).toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : new Date().toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'});
+  const fechaEvStr=fechaEvento ? new Date(fechaEvento).toLocaleDateString('es-ES',{day:'2-digit',month:'long',year:'numeric'}) : '—';
+  const paxTotal=v('pax-total');
+  const validez=v('validez')||'15';
+  const formaPago=v('forma-pago');
+  const obs=v('obs-pres');
+
+  const isAB=MARCA==='AB';
+  const hdrClass=isAB?'pres-header-ab':'pres-header-pv';
+  const logoTxt=isAB?'ALABOCA':'PLACERES DE LA VIDA';
+  const logoSub=isAB?'CATERING':'CATERING & EVENTOS';
+  const contact=isAB?'Portal de Bergara 4, Pab.13 · Vitoria-Gasteiz<br>T. 945 095 890 / 681 945 220<br>contacto@alaboca.es · www.alaboca.es':'T. 605 729 858<br>contacto@placeresdelavida.es';
+
+  // Agrupar líneas
+  let curG='';
+  const filasHTML=lineas.map(l=>{
+    let out='';
+    if(l.g!==curG){curG=l.g;out+=`<tr class="grupo"><td colspan="4">${l.g}</td></tr>`;}
+    const unit=l.unit||'pax';
+    out+=`<tr><td>${l.desc}</td><td>${l.uds} ${unit}</td><td>${eur(l.precio)}</td><td>${eur(l.uds*l.precio)}</td></tr>`;
+    return out;
+  }).join('');
+
+  const obsHTML=obs?`<div style="margin-top:8px;font-size:.85em;color:#555;white-space:pre-wrap">${obs}</div>`:'';
+
+  const html=`
+  <div class="pres-wrap">
+    <div class="${hdrClass}">
+      <div>
+        <div class="pres-logo-txt">${logoTxt}</div>
+        <div class="pres-logo-sub">${logoSub}</div>
+      </div>
+      <div class="pres-contact">${contact}</div>
+    </div>
+    <div class="pres-num-box">
+      <span>Presupuesto Nº <strong>${numPres}</strong></span>
+      <span>Fecha: <strong>${fechaPres}</strong></span>
+      <span>Validez: <strong>${validez} días</strong></span>
+    </div>
+    <div class="pres-cliente-box">
+      <h3>Datos del cliente y evento</h3>
+      <div class="pres-cliente-grid">
+        <div><strong>Cliente:</strong> ${cliente}</div>
+        ${tel?`<div><strong>Teléfono:</strong> ${tel}</div>`:''}
+        ${email?`<div><strong>Email:</strong> ${email}</div>`:''}
+        ${paxTotal?`<div><strong>Nº comensales:</strong> ${paxTotal} pax</div>`:''}
+        ${evento?`<div><strong>Evento:</strong> ${evento}</div>`:''}
+        <div><strong>Fecha del evento:</strong> ${fechaEvStr}</div>
+        ${ubic?`<div class="full" style="grid-column:1/-1"><strong>Ubicación:</strong> ${ubic}</div>`:''}
+      </div>
+    </div>
+    <table class="pres-tabla">
+      <thead><tr><th>Concepto</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead>
+      <tbody>${filasHTML}</tbody>
+    </table>
+    <div class="pres-totales">
+      <div class="pres-tot-fila"><span>Base imponible</span><span>${eur(base)}</span></div>
+      <div class="pres-tot-fila"><span>IVA (${pct}%)</span><span>${eur(ivaAmt)}</span></div>
+      <div class="pres-tot-fila total"><span>TOTAL</span><span>${eur(total)}</span></div>
+    </div>
+    <div class="pres-condiciones">
+      <h4>Condiciones</h4>
+      <div><strong>Forma de pago:</strong> ${formaPago}</div>
+      ${obsHTML}
+    </div>
+    <div class="pres-firma">
+      <div class="pres-firma-box">Firma y sello del proveedor<br><br><br></div>
+      <div class="pres-firma-box">Aceptación del cliente<br>(Fecha y firma)<br><br></div>
+    </div>
+    <div class="pres-pie">
+      Este presupuesto tiene validez de ${validez} días desde la fecha de emisión. · Todos los precios indicados son + IVA.
+    </div>
+  </div>`;
+
+  const res=document.getElementById('resultado');
+  res.innerHTML=html;
+  res.style.display='block';
+
+  if(imprimir){
+    window.print();
+    return;
+  }
+
+  const clone=res.cloneNode(true);
+  const wrapper=document.createElement('div');
+  wrapper.style.cssText='position:fixed;top:0;left:-9999px;width:780px;background:#fff;box-sizing:border-box;font-family:Arial,sans-serif;font-size:13px;color:#222';
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  const d=fechaEvento?fechaEvento.split('-'):null;
+  const fStr=d?`${d[2]}${d[1]}${d[0]}`:'';
+  const cStr=cliente.replace(/[^\wáéíóúÁÉÍÓÚñÑ\s]/g,'').trim().replace(/\s+/g,'_');
+  const brand=isAB?'ALABOCA':'PV';
+  const filename=[fStr,cStr,brand].filter(Boolean).join('_')+'_Presupuesto.pdf';
+
+  const btn=document.querySelector('.btn-gen');
+  btn.textContent='⏳ Generando...';btn.disabled=true;
+
+  html2pdf().set({
+    margin:[8,6,8,6],filename,
+    image:{type:'jpeg',quality:0.95},
+    html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',width:780,windowWidth:780},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+    pagebreak:{mode:'css'}
+  }).from(wrapper).save().then(()=>{
+    document.body.removeChild(wrapper);
+    btn.textContent='⬇ Descargar PDF';btn.disabled=false;
+  });
+}
+
+// ══ AUTO-GUARDADO ══
+const LS_FORM_KEY='catering_presup_v1';
+function guardarFormulario(){
+  const data={MARCA};
+  document.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
+    if(el.type==='checkbox') data[el.id]=el.checked;
+    else if(el.type==='radio') return;
+    else data[el.id]=el.value;
+  });
+  // Radio opts seleccionados
+  document.querySelectorAll('[id^=radio-]').forEach(grp=>{
+    const s=grp.querySelector('.radio-opt.sel');
+    if(s) data['__radio_'+grp.id]=s.dataset.val||s.textContent.trim();
+  });
+  data['__lineasCustom__']=getLineasCustom();
+  localStorage.setItem(LS_FORM_KEY,JSON.stringify(data));
+  const ind=document.getElementById('save-ind');
+  if(ind){ind.textContent='💾 Guardado '+new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});ind.style.opacity=1;clearTimeout(ind._t);ind._t=setTimeout(()=>ind.style.opacity=.4,3000);}
+}
+function programarGuardado(){clearTimeout(_saveTimer);_saveTimer=setTimeout(guardarFormulario,800);}
+
+function cargarFormulario(){
+  const raw=localStorage.getItem(LS_FORM_KEY);
+  if(!raw) return false;
+  let data;try{data=JSON.parse(raw);}catch(e){return false;}
+  if(data.MARCA) cambiarMarca(data.MARCA);
+  document.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{
+    if(!(el.id in data)) return;
+    if(el.type==='checkbox') el.checked=data[el.id];
+    else el.value=data[el.id];
+  });
+  // Restaurar radios
+  Object.keys(data).filter(k=>k.startsWith('__radio_')).forEach(k=>{
+    const grpId=k.replace('__radio_','');
+    const grp=document.getElementById(grpId);
+    if(!grp) return;
+    const val=data[k];
+    grp.querySelectorAll('.radio-opt').forEach(b=>{
+      b.classList.toggle('sel',b.dataset.val===val||b.textContent.trim()===val);
+    });
+  });
+  // Líneas custom
+  if(data['__lineasCustom__']){
+    data['__lineasCustom__'].forEach(l=>addLineaCustom(l.desc,l.qty,l.precio));
+  }
+  return true;
+}
+function limpiarFormulario(){
+  if(!confirm('¿Borrar este presupuesto y empezar uno nuevo?')) return;
+  localStorage.removeItem(LS_FORM_KEY);
+  location.reload();
+}
+
+document.addEventListener('input',programarGuardado);
+document.addEventListener('change',programarGuardado);
+
+// ── CARGAR PRELOAD (desde hoja de servicio o gestión) ──
+function cargarPreload(){
+  const raw=localStorage.getItem('catering_presup_preload_v1');
+  if(!raw) return false;
+  localStorage.removeItem('catering_presup_preload_v1');
+  let d; try{d=JSON.parse(raw);}catch(e){return false;}
+  // Marca
+  if(d.marca) cambiarMarca(d.marca);
+  // Datos evento
+  if(d.cliente) document.getElementById('cliente').value=d.cliente;
+  if(d.tel) document.getElementById('tel-cliente').value=d.tel;
+  if(d.fecha_evento) document.getElementById('fecha-evento').value=d.fecha_evento;
+  if(d.lugar) document.getElementById('ubic-evento').value=d.lugar;
+  if(d.pax) document.getElementById('pax-total').value=d.pax;
+  if(d.desc_evento) document.getElementById('desc-evento').value=d.desc_evento;
+  // Nº presupuesto y fecha automáticos
+  document.getElementById('fecha-pres').valueAsDate=new Date();
+  const lastNum=parseInt(localStorage.getItem('catering_last_presup')||'0')+1;
+  localStorage.setItem('catering_last_presup',lastNum);
+  document.getElementById('num-pres').value='P'+new Date().getFullYear()+String(lastNum).padStart(3,'0');
+  // Activar servicio y pax
+  const pax=d.pax||0;
+  const nveg=d.nveg||0;
+  const nsg=d.nsg||0;
+  const paxR=pax-nveg-nsg;
+  const tipo=(d.tipo||'').toUpperCase();
+  const marca=d.marca||'AB';
+  function setRadio(grpId,val){
+    const grp=document.getElementById(grpId);if(!grp)return;
+    grp.querySelectorAll('.radio-opt').forEach(b=>b.classList.toggle('sel',b.dataset.val===val));
+  }
+  if(marca==='AB'){
+    if(tipo==='COFFEE'){document.getElementById('cb-ab-coffee').checked=true;document.getElementById('pax-ab-coffee').value=pax;document.getElementById('ab-coffee').classList.add('visible');}
+    else if(tipo==='LUNCH'){document.getElementById('cb-ab-coctel').checked=true;document.getElementById('pax-ab-coctel').value=pax;document.getElementById('ab-coctel').classList.add('visible');}
+    else if(tipo==='MENU_BLUSAS'){document.getElementById('cb-ab-blusas').checked=true;document.getElementById('pax-ab-blusas').value=pax;document.getElementById('ab-blusas').classList.add('visible');
+      if(d.menu_blusas_tipo) setRadio('radio-ab-blusas',d.menu_blusas_tipo==='menu1'?'blusa1':'blusa2');}
+    else if(tipo==='MENU_DEGUSTACION'){document.getElementById('cb-ab-cuad').checked=true;document.getElementById('pax-ab-cuad').value=pax;document.getElementById('ab-cuad').classList.add('visible');
+      const deguMap={araba:'celedon',gasteiz:'blanca',kutxi:'sanpru',umeak:'umeak'};
+      if(d.menu_degu_tipo) setRadio('radio-ab-cuad',deguMap[d.menu_degu_tipo]||'celedon');}
+    else if(tipo==='CAJAS'){document.getElementById('cb-ab-cajas').checked=true;document.getElementById('ab-cajas').classList.add('visible');}
+    else if(tipo==='RACIONES'){document.getElementById('cb-ab-raciones').checked=true;document.getElementById('ab-raciones').classList.add('visible');}
+  } else {
+    if(tipo==='COFFEE'){document.getElementById('cb-pv-coffee').checked=true;document.getElementById('pax-pv-coffee').value=pax;document.getElementById('pv-coffee').classList.add('visible');
+      const pvCbMap={basico:'cb1',completo1:'cb2',completo2:'cb3'};
+      if(d.coffee_opt) setRadio('radio-pv-coffee',pvCbMap[d.coffee_opt]||'cb1');}
+    else if(tipo==='LUNCH'){document.getElementById('cb-pv-lunch').checked=true;document.getElementById('pax-pv-lunch').value=pax;document.getElementById('pv-lunch').classList.add('visible');}
+    else if(tipo==='MENU_POPULAR'){document.getElementById('cb-pv-menu').checked=true;document.getElementById('pax-pv-menu').value=pax;document.getElementById('pv-menu').classList.add('visible');setRadio('radio-pv-menu','popular');}
+    else if(tipo==='MENU_CELEBRACION'){document.getElementById('cb-pv-menu').checked=true;document.getElementById('pax-pv-menu').value=pax;document.getElementById('pv-menu').classList.add('visible');setRadio('radio-pv-menu','celebracion');}
+    else if(tipo==='MENU_INFANTIL'){document.getElementById('cb-pv-menu').checked=true;document.getElementById('pax-pv-menu').value=pax;document.getElementById('pv-menu').classList.add('visible');setRadio('radio-pv-menu','infantil');}
+    else if(tipo==='CAZUELA'){document.getElementById('cb-pv-menu').checked=true;document.getElementById('pax-pv-menu').value=pax;document.getElementById('pv-menu').classList.add('visible');setRadio('radio-pv-menu','cazuela');}
+    else if(tipo==='MENU_ENVASADO'||tipo==='ENVASADO'){document.getElementById('cb-pv-envasado').checked=true;document.getElementById('pax-pv-envasado').value=pax;document.getElementById('pv-envasado').classList.add('visible');}
+  }
+
+  // ── Construir detalle de menú para observaciones ──
+  const detalleLines=[];
+  const TABLA_PRECIOS={'Tabla de ibéricos para compartir':19,'Tabla de quesos para compartir':16};
+
+  if(marca==='AB'){
+    if(tipo==='LUNCH'){
+      if(d.pinchos&&d.pinchos.length){
+        detalleLines.push('📋 PINCHOS ('+d.pinchos.length+' tipos × '+paxR+' uds/tipo):');
+        d.pinchos.forEach(p=>detalleLines.push('  • '+p));
+      }
+      if(nveg>0&&d.pinchos_veg&&d.pinchos_veg.length){
+        detalleLines.push('🌱 VEGANO (×'+nveg+' pax):');
+        d.pinchos_veg.forEach(p=>detalleLines.push('  • '+p));
+      }
+      if(nsg>0&&d.pinchos_sg&&d.pinchos_sg.length){
+        detalleLines.push('🌾 SIN GLUTEN (×'+nsg+' pax):');
+        d.pinchos_sg.forEach(p=>detalleLines.push('  • '+p));
+      }
+      // Tablas como líneas custom con precio
+      if(d.extras_tabla&&d.extras_tabla.length){
+        d.extras_tabla.forEach(t=>{
+          const pr=TABLA_PRECIOS[t]||0;
+          if(pr>0) addLineaCustom(t,1,pr);
+        });
+      }
+    } else if(tipo==='COFFEE'){
+      const ppPax=d.coffee_pax||2;
+      if(d.coffee_items&&d.coffee_items.length){
+        detalleLines.push('☕ COFFEE BREAK ('+ppPax+' piezas/pax — '+d.coffee_items.length+' tipos):');
+        d.coffee_items.forEach(p=>detalleLines.push('  • '+p));
+      }
+      if(nveg>0&&d.coffee_veg&&d.coffee_veg.length){
+        detalleLines.push('🌱 VEGANO coffee (×'+nveg+'):');
+        d.coffee_veg.forEach(p=>detalleLines.push('  • '+p));
+      }
+      if(nsg>0&&d.coffee_sg&&d.coffee_sg.length){
+        detalleLines.push('🌾 SIN GLUTEN coffee (×'+nsg+'):');
+        d.coffee_sg.forEach(p=>detalleLines.push('  • '+p));
+      }
+    } else if(tipo==='MENU_BLUSAS'){
+      const nomMenu=d.menu_blusas_tipo==='menu1'?'Menú 1':'Menú 2';
+      detalleLines.push('🍽 MENÚ BLUSAS — '+nomMenu+':');
+      if(d.menu_prims&&d.menu_prims.length) d.menu_prims.forEach(p=>detalleLines.push('  Primero: '+p));
+      if(d.menu_segs&&d.menu_segs.length) d.menu_segs.forEach(p=>detalleLines.push('  Segundo: '+p));
+      if(d.menu_postres&&d.menu_postres.length) d.menu_postres.forEach(p=>detalleLines.push('  Postre: '+p));
+    } else if(tipo==='MENU_DEGUSTACION'){
+      const nomDegu={araba:'Araba 32€',gasteiz:'Gasteiz 27€',kutxi:'Kutxillerría 22€',umeak:'Umeak 13.95€'};
+      detalleLines.push('🥩 MENÚ DEGUSTACIÓN — '+(nomDegu[d.menu_degu_tipo]||d.menu_degu_tipo||'')+':');
+      if(d.menu_segs&&d.menu_segs.length) d.menu_segs.forEach(p=>detalleLines.push('  2º plato: '+p));
+      if(d.menu_postres&&d.menu_postres.length) d.menu_postres.forEach(p=>detalleLines.push('  Postre: '+p));
+    }
+    // Camareros AB
+    if(d.camareros>0){
+      const horas=Math.max(4,d.camareros*4);
+      document.getElementById('cb-ab-cam').checked=true;
+      document.getElementById('h-ab-cam').value=horas;
+    }
+  } else {
+    // PV
+    if(tipo==='LUNCH'){
+      if(d.pinchos&&d.pinchos.length){
+        detalleLines.push('🥢 BOCADOS ('+d.pinchos.length+' tipos × '+paxR+' uds/tipo):');
+        d.pinchos.forEach(p=>detalleLines.push('  • '+p));
+      }
+      if(nveg>0&&d.pinchos_veg&&d.pinchos_veg.length){
+        detalleLines.push('🌱 VEGANO (×'+nveg+' pax):');
+        d.pinchos_veg.forEach(p=>detalleLines.push('  • '+p));
+      }
+      if(nsg>0&&d.pinchos_sg&&d.pinchos_sg.length){
+        detalleLines.push('🌾 SIN GLUTEN (×'+nsg+' pax):');
+        d.pinchos_sg.forEach(p=>detalleLines.push('  • '+p));
+      }
+    } else if(tipo==='COFFEE'){
+      if(d.coffee_items&&d.coffee_items.length){
+        detalleLines.push('☕ COFFEE BREAK PV — piezas seleccionadas:');
+        d.coffee_items.forEach(p=>detalleLines.push('  • '+p));
+      }
+      if(nveg>0&&d.coffee_veg&&d.coffee_veg.length){
+        detalleLines.push('🌱 VEGANO (×'+nveg+'):');
+        d.coffee_veg.forEach(p=>detalleLines.push('  • '+p));
+      }
+    } else if(tipo==='MENU_POPULAR'){
+      detalleLines.push('🍽 MENÚ POPULAR PV:');
+      if(d.menu_ents&&d.menu_ents.length) d.menu_ents.forEach(p=>detalleLines.push('  Entrante: '+p));
+      if(d.menu_prims&&d.menu_prims.length) d.menu_prims.forEach(p=>detalleLines.push('  Primero: '+p));
+      if(d.menu_segs&&d.menu_segs.length) d.menu_segs.forEach(p=>detalleLines.push('  Segundo: '+p));
+      if(d.menu_postres&&d.menu_postres.length) d.menu_postres.forEach(p=>detalleLines.push('  Postre: '+p));
+    } else if(tipo==='MENU_CELEBRACION'){
+      detalleLines.push('✨ MENÚ CELEBRACIÓN PV:');
+      if(d.menu_ents&&d.menu_ents.length) d.menu_ents.forEach(p=>detalleLines.push('  Entrante: '+p));
+      if(d.menu_prims&&d.menu_prims.length) d.menu_prims.forEach(p=>detalleLines.push('  Primero: '+p));
+      if(d.menu_segs&&d.menu_segs.length) d.menu_segs.forEach(p=>detalleLines.push('  Segundo: '+p));
+      if(d.menu_postres&&d.menu_postres.length) d.menu_postres.forEach(p=>detalleLines.push('  Postre: '+p));
+    }
+    // Camareros PV
+    if(d.camareros>0){
+      const horas=Math.max(4,d.camareros*4);
+      document.getElementById('cb-pv-cam').checked=true;
+      document.getElementById('h-pv-cam').value=horas;
+    }
+  }
+
+  // Pinchos/bocados extra → líneas custom con precio
+  if(d.pinchos_extra&&d.pinchos_extra.length){
+    d.pinchos_extra.forEach(pe=>{
+      if(pe.desc&&pe.precio>0) addLineaCustom(pe.desc+' (extra)',pax,pe.precio);
+    });
+  }
+
+  // Observaciones: detalle menú + notas de la hoja
+  const obsEl=document.getElementById('obs-pres');
+  if(obsEl){
+    const partes=[];
+    if(detalleLines.length>0) partes.push(detalleLines.join('\n'));
+    if(d.obs) partes.push('📝 Notas del evento: '+d.obs);
+    if(partes.length>0) obsEl.value=partes.join('\n\n');
+  }
+
+  // Veganos y SG en descripción evento
+  if((nveg>0||nsg>0)&&d.desc_evento){
+    const extra=[];
+    if(nveg>0) extra.push(nveg+' vegano'+(nveg>1?'s':''));
+    if(nsg>0) extra.push(nsg+' sin gluten');
+    const descEl=document.getElementById('desc-evento');
+    if(descEl&&extra.length) descEl.value=(descEl.value||d.desc_evento)+' ('+extra.join(', ')+')';
+  }
+
+  calcular();
+  return true;
+}
+
+// ══ INIT ══
+buildRacionesInputs();
+cargarPrecios();
+const hayPreload=cargarPreload();
+if(!hayPreload){
+  const haySaved=cargarFormulario();
+  if(!haySaved){
+    document.getElementById('fecha-pres').valueAsDate=new Date();
+    const lastNum=parseInt(localStorage.getItem('catering_last_presup')||'0')+1;
+    localStorage.setItem('catering_last_presup',lastNum);
+    document.getElementById('num-pres').value='P'+new Date().getFullYear()+String(lastNum).padStart(3,'0');
+  }
+}
+calcular();
+</script>
+</body>
+</html>
