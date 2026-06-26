@@ -1127,6 +1127,34 @@ function loadDB(){
 }
 
 // ═══════════════════════════════════════════════════
+// SYNC HOJAS DESDE APPS EXTERNAS (Hoja_Servicio_ALABOCA / PV)
+// ═══════════════════════════════════════════════════
+function syncExternalHojas(){
+  try{
+    const raw=localStorage.getItem('albaraba_v2');
+    if(!raw)return false;
+    const localDB=JSON.parse(raw);
+    if(!localDB.hojas||!localDB.hojas.length)return false;
+    let changed=false;
+    localDB.hojas.forEach(h=>{
+      if(!DB.hojas.find(x=>x.id===h.id)){DB.hojas.push(h);changed=true;}
+    });
+    if(changed)saveDB();
+    return changed;
+  }catch(e){return false;}
+}
+window.addEventListener('storage',function(e){
+  if(e.key==='albaraba_v2'){
+    try{
+      const d=JSON.parse(e.newValue||'{}');
+      if(d.hojas)d.hojas.forEach(h=>{if(!DB.hojas.find(x=>x.id===h.id))DB.hojas.push(h);});
+      if(currentSection==='hojas')renderHojasTable();
+      if(currentSection==='dashboard')renderDashboard();
+    }catch(err){}
+  }
+});
+
+// ═══════════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════════
 let currentSection='dashboard';
@@ -1142,7 +1170,7 @@ function nav(s){
   else if(s==='proveedores')renderProvTable();
   else if(s==='productos')renderProdTable();
   else if(s==='elaboraciones')renderElabTable();
-  else if(s==='hojas')renderHojasTable();
+  else if(s==='hojas'){syncExternalHojas();renderHojasTable();}
   else if(s==='pedidos')renderPedidoSection();
   else if(s==='stock')renderStockTable();
   else if(s==='informes')renderInformes();
@@ -1279,7 +1307,17 @@ function renderDashboard(){
   const sinPrecioAlert=sinPrecioCount>0?`<div class="notice warn" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('productos')">💰 <strong>${sinPrecioCount} productos sin precio.</strong> Añade precios para que funcione el cálculo de costes en Gastos. <u>Ir a Productos →</u></div>`:'';
   const tarPend=(DB.tareas||[]).filter(t=>t.estado==='pendiente');
   const tarAlert=tarPend.length>0?`<div class="notice" style="cursor:pointer;margin-bottom:10px;grid-column:span 2" onclick="nav('tareas')">📝 <strong>${tarPend.length} tarea(s) pendiente(s)</strong>${tarPend.filter(t=>t.prioridad==='alta').length>0?` · ${tarPend.filter(t=>t.prioridad==='alta').length} de alta prioridad 🔴`:''} <u>Ver Tareas →</u></div>`:'';
-  document.getElementById('dash-grids').innerHTML=elabAlert+hojasAlert+sinPrecioAlert+appccAlert+mejorasAlert+tarAlert+pedAlertHTML+`
+  const appccBtn=`<div class="card" style="grid-column:span 2;background:linear-gradient(135deg,#1a4fa8 0%,#0d2d6e 100%);color:#fff;cursor:pointer;border:none" onclick="window.open('APPCC_ALBARABA.html','_blank')">
+    <div style="padding:18px 20px;display:flex;align-items:center;gap:16px">
+      <div style="font-size:38px;line-height:1">🧪</div>
+      <div style="flex:1">
+        <div style="font-size:17px;font-weight:800;letter-spacing:.3px">APPCC · Control Sanitario</div>
+        <div style="font-size:12px;opacity:.75;margin-top:3px">Temperaturas · Limpiezas · Lotes · Etiquetas · Informes oficiales · Cierre mensual</div>
+      </div>
+      <div style="font-size:12px;font-weight:700;background:rgba(255,255,255,.2);padding:8px 16px;border-radius:20px;white-space:nowrap">Abrir APPCC →</div>
+    </div>
+  </div>`;
+  document.getElementById('dash-grids').innerHTML=appccBtn+elabAlert+hojasAlert+sinPrecioAlert+appccAlert+mejorasAlert+tarAlert+pedAlertHTML+`
     <div class="card" style="grid-column:span 2"><div class="card-head"><h3>📅 Agenda — próximos 7 días</h3><button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver todos</button></div><div style="padding:0 16px 4px">${agendaHTML}</div></div>
     <div class="card"><div class="card-head"><h3>📊 Elaboraciones por categoría</h3></div><div style="padding:16px">${catHTML||'<div class="empty"><p>Sin elaboraciones</p></div>'}</div></div>
     <div class="card"><div class="card-head"><h3>📦 Últimos productos añadidos</h3><button class="btn btn-sm btn-gold" onclick="nav('productos')">Ver todos</button></div>
