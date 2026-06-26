@@ -235,9 +235,9 @@ input:focus,select:focus{outline:none;border-color:var(--teal);background:#fff}
         <label class="check-item"><input type="checkbox" name="extra-a" value="Tabla de ibéricos para compartir"> 🧀 Tabla ibéricos (compartir)</label>
         <label class="check-item"><input type="checkbox" name="extra-a" value="Tabla de quesos para compartir"> 🧀 Tabla quesos (compartir)</label>
       </div>
-      <p class="grupo-lbl">🌟 PINCHOS EXTRA (precio adicional por persona — aparecerá en el presupuesto)</p>
+      <p class="grupo-lbl">🌟 BOCADOS EXTRA (elige categoría · aparecerán en la hoja generada y en el presupuesto)</p>
       <div id="pext-a-cont"></div>
-      <button type="button" onclick="addPinchoExtra('a')" style="background:none;border:1.5px dashed var(--teal);color:var(--teal);padding:5px 14px;border-radius:15px;cursor:pointer;font-size:.8em;margin-top:4px">+ Añadir pintxo extra con precio</button>
+      <button type="button" onclick="addPinchoExtra('a')" style="background:none;border:1.5px dashed var(--teal);color:var(--teal);padding:5px 14px;border-radius:15px;cursor:pointer;font-size:.8em;margin-top:4px">+ Añadir bocado extra</button>
     </div>
 
     <!-- COFFEE -->
@@ -318,6 +318,9 @@ input:focus,select:focus{outline:none;border-color:var(--teal);background:#fff}
         <label class="check-item"><input type="checkbox" name="coffee-sg" value="Fruta de temporada (SG)"> Fruta de temporada SG</label>
         <label class="check-item"><input type="checkbox" name="coffee-sg" value="Bizcocho sin gluten (SG)"> Bizcocho sin gluten</label>
       </div>
+      <p class="grupo-lbl" style="margin-top:10px">🌟 PIEZAS EXTRA PERSONALIZADAS (aparecerán en la hoja generada)</p>
+      <div id="pext-coffee-a-cont"></div>
+      <button type="button" onclick="addItemExtra('pext-coffee-a-cont',CATS_COFFEE)" style="background:none;border:1.5px dashed var(--teal);color:var(--teal);padding:5px 14px;border-radius:15px;cursor:pointer;font-size:.8em;margin-top:4px">+ Añadir pieza extra</button>
     </div>
 
     <!-- MENÚ BLUSAS -->
@@ -359,6 +362,9 @@ input:focus,select:focus{outline:none;border-color:var(--teal);background:#fff}
         <label class="check-item"><input type="checkbox" name="mb-postre" value="Natillas"> Natillas</label>
         <label class="check-item"><input type="checkbox" name="mb-postre" value="Tarta Oreo"> Tarta Oreo</label>
       </div>
+      <p class="grupo-lbl" style="margin-top:10px">🌟 PLATOS EXTRA PERSONALIZADOS (aparecerán en la hoja generada)</p>
+      <div id="pext-blusas-a-cont"></div>
+      <button type="button" onclick="addItemExtra('pext-blusas-a-cont',CATS_BLUSAS)" style="background:none;border:1.5px dashed var(--teal);color:var(--teal);padding:5px 14px;border-radius:15px;cursor:pointer;font-size:.8em;margin-top:4px">+ Añadir plato extra</button>
       <div style="margin-top:10px;border-top:1px solid #eee;padding-top:8px">
         <label class="check-item" style="display:inline-flex;border:none;padding:0;gap:8px;font-size:.85em;font-weight:700">
           <input type="checkbox" id="cb-infantil-blusas" onchange="document.getElementById('inf-blusas-sub').style.display=this.checked?'block':'none'"> 👶 ¿Hay niños con menú infantil?
@@ -444,6 +450,9 @@ input:focus,select:focus{outline:none;border-color:var(--teal);background:#fff}
       <div id="md-umeak" style="display:none;margin-top:10px">
         <p class="grupo-lbl">UMEAK (niños) — Croquetas · Macarrones con chorizo · Pollo asado · Natillas</p>
       </div>
+      <p class="grupo-lbl" style="margin-top:10px">🌟 PLATOS EXTRA PERSONALIZADOS (aparecerán en la hoja generada)</p>
+      <div id="pext-degu-a-cont"></div>
+      <button type="button" onclick="addItemExtra('pext-degu-a-cont',CATS_DEGU)" style="background:none;border:1.5px dashed var(--teal);color:var(--teal);padding:5px 14px;border-radius:15px;cursor:pointer;font-size:.8em;margin-top:4px">+ Añadir plato extra</button>
       <div style="margin-top:8px;font-size:.78em;color:#777;border-top:1px solid #eee;padding-top:8px">
         Incluye siempre: ½ botella tinto/blanco Rioja · Agua · Gaseosa · Pan · Vajilla biodegradable · Café · Chupito (6.50€)
       </div>
@@ -535,6 +544,10 @@ input:focus,select:focus{outline:none;border-color:var(--teal);background:#fff}
       <div class="racion-row"><label><input type="checkbox" name="racion-a" value="Espaguetis boloñesa (7.3€)"> Espaguetis boloñesa</label><input type="number" class="racion-qty" id="rq-espag" placeholder="—" min="1"><span class="racion-u">raciones</span></div>
       <div class="racion-row"><label><input type="checkbox" name="racion-a" value="Lasaña de carne (8.3€)"> Lasaña de carne</label><input type="number" class="racion-qty" id="rq-lasana" placeholder="—" min="1"><span class="racion-u">raciones</span></div>
       <div class="racion-row"><label><input type="checkbox" name="racion-a" value="Macarrones con txorizo (7.3€)"> Macarrones con txorizo</label><input type="number" class="racion-qty" id="rq-macar" placeholder="—" min="1"><span class="racion-u">raciones</span></div>
+
+      <p class="grupo-lbl" style="margin-top:10px">🌟 RACIONES EXTRA PERSONALIZADAS (cantidad libre)</p>
+      <div id="pext-raciones-a-cont"></div>
+      <button type="button" onclick="addRacionExtra('pext-raciones-a-cont')" style="background:none;border:1.5px dashed var(--teal);color:var(--teal);padding:5px 14px;border-radius:15px;cursor:pointer;font-size:.8em;margin-top:4px">+ Añadir ración extra</button>
     </div>
   </div>
 
@@ -958,6 +971,20 @@ function calcular() {
       extras.forEach(e=>h+=filC(e,Math.max(1,rup(pax/12)),'uds',false,'1 tabla cada ~12 personas'));
     }
 
+    // Pinchos extra personalizados — clasificados por categoría
+    const pext=getPinchosExtra('a');
+    if(pext.length>0){
+      const pextFrio=pext.filter(p=>p.cat==='frio');
+      const pextCal=pext.filter(p=>p.cat==='caliente');
+      const pextDulce=pext.filter(p=>p.cat==='dulce');
+      const pextOtro=pext.filter(p=>p.cat==='otro');
+      h+=infobox('🌟 <strong>Bocados extra personalizados</strong>');
+      if(pextFrio.length){h+=infobox('❄ Fríos extra');pextFrio.forEach(p=>h+=filC(p.desc,paxR,'uds',true,p.precio>0?p.precio+'€/pax':''));}
+      if(pextCal.length){h+=infobox('🔥 Calientes extra');pextCal.forEach(p=>h+=filC(p.desc,paxR,'uds',false,p.precio>0?p.precio+'€/pax':''));}
+      if(pextDulce.length){h+=infobox('🍬 Dulces extra');pextDulce.forEach(p=>h+=filC(p.desc,paxR,'uds',false,p.precio>0?p.precio+'€/pax':''));}
+      if(pextOtro.length){pextOtro.forEach(p=>h+=filC(p.desc,paxR,'uds',false,p.precio>0?p.precio+'€/pax':''));}
+    }
+
     cocinaHTML += seccC('🥢 PINCHOS — PRODUCCIÓN', h);
   }
   else if(srv==='COFFEE') {
@@ -981,6 +1008,19 @@ function calcular() {
       h+=infobox(`🌾 Sin gluten: ${selSG.length} tipos × ${cpPax} × ${nSG} persona${nSG>1?'s':''} = <strong>${porTSG} uds/tipo</strong>`);
       selSG.forEach(p=>h+=filC(p,porTSG,'uds'));
     } else if(nSG>0) h+=warnbox(`⚠ ${nSG} persona${nSG>1?'s':''} sin gluten sin opciones marcadas.`);
+    // Piezas extra personalizadas — coffee
+    const cpext=_getExtras('pext-coffee-a-cont');
+    if(cpext.length>0){
+      const cpDulce=cpext.filter(p=>p.cat==='dulce');
+      const cpSalado=cpext.filter(p=>p.cat==='salado');
+      const cpFresco=cpext.filter(p=>p.cat==='fresco');
+      const cpOtro=cpext.filter(p=>p.cat==='otro');
+      h+=infobox('🌟 <strong>Piezas extra personalizadas</strong>');
+      if(cpDulce.length){h+=infobox('🍩 Dulces extra');cpDulce.forEach(p=>h+=filC(p.desc,paxR,'uds'));}
+      if(cpSalado.length){h+=infobox('🥪 Salados extra');cpSalado.forEach(p=>h+=filC(p.desc,paxR,'uds'));}
+      if(cpFresco.length){h+=infobox('🍓 Frescos extra');cpFresco.forEach(p=>h+=filC(p.desc,paxR,'uds'));}
+      if(cpOtro.length){cpOtro.forEach(p=>h+=filC(p.desc,paxR,'uds'));}
+    }
     cocinaHTML += seccC('☕ COFFEE — PIEZAS', h);
   }
   else if(srv==='MENU_BLUSAS') {
@@ -992,17 +1032,26 @@ function calcular() {
     const pref=mn==='menu1'?'mb1':'mb2';
     const prims=[...document.querySelectorAll(`input[name=${pref}-prim]:checked`)].map(i=>i.value);
     const segs=[...document.querySelectorAll(`input[name=${pref}-seg]:checked`)].map(i=>i.value);
+    // Extras personalizados blusas
+    const bext=_getExtras('pext-blusas-a-cont');
+    const bxEntr=bext.filter(p=>p.cat==='entrante').map(p=>filC(p.desc,paxAd,'raciones')).join('');
+    const bxPrim=bext.filter(p=>p.cat==='primero').map(p=>filC(p.desc,paxAd,'raciones')).join('');
+    const bxSeg=bext.filter(p=>p.cat==='segundo').map(p=>filC(p.desc,paxAd,'raciones')).join('');
+    const bxPos=bext.filter(p=>p.cat==='postre').map(p=>filC(p.desc,paxAd,'raciones')).join('');
+    const bxInf=bext.filter(p=>p.cat==='infantil').map(p=>filC(p.desc,paxInf||1,'raciones')).join('');
+    const bxOtro=bext.filter(p=>p.cat==='otro').map(p=>filC(p.desc,paxAd,'raciones')).join('');
     cocinaHTML+=seccC(`🍽 MENÚ BLUSAS ${mn==='menu1'?'1':'2'}`,infoH);
-    cocinaHTML+=seccC('🥗 ENTRANTE',filC('Alitas de pollo marinadas',paxAd,'raciones')+xRender(eg.entrante));
-    if(prims.length) cocinaHTML+=seccC('🍝 PRIMEROS',prims.map(p=>filC(p,paxAd,'raciones')).join('')+xRender(eg.primero));
-    else cocinaHTML+=seccC('🍝 PRIMEROS',warnbox('⚠ No has marcado primero.')+xRender(eg.primero));
-    if(segs.length) cocinaHTML+=seccC('🥩 SEGUNDOS',segs.map(p=>filC(p,paxAd,'raciones')).join('')+xRender(eg.segundo));
-    else cocinaHTML+=seccC('🥩 SEGUNDOS',warnbox('⚠ No has marcado segundo.')+xRender(eg.segundo));
-    cocinaHTML+=seccC('🍮 POSTRES',postresAElegir('mb-postre')+xRender(eg.postre));
+    cocinaHTML+=seccC('🥗 ENTRANTE',filC('Alitas de pollo marinadas',paxAd,'raciones')+xRender(eg.entrante)+bxEntr);
+    if(prims.length) cocinaHTML+=seccC('🍝 PRIMEROS',prims.map(p=>filC(p,paxAd,'raciones')).join('')+xRender(eg.primero)+bxPrim);
+    else cocinaHTML+=seccC('🍝 PRIMEROS',warnbox('⚠ No has marcado primero.')+xRender(eg.primero)+bxPrim);
+    if(segs.length) cocinaHTML+=seccC('🥩 SEGUNDOS',segs.map(p=>filC(p,paxAd,'raciones')).join('')+xRender(eg.segundo)+bxSeg);
+    else cocinaHTML+=seccC('🥩 SEGUNDOS',warnbox('⚠ No has marcado segundo.')+xRender(eg.segundo)+bxSeg);
+    cocinaHTML+=seccC('🍮 POSTRES',postresAElegir('mb-postre')+xRender(eg.postre)+bxPos);
     const infSelsBl=[...document.querySelectorAll('input[name=inf-blusas-a]:checked')].map(i=>i.value);
-    if(paxInf>0||eg.infantil.length){
-      cocinaHTML+=seccC('👶 MENÚ INFANTIL',(paxInf>0?(infSelsBl.length?infSelsBl.map(p=>filC(p,paxInf,'raciones')).join(''):warnbox('⚠ Marca los platos del menú infantil.')):'') +xRender(eg.infantil));
+    if(paxInf>0||eg.infantil.length||bxInf){
+      cocinaHTML+=seccC('👶 MENÚ INFANTIL',(paxInf>0?(infSelsBl.length?infSelsBl.map(p=>filC(p,paxInf,'raciones')).join(''):warnbox('⚠ Marca los platos del menú infantil.')):'') +xRender(eg.infantil)+bxInf);
     }
+    if(bxOtro) cocinaHTML+=seccC('➕ EXTRAS PERSONALIZADOS',bxOtro);
   }
   else if(srv==='MENU_DEGUSTACION') {
     const md=stA.mdegu, fmt=stA.formato;
@@ -1017,21 +1066,29 @@ function calcular() {
       kutxi:['Ensaladilla rusa','Champiñones al ajillo','Morcilla de Burgos con piperrada'],
       umeak:['Croquetas']
     };
-    cocinaHTML+=seccC('🥗 ENTRANTES',entrantesMap[md].map(e=>filC(e,rup(paxAdD/4),'fuentes para compartir')).join('')+xRender(eg.entrante));
+    // Extras personalizados degustation
+    const dext=_getExtras('pext-degu-a-cont');
+    const dxEntr=dext.filter(p=>p.cat==='entrante').map(p=>filC(p.desc,paxAdD,'raciones')).join('');
+    const dxSeg=dext.filter(p=>p.cat==='segundo').map(p=>filC(p.desc,paxAdD,'raciones')).join('');
+    const dxPos=dext.filter(p=>p.cat==='postre').map(p=>filC(p.desc,paxAdD,'raciones')).join('');
+    const dxInf=dext.filter(p=>p.cat==='infantil').map(p=>filC(p.desc,paxInfD||1,'raciones')).join('');
+    const dxOtro=dext.filter(p=>p.cat==='otro').map(p=>filC(p.desc,paxAdD,'raciones')).join('');
+    cocinaHTML+=seccC('🥗 ENTRANTES',entrantesMap[md].map(e=>filC(e,rup(paxAdD/4),'fuentes para compartir')).join('')+xRender(eg.entrante)+dxEntr);
     if(md!=='umeak'){
       const sels=[...document.querySelectorAll(`input[name=a-${md}]:checked`)].map(i=>i.value);
-      if(sels.length) cocinaHTML+=seccC('🥩 SEGUNDOS',sels.map(p=>filC(p,paxAdD,'raciones')).join('')+xRender(eg.segundo));
-      else cocinaHTML+=seccC('🥩 SEGUNDOS',warnbox('⚠ No has marcado el segundo plato.')+xRender(eg.segundo));
+      if(sels.length) cocinaHTML+=seccC('🥩 SEGUNDOS',sels.map(p=>filC(p,paxAdD,'raciones')).join('')+xRender(eg.segundo)+dxSeg);
+      else cocinaHTML+=seccC('🥩 SEGUNDOS',warnbox('⚠ No has marcado el segundo plato.')+xRender(eg.segundo)+dxSeg);
       const postres=[...document.querySelectorAll(`input[name=post-${md}]:checked`)].map(i=>i.value);
-      if(postres.length){const pp=Math.ceil(paxAdD/postres.length);cocinaHTML+=seccC('🍮 POSTRES',postres.map(p=>filC(p,pp,'uds')).join('')+xRender(eg.postre));}
-      else cocinaHTML+=seccC('🍮 POSTRES',warnbox('⚠ Marca las opciones de postre.')+xRender(eg.postre));
+      if(postres.length){const pp=Math.ceil(paxAdD/postres.length);cocinaHTML+=seccC('🍮 POSTRES',postres.map(p=>filC(p,pp,'uds')).join('')+xRender(eg.postre)+dxPos);}
+      else cocinaHTML+=seccC('🍮 POSTRES',warnbox('⚠ Marca las opciones de postre.')+xRender(eg.postre)+dxPos);
     } else {
-      cocinaHTML+=seccC('🍽 UMEAK (niños)',['Croquetas','Macarrones con chorizo','Pollo asado','Natillas'].map(p=>filC(p,paxAdD,'raciones')).join('')+xRender(eg.infantil));
+      cocinaHTML+=seccC('🍽 UMEAK (niños)',['Croquetas','Macarrones con chorizo','Pollo asado','Natillas'].map(p=>filC(p,paxAdD,'raciones')).join('')+xRender(eg.infantil)+dxInf);
     }
     const infSelsDeg=[...document.querySelectorAll('input[name=inf-degu-a]:checked')].map(i=>i.value);
-    if(paxInfD>0||eg.infantil.length){
-      cocinaHTML+=seccC('👶 MENÚ INFANTIL',(paxInfD>0?(infSelsDeg.length?infSelsDeg.map(p=>filC(p,paxInfD,'raciones')).join(''):warnbox('⚠ Marca los platos del menú infantil.')):'') +xRender(eg.infantil));
+    if(paxInfD>0||eg.infantil.length||dxInf){
+      cocinaHTML+=seccC('👶 MENÚ INFANTIL',(paxInfD>0?(infSelsDeg.length?infSelsDeg.map(p=>filC(p,paxInfD,'raciones')).join(''):warnbox('⚠ Marca los platos del menú infantil.')):'') +xRender(eg.infantil)+dxInf);
     }
+    if(dxOtro) cocinaHTML+=seccC('➕ EXTRAS PERSONALIZADOS',dxOtro);
   }
   else if(srv==='CAJAS') {
     const cajas=[...document.querySelectorAll('input[name=caja-a]:checked')];
@@ -1057,6 +1114,12 @@ function calcular() {
       h+=filC(cb.value,qty,u);
     });
     if(!hayAlgo) h=warnbox('⚠ Sin raciones seleccionadas.');
+    // Raciones extra personalizadas
+    const rext=_getRacionesExtra('pext-raciones-a-cont');
+    if(rext.length>0){
+      h+=infobox('🌟 <strong>Raciones extra personalizadas</strong>');
+      rext.forEach(p=>h+=filC(p.desc,p.qty,p.unit));
+    }
     cocinaHTML += seccC('🍲 RACIONES PEDIDAS', h);
   }
 
@@ -1317,23 +1380,61 @@ function calcular() {
   res.scrollIntoView({behavior:'smooth'});
 }
 
-// ── Pinchos extra (filas dinámicas con nombre + precio/pax) ──
+// ── Items extra por tipo de servicio ──
+const CATS_LUNCH=[['caliente','🔥 Caliente'],['frio','❄ Frío'],['dulce','🍬 Dulce/Postre'],['otro','➕ Extra']];
+const CATS_COFFEE=[['dulce','🍩 Dulce'],['salado','🥪 Salado'],['fresco','🍓 Fresco'],['otro','➕ Extra']];
+const CATS_BLUSAS=[['entrante','🥗 Entrante'],['primero','🍝 Primero'],['segundo','🥩 Segundo'],['postre','🍮 Postre'],['infantil','👶 Infantil'],['otro','➕ Extra']];
+const CATS_DEGU=[['entrante','🥗 Entrante'],['segundo','🥩 Segundo'],['postre','🍮 Postre'],['infantil','👶 Infantil'],['otro','➕ Extra']];
+
+function addItemExtra(contId, cats){
+  const cont=document.getElementById(contId);
+  if(!cont)return;
+  const div=document.createElement('div');
+  div.style.cssText='display:grid;grid-template-columns:130px 1fr 30px;gap:6px;margin-bottom:6px;align-items:center';
+  const catSel=cats?`<select class="pe-cat" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.82em">${cats.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join('')}</select>`:'';
+  div.innerHTML=catSel+`<input type="text" class="pe-desc" placeholder="Nombre del plato / bocado extra" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em"><button onclick="this.parentElement.remove()" style="background:#f44336;color:#fff;border:none;border-radius:5px;cursor:pointer;padding:6px 8px">✕</button>`;
+  cont.appendChild(div);
+}
+function _getExtras(contId){
+  const cont=document.getElementById(contId);
+  if(!cont)return[];
+  return[...cont.querySelectorAll(':scope > div')].map(div=>({
+    desc:(div.querySelector('.pe-desc')?.value||'').trim(),
+    cat:div.querySelector('.pe-cat')?.value||'otro'
+  })).filter(p=>p.desc);
+}
+function addRacionExtra(contId){
+  const cont=document.getElementById(contId);
+  if(!cont)return;
+  const div=document.createElement('div');
+  div.style.cssText='display:grid;grid-template-columns:1fr 80px 60px 30px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML=`<input type="text" class="pe-desc" placeholder="Nombre de la ración extra" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em"><input type="number" class="pe-qty" placeholder="Cant." min="1" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em;text-align:center"><input type="text" class="pe-unit" placeholder="uds" value="raciones" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.85em;text-align:center"><button onclick="this.parentElement.remove()" style="background:#f44336;color:#fff;border:none;border-radius:5px;cursor:pointer;padding:6px 8px">✕</button>`;
+  cont.appendChild(div);
+}
+function _getRacionesExtra(contId){
+  const cont=document.getElementById(contId);
+  if(!cont)return[];
+  return[...cont.querySelectorAll(':scope > div')].map(div=>({
+    desc:(div.querySelector('.pe-desc')?.value||'').trim(),
+    qty:parseInt(div.querySelector('.pe-qty')?.value)||1,
+    unit:(div.querySelector('.pe-unit')?.value||'uds').trim()
+  })).filter(p=>p.desc);
+}
+// Alias para compatibilidad con generarPresupuesto_A (usa precio)
 function addPinchoExtra(sfx){
   const cont=document.getElementById('pext-'+sfx+'-cont');
   if(!cont)return;
   const div=document.createElement('div');
-  div.style.cssText='display:grid;grid-template-columns:1fr 110px 30px;gap:6px;margin-bottom:6px;align-items:center';
-  div.innerHTML=`
-    <input type="text" class="pe-desc" placeholder="Nombre del pintxo extra" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em">
-    <input type="number" class="pe-precio" placeholder="€/pax" step="0.01" min="0" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em;text-align:right">
-    <button onclick="this.parentElement.remove()" style="background:#f44336;color:#fff;border:none;border-radius:5px;cursor:pointer;padding:6px 8px">✕</button>`;
+  div.style.cssText='display:grid;grid-template-columns:130px 1fr 100px 30px;gap:6px;margin-bottom:6px;align-items:center';
+  div.innerHTML=`<select class="pe-cat" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.82em">${CATS_LUNCH.map(c=>`<option value="${c[0]}">${c[1]}</option>`).join('')}</select><input type="text" class="pe-desc" placeholder="Nombre del bocado extra" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em"><input type="number" class="pe-precio" placeholder="€/pax" step="0.01" min="0" style="padding:7px 9px;border:1.5px solid #ddd;border-radius:7px;font-size:.9em;text-align:right"><button onclick="this.parentElement.remove()" style="background:#f44336;color:#fff;border:none;border-radius:5px;cursor:pointer;padding:6px 8px">✕</button>`;
   cont.appendChild(div);
 }
 function getPinchosExtra(sfx){
-  return [...document.querySelectorAll('#pext-'+sfx+'-cont > div')].map(div=>({
-    desc:(div.querySelector('.pe-desc').value||'').trim(),
-    precio:parseFloat(div.querySelector('.pe-precio').value)||0
-  })).filter(p=>p.desc&&p.precio>0);
+  return[...document.querySelectorAll('#pext-'+sfx+'-cont > div')].map(div=>({
+    desc:(div.querySelector('.pe-desc')?.value||'').trim(),
+    precio:parseFloat(div.querySelector('.pe-precio')?.value)||0,
+    cat:div.querySelector('.pe-cat')?.value||'otro'
+  })).filter(p=>p.desc);
 }
 
 function generarPresupuesto_A(){
