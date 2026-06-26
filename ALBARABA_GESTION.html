@@ -208,6 +208,9 @@ textarea.fc{resize:vertical;min-height:70px}
     <h1>🍽 Albaraba SL</h1>
     <p>APPCC · Catering · Gestión</p>
   </div>
+  <div id="user-greeting" style="display:none;padding:9px 16px 7px;background:rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.1);font-size:13px;color:rgba(255,255,255,.9)">
+    <span id="user-greeting-name">👤</span>
+  </div>
   <div class="nav-group">
     <div class="nav-label admin-only">Principal</div>
     <div class="ni active admin-only" id="ni-dashboard" onclick="nav('dashboard')"><span class="ic">📊</span> Dashboard</div>
@@ -231,6 +234,7 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="nav-label">Equipo</div>
     <div class="ni" id="ni-mejoras" onclick="nav('mejoras')"><span class="ic">🔧</span> Mejoras</div>
     <div class="ni" id="ni-tareas" onclick="nav('tareas')"><span class="ic">📝</span> Tareas</div>
+    <div class="ni" id="ni-appcc-worker" onclick="window.open('APPCC_ALBARABA.html','_blank')"><span class="ic">🧹</span> APPCC Sanidad</div>
     <div class="ni admin-only" id="ni-usuarios" onclick="nav('usuarios')"><span class="ic">👥</span> Usuarios</div>
     <div class="nav-label admin-only">Datos</div>
     <div class="ni admin-only" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
@@ -688,6 +692,7 @@ textarea.fc{resize:vertical;min-height:70px}
   <div class="mn-item" id="mn-productos" onclick="nav('productos')"><div class="ic">📦</div>Productos</div>
   <div class="mn-item" id="mn-tareas" onclick="nav('tareas')"><div class="ic">📝</div>Tareas</div>
   <div class="mn-item" id="mn-pedidos" onclick="nav('pedidos')"><div class="ic">🛒</div>Pedido</div>
+  <div class="mn-item" id="mn-appcc-mob" onclick="window.open('APPCC_ALBARABA.html','_blank')" style="display:none"><div class="ic">🧹</div>APPCC</div>
   <div class="mn-item" onclick="cerrarSesion()" style="color:rgba(255,100,100,.7)"><div class="ic">🚪</div>Salir</div>
 </nav>
 
@@ -2585,6 +2590,7 @@ function exportarAppccExcel(){
 // ═══════════════════════════════════════════════════
 let userRole='trabajador';
 let currentUserEmail='';
+let currentUserName='';
 function applyRole(email){
   if(email)currentUserEmail=(email||'').toLowerCase().trim();
   // contacto@alaboca.es es SIEMPRE admin - hardcoded
@@ -2593,6 +2599,15 @@ function applyRole(email){
   } else {
     const admins=(DB.admins||[]).map(e=>e.toLowerCase().trim());
     userRole=admins.includes(currentUserEmail)?'admin':'trabajador';
+  }
+  // Buscar nombre en DB.usuarios
+  const u=(DB.usuarios||[]).find(x=>(x.email||'').toLowerCase()===currentUserEmail);
+  if(u&&u.nombre){
+    currentUserName=u.nombre;
+  } else if(currentUserEmail){
+    // Fallback: usar parte del email antes del @, capitalizada
+    const prefix=currentUserEmail.split('@')[0];
+    currentUserName=prefix.charAt(0).toUpperCase()+prefix.slice(1);
   }
   _applyRoleDOM();
 }
@@ -2604,6 +2619,21 @@ function _applyRoleDOM(){
   });
   const lb=document.getElementById('sync-label');
   if(lb)lb.textContent=userRole==='admin'?'Admin':'Trabajador';
+  // Mostrar saludo con nombre
+  const greeting=document.getElementById('user-greeting');
+  const gname=document.getElementById('user-greeting-name');
+  if(greeting&&gname&&currentUserName){
+    greeting.style.display='block';
+    gname.textContent='👤 Hola, '+currentUserName+' '+(userRole==='admin'?'(admin)':'');
+  }
+  // APPCC worker link: visible para trabajadores, oculto para admins (ya tienen su propio ni-appcc)
+  const appccW=document.getElementById('ni-appcc-worker');
+  if(appccW) appccW.style.setProperty('display',userRole==='admin'?'none':'flex','important');
+  // Botón APPCC en nav móvil
+  const mnA=document.getElementById('mn-appcc-mob');
+  const mnP=document.getElementById('mn-pedidos');
+  if(mnA) mnA.style.display=userRole==='trabajador'?'flex':'none';
+  if(mnP) mnP.style.display=userRole==='admin'?'flex':'none';
 }
 function renderUsuarios(){
   const list=document.getElementById('admins-list');
