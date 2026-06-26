@@ -35,13 +35,16 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .mod-header-right{margin-left:auto;display:flex;gap:8px}
 
 /* TILE GRID */
-.tile-grid{flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-content:start}
+.tile-grid{flex:1;overflow-y:auto;padding:16px 16px 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-content:start}
+.tile-section-header{grid-column:1/-1;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:#1a4fa8;padding:4px 10px 8px;border-left:3px solid #1a4fa8;margin:10px 0 2px}
 @media(max-width:600px){.tile-grid{grid-template-columns:repeat(2,1fr)}}
-.tile{background:#fff;border-radius:16px;padding:16px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.08);min-height:100px;transition:transform .1s,box-shadow .1s;user-select:none}
+.tile{background:#fff;border-radius:14px;padding:14px 8px 12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;position:relative;box-shadow:0 2px 8px rgba(26,79,168,.08),0 1px 2px rgba(0,0,0,.05);min-height:88px;transition:transform .12s,box-shadow .12s;user-select:none;border:1px solid rgba(26,79,168,.07)}
+.tile:hover{box-shadow:0 4px 16px rgba(26,79,168,.14),0 2px 4px rgba(0,0,0,.07);transform:translateY(-1px)}
 .tile:active{transform:scale(.96);box-shadow:0 0 0 rgba(0,0,0,0)}
 .tile-icon{font-size:32px;line-height:1}
-.tile-label{font-size:12px;font-weight:600;text-align:center;color:#333;line-height:1.3}
-.tile-badge{position:absolute;top:8px;right:8px;background:#e74c3c;color:#fff;border-radius:50%;width:20px;height:20px;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.tile-label{font-size:12px;font-weight:700;text-align:center;color:#222;line-height:1.3}
+.tile-sublabel{font-size:10px;text-align:center;color:#888;line-height:1.35;margin-top:1px}
+.tile-badge{position:absolute;top:7px;right:7px;background:#e74c3c;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .tile.overdue{border:2px solid #e74c3c}
 .tile.done{border:2px solid #2ecc71}
 
@@ -185,8 +188,10 @@ input,select,textarea{font-family:inherit;font-size:15px}
 @media(prefers-color-scheme:dark){
   body{background:#0f1f1a;color:#e8f0ee}
   .card{background:#1a2e28;box-shadow:none}
-  .tile{background:#1a2e28}
+  .tile{background:#1a2e28;border-color:#2e4e42}
   .tile-label{color:#ccc}
+  .tile-sublabel{color:#8a9e98}
+  .tile-section-header{color:#4d9aff;border-left-color:#4d9aff}
   .fc{background:#243b33;border-color:#2e4e42;color:#e8f0ee}
   .home-footer{background:#1a2e28;border-color:#2e4e42}
   .home-footer-btn{background:#243b33}
@@ -198,6 +203,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 </style>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -417,6 +423,14 @@ input,select,textarea{font-family:inherit;font-size:15px}
 </div>
 
 <!-- CONFIG -->
+<div id="mod-docs" class="screen">
+  <div class="mod-header">
+    <button class="mod-back" onclick="showMod('home')">←</button>
+    <div><div class="mod-title">📁 Mis Documentos</div><div class="mod-sub">Gestión documental APPCC</div></div>
+    <div class="mod-header-right"><button class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,.4)" onclick="openDocModal()">+ Añadir</button></div>
+  </div>
+  <div class="mod-body" id="docs-body"></div>
+</div>
 <div id="mod-cfg" class="screen">
   <div class="mod-header"><button class="mod-back" onclick="showHome()">←</button><div><div class="mod-title">⚙ Configuración</div><div class="mod-sub">Empleados · Zonas · Tareas</div></div></div>
   <div class="mod-body" id="cfg-body"></div>
@@ -442,7 +456,8 @@ const K={
   noconf:'a_noconf', formacion:'a_form', mant:'a_mant',
   contras:'a_contras', plagas:'a_plagas', cfg_emp:'a_cfgemp',
   gtindb:'a_gtindb',
-  wActive:'a_worker_active'
+  wActive:'a_worker_active',
+  docs:'a_docs'
 };
 const ld=k=>JSON.parse(localStorage.getItem(k)||'[]');
 const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
@@ -626,7 +641,7 @@ function renderMod(id){
     plan:renderPlan, temps:renderTemps, limp:renderLimp, aceite:renderAceite,
     recep:renderRecep, elab:renderElab, traz:renderTraz, congel:renderCongel,
     descongel:renderDescongel, regen:renderRegen, tserv:renderTserv,
-    bpm:renderBpm, agua:renderAgua, preop:renderPreop, inf:renderInf, cfg:renderCfg,
+    bpm:renderBpm, agua:renderAgua, preop:renderPreop, inf:renderInf, cfg:renderCfg, docs:renderDocs,
     abat:renderAbat, lava:renderLava, basura:renderBasura,
     noconf:renderNoConf, formacion:renderFormacion, mant:renderMant,
     contras:renderContras, plagas:renderPlagas, etiquetas:renderEtiquetas
@@ -668,31 +683,31 @@ function updateScoreChip(){
 // HOME TILE GRID
 // ============================================================
 const TILES=[
-  {id:'plan',icon:'📅',label:'Planificación',mod:'plan'},
-  {id:'temps',icon:'🌡',label:'Temp. Neveras',mod:'temps'},
-  {id:'limp',icon:'🧹',label:'Limpieza',mod:'limp'},
-  {id:'aceite',svg:`<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="34" height="34"><rect x="4" y="18" width="32" height="18" rx="4" fill="#c8860a"/><rect x="6" y="23" width="28" height="11" rx="2" fill="#f0c040" opacity="0.8"/><path d="M10 7 L10 27 Q10 29 13 29 L27 29 Q30 29 30 27 L30 7 Z" fill="none" stroke="#555" stroke-width="2"/><line x1="10" y1="13" x2="30" y2="13" stroke="#777" stroke-width="1"/><line x1="10" y1="19" x2="30" y2="19" stroke="#777" stroke-width="1"/><line x1="10" y1="25" x2="30" y2="25" stroke="#777" stroke-width="1"/><line x1="16" y1="7" x2="16" y2="29" stroke="#777" stroke-width="1"/><line x1="22" y1="7" x2="22" y2="29" stroke="#777" stroke-width="1"/><path d="M15 7 L15 4 Q20 2 25 4 L25 7" stroke="#444" stroke-width="2" fill="none"/><rect x="1" y="21" width="3" height="8" rx="1.5" fill="#888"/><rect x="36" y="21" width="3" height="8" rx="1.5" fill="#888"/><path d="M9 38 Q11 36 13 38 Q15 40 17 38 Q19 36 21 38 Q23 40 25 38 Q27 36 29 38 Q31 40 33 38" stroke="#e74c3c" stroke-width="1.5" fill="none"/></svg>`,label:'Aceites',mod:'aceite'},
-  {id:'recep',icon:'📦',label:'Recepción',mod:'recep'},
-  {id:'elab',icon:'🍳',label:'Elaboraciones',mod:'elab'},
-  {id:'traz',icon:'🔗',label:'Trazabilidad',mod:'traz'},
-  {id:'congel',icon:'🧊',label:'Congelación',mod:'congel'},
+  {id:'preop',icon:'🔍',label:'Insp. Preoperativa',mod:'preop'},
+  {id:'temps',icon:'🌡',label:'Temp. Cámaras',mod:'temps',sublabel:'Neveras: 0°C–6°C · Congelador: ≤−18°C'},
+  {id:'agua',icon:'💧',label:'Control del Agua',mod:'agua'},
+  {id:'recep',icon:'📦',label:'Recepción Mercancías',mod:'recep'},
+  {id:'elab',icon:'🍳',label:'Elaboraciones Diarias',mod:'elab'},
+  {id:'abat',icon:'❄',label:'Abatidor',mod:'abat'},
+  {id:'congel',icon:'❄',label:'Congelación',mod:'congel'},
   {id:'descongel',icon:'🔄',label:'Descongelación',mod:'descongel'},
   {id:'regen',icon:'🔥',label:'Regeneración',mod:'regen'},
-  {id:'tserv',icon:'🌡',label:'Temp. Servicio',mod:'tserv'},
+  {id:'tserv',icon:'🌡',label:'Temp. de Servicio',mod:'tserv',sublabel:'Caliente: ≥65°C · Frío: ≤8°C'},
+  {id:'aceite',svg:`<svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" width="34" height="34"><rect x="4" y="18" width="32" height="18" rx="4" fill="#c8860a"/><rect x="6" y="23" width="28" height="11" rx="2" fill="#f0c040" opacity="0.8"/><path d="M10 7 L10 27 Q10 29 13 29 L27 29 Q30 29 30 27 L30 7 Z" fill="none" stroke="#555" stroke-width="2"/><line x1="10" y1="13" x2="30" y2="13" stroke="#777" stroke-width="1"/><line x1="10" y1="19" x2="30" y2="19" stroke="#777" stroke-width="1"/><line x1="10" y1="25" x2="30" y2="25" stroke="#777" stroke-width="1"/><line x1="16" y1="7" x2="16" y2="29" stroke="#777" stroke-width="1"/><line x1="22" y1="7" x2="22" y2="29" stroke="#777" stroke-width="1"/><path d="M15 7 L15 4 Q20 2 25 4 L25 7" stroke="#444" stroke-width="2" fill="none"/><rect x="1" y="21" width="3" height="8" rx="1.5" fill="#888"/><rect x="36" y="21" width="3" height="8" rx="1.5" fill="#888"/><path d="M9 38 Q11 36 13 38 Q15 40 17 38 Q19 36 21 38 Q23 40 25 38 Q27 36 29 38 Q31 40 33 38" stroke="#e74c3c" stroke-width="1.5" fill="none"/></svg>`,label:'Aceites',mod:'aceite'},
   {id:'bpm',icon:'✅',label:'Auditoría BPM',mod:'bpm'},
-  {id:'agua',icon:'💧',label:'Agua',mod:'agua'},
-  {id:'preop',icon:'🔍',label:'Preoperativa',mod:'preop'},
-  {id:'abat',icon:'❄',label:'Abatidor',mod:'abat'},
   {id:'lava',icon:'🍽',label:'Lavavajillas',mod:'lava'},
-  {id:'basura',icon:'♻',label:'Basuras Org.',mod:'basura'},
-  {id:'noconf',icon:'⚠',label:'No Conformidades',mod:'noconf'},
-  {id:'formacion',icon:'🎓',label:'Formación',mod:'formacion'},
-  {id:'mant',icon:'🔧',label:'Mantenimiento',mod:'mant'},
-  {id:'contras',icon:'🌡',label:'Contrastación',mod:'contras'},
-  {id:'plagas',icon:'🐛',label:'Plagas DDD',mod:'plagas'},
+  {id:'basura',icon:'♻',label:'Basuras Orgánico',mod:'basura'},
   {id:'etiquetas',icon:'🏷',label:'Etiquetas',mod:'etiquetas'},
-  {id:'inf',icon:'📄',label:'Informes',mod:'inf'},
-  {id:'cfg',icon:'⚙',label:'Config',mod:'cfg'}
+  {id:'traz',icon:'🔗',label:'Trazabilidad',mod:'traz'},
+  {id:'noconf',icon:'⚠',label:'No Conformidades',mod:'noconf'},
+  {id:'formacion',icon:'🎓',label:'Formación Personal',mod:'formacion'},
+  {id:'mant',icon:'🔧',label:'Mantenimiento',mod:'mant'},
+  {id:'contras',icon:'🌡',label:'Contrastación Sondas',mod:'contras'},
+  {id:'plagas',icon:'🐛',label:'Control de Plagas',mod:'plagas'},
+  {id:'limp',icon:'🧹',label:'Limpieza',mod:'limp'},
+  {id:'inf',icon:'📄',label:'Informes APPCC',mod:'inf'},
+  {id:'docs',icon:'📁',label:'Mis Documentos',mod:'docs'},
+  {id:'cfg',icon:'⚙',label:'Configuración',mod:'cfg'}
 ];
 function getPendingCount(mod){
   const now=new Date();
@@ -708,15 +723,35 @@ function getPendingCount(mod){
 function renderTileGrid(){
   const g=document.getElementById('tileGrid');
   if(!g)return;
-  g.innerHTML=TILES.map(t=>{
-    const cnt=getPendingCount(t.mod);
-    const iconEl=t.svg?`<div class="tile-icon">${t.svg}</div>`:`<div class="tile-icon">${t.icon}</div>`;
-    return `<div class="tile" onclick="showMod('${t.mod}')">
+  // Section structure: each entry is either a header string or a tile mod id
+  const SECTIONS=[
+    {header:'INICIO DEL DÍA', mods:['preop','temps','agua']},
+    {header:'PRODUCCIÓN', mods:['recep','elab','abat','congel','descongel','regen','tserv']},
+    {header:'CONTROL DE CALIDAD', mods:['aceite','bpm','lava','basura','etiquetas']},
+    {header:'TRAZABILIDAD', mods:['traz']},
+    {header:'GESTIÓN Y REGISTROS', mods:['noconf','formacion','contras','plagas','limp']},
+    {header:'CIERRE Y DOCUMENTACIÓN', mods:['inf','docs','cfg']}
+  ];
+  const tileMap={};
+  TILES.forEach(t=>tileMap[t.mod]=t);
+  let html='';
+  SECTIONS.forEach(sec=>{
+    html+=`<div class="tile-section-header">${sec.header}</div>`;
+    sec.mods.forEach(mod=>{
+      const t=tileMap[mod];
+      if(!t)return;
+      const cnt=getPendingCount(t.mod);
+      const iconEl=t.svg?`<div class="tile-icon">${t.svg}</div>`:`<div class="tile-icon">${t.icon}</div>`;
+      const subEl=t.sublabel?`<div class="tile-sublabel">${t.sublabel}</div>`:'';
+      html+=`<div class="tile" onclick="showMod('${t.mod}')">
       ${cnt?`<div class="tile-badge">${cnt}</div>`:''}
       ${iconEl}
       <div class="tile-label">${t.label}</div>
+      ${subEl}
     </div>`;
-  }).join('');
+    });
+  });
+  g.innerHTML=html;
 }
 
 // ============================================================
@@ -1550,12 +1585,53 @@ function getSelectedAlergenos(){
     return btn&&btn.classList.contains('sel');
   });
 }
+function scanIngrediente() {
+  openScanModal(raw => {
+    const parsed = parseScan(raw);
+    const known = parsed.gtin ? lookupGTIN(parsed.gtin) : null;
+    const nombre = parsed.isInternal ? parsed.producto : (known ? known.nombre : null);
+    if (nombre) {
+      const prodEl = document.getElementById('el-prod');
+      if (prodEl) prodEl.value = nombre;
+    } else if (parsed.gtin) {
+      const n = prompt('Producto nuevo. Introduce el nombre:');
+      if (n) {
+        registerGTIN(parsed.gtin, {nombre:n, proveedor:''});
+        const prodEl = document.getElementById('el-prod');
+        if (prodEl) prodEl.value = n;
+      }
+    }
+  });
+}
+
+function scanToFields(fieldMap) {
+  openScanModal(raw => {
+    const parsed = parseScan(raw);
+    const known = parsed.gtin ? lookupGTIN(parsed.gtin) : null;
+    const nombre = parsed.isInternal ? parsed.producto : (known ? known.nombre : null);
+    if (nombre) {
+      if (fieldMap.prod) { const el=document.getElementById(fieldMap.prod); if(el) el.value=nombre; }
+      if (fieldMap.lote && parsed.lot) { const el=document.getElementById(fieldMap.lote); if(el) el.value=parsed.lot; }
+      if (fieldMap.dlc && parsed.expiry) { const el=document.getElementById(fieldMap.dlc); if(el) el.value=parsed.expiry; }
+    } else {
+      const nombre2 = parsed.isInternal ? parsed.producto : prompt('Producto no reconocido. Introduce el nombre:');
+      if (nombre2 && fieldMap.prod) {
+        const el=document.getElementById(fieldMap.prod); if(el) el.value=nombre2;
+        if (parsed.gtin) registerGTIN(parsed.gtin, {nombre:nombre2, proveedor:''});
+      }
+    }
+  });
+}
+
 function openElabModal(){
   const emps=ld(K.emp);
   const gestorElabs=getGestorElabs();
   const prodOpts=gestorElabs.length?gestorElabs.map(e=>`<option>${e.nombre}</option>`).join(''):'';
   const lot=genLot();
   openModal(`<div class="modal-title">🍳 Nueva Elaboración</div>
+    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
+      <button onclick="scanIngrediente()" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras del ingrediente</button>
+    </div>
     <div class="fc-group"><label class="fc-label">Producto / Elaboración</label>
       <input class="fc" id="el-prod" list="el-prods-list" placeholder="Nombre del producto elaborado">
       <datalist id="el-prods-list">${prodOpts}</datalist>
@@ -1647,8 +1723,9 @@ function printElabLabel(rid){
     <div class="lb-row">Cantidad: ${r.cantidad} ${r.unidad}</div>
     <div class="lb-dlc">Consumir antes de: ${r.dlc}</div>
     <div class="lb-dest">${r.destino==='congelador'?'❄ CONGELADOR':'🌡 NEVERA'}</div>
+    <div id="alb-qr-elab" style="margin-top:4px;text-align:center"></div>
   </div>
-  <script>window.onload=function(){window.print();setTimeout(()=>window.close(),800)}${'<'+'/script>'}
+  <script>window.addEventListener('load',function(){window.print();setTimeout(()=>window.close(),800);if(window.QRCode){new QRCode(document.getElementById('alb-qr-elab'),{text:'ALB|'+encodeURIComponent(r.producto)+'|'+encodeURIComponent(r.lote)+'|'+encodeURIComponent(r.dlc)+'|'+encodeURIComponent(r.emp)+'|'+new Date().toISOString(),width:72,height:72,correctLevel:QRCode.CorrectLevel.M})}})${'<'+'/script>'}
   </body></html>`);w.document.close();
 }
 
@@ -1845,8 +1922,9 @@ function printStepLabel(data){
     ${data.linea3?`<div class="lb-row">${data.linea3}</div>`:''}
     ${data.dlc?`<div class="lb-dlc">⚠ Consumir antes de: ${data.dlc}</div>`:''}
     <div class="lb-emp">Responsable: ${data.emp||'—'} &nbsp;·&nbsp; ${data.fecha||''}</div>
+    <div id="alb-qr-step" style="margin-top:4px;text-align:center"></div>
   </div>
-  <script>window.onload=function(){window.print();setTimeout(()=>window.close(),800)}${'<'+'/script>'}
+  <script>window.addEventListener('load',function(){window.print();setTimeout(()=>window.close(),800);if(window.QRCode){new QRCode(document.getElementById('alb-qr-step'),{text:'ALB|'+encodeURIComponent(data.producto||'')+'|'+encodeURIComponent(data.lote||'')+'|'+encodeURIComponent(data.dlc||'')+'|'+encodeURIComponent(data.emp||'')+'|'+new Date().toISOString(),width:72,height:72,correctLevel:QRCode.CorrectLevel.M})}})${'<'+'/script>'}
   </body></html>`);w.document.close();
 }
 
@@ -1970,6 +2048,9 @@ function renderCongel(){
 function openCongelModal(){
   const emps=ld(K.emp);const elabs=ld(K.elab).filter(r=>r.destino==='congelador'&&r.estado!=='servido');
   openModal(`<div class="modal-title">🧊 Registro de Congelación</div>
+    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
+      <button onclick="scanToFields({prod:'cg-prod', lote:'cg-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+    </div>
     <div class="fc-group"><label class="fc-label">Producto</label>
       <input class="fc" id="cg-prod" placeholder="Nombre del producto" list="cg-prod-list">
       <datalist id="cg-prod-list">${elabs.map(e=>`<option value="${e.producto}">`).join('')}</datalist>
@@ -2086,6 +2167,9 @@ function openDescongelFor(elabId){
 function openDescongelModal(){
   const emps=ld(K.emp);
   openModal(`<div class="modal-title">🔄 Descongelación — entrada manual</div>
+    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
+      <button onclick="scanToFields({prod:'dc2-prod', lote:'dc2-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+    </div>
     <div class="fc-group"><label class="fc-label">Producto</label>
       <input class="fc" id="dc2-prod" placeholder="Nombre del producto"></div>
     <div class="fc-group" style="margin-top:8px"><label class="fc-label">Nº Lote</label>
@@ -2205,6 +2289,9 @@ function openRegenFor(elabId){
 function openRegenModal(){
   const emps=ld(K.emp);
   openModal(`<div class="modal-title">🔥 Regeneración — manual</div>
+    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
+      <button onclick="scanToFields({prod:'rg2-prod', lote:'rg2-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+    </div>
     <div class="fc-group"><label class="fc-label">Producto</label>
       <input class="fc" id="rg2-prod" placeholder="Nombre del producto"></div>
     <div class="fc-group" style="margin-top:8px"><label class="fc-label">Nº Lote</label>
@@ -2288,6 +2375,9 @@ function renderTserv(){
 function openTservModal(){
   const emps=ld(K.emp);const elabs=ld(K.elab).filter(r=>r.estado!=='servido');
   openModal(`<div class="modal-title">🌡 Temperatura de Servicio</div>
+    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
+      <button onclick="scanToFields({prod:'ts2-prod', lote:'ts2-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+    </div>
     <div class="fc-group"><label class="fc-label">Producto</label>
       <input class="fc" id="ts2-prod" placeholder="Producto" list="ts2-list">
       <datalist id="ts2-list">${elabs.map(e=>`<option value="${e.producto}">`).join('')}</datalist>
@@ -2335,98 +2425,256 @@ function saveTserv(){
 }
 
 // ============================================================
-// BPM
+// BPM — 10 categorías oficiales F1 PA01
 // ============================================================
-const BPM_CHECKS=[
-  'Higiene personal del personal',
-  'Ropa de trabajo limpia y adecuada',
-  'Uso correcto de EPIs (guantes, mascarilla, gorro)',
-  'No se come ni se bebe en zona de producción',
-  'Productos correctamente etiquetados',
-  'Separación de productos crudos y cocinados',
-  'Temperaturas de almacenamiento correctas',
-  'Limpieza y orden general de instalaciones',
-  'Estado correcto de equipos y utensilios',
-  'No se usan productos vencidos / caducados'
+const BPM_CATS=[
+  {id:'prep_mp',icon:'🥩',label:'Preparación de Materias Primas',items:[
+    'Manipulador con ropa protectora',
+    'Las operaciones de preparación de MP se realizan en zona delimitada para ello',
+    'Ausencia de envases y embalajes en zona de trabajo',
+    'Utensilios de cocina correctamente limpios y desinfectados (visual)',
+    'Contenedores de basura cerrados',
+    'Higienización correcta de frutas, verduras y hortalizas',
+    'Limpieza y desinfección de superficies tras preparación de materias primas'
+  ]},
+  {id:'limp',icon:'🧹',label:'Limpieza y Desinfección',items:[
+    'Se sigue el procedimiento establecido del método L+D',
+    'Se sigue la frecuencia establecida',
+    'Se siguen las instrucciones del fabricante (dosis, tiempo de actuación...)',
+    'Todos los productos de limpieza disponen de ficha técnica, ficha de seguridad y registro biocida',
+    'Todas las instalaciones, utensilios y equipos se encuentran en perfecto estado de L+D',
+    'Todo ello queda registrado en las fichas'
+  ]},
+  {id:'residuos',icon:'🗑️',label:'Gestión de Residuos',items:[
+    'Se respeta la capacidad máxima de los contenedores de residuos sólidos',
+    'Contenedores de residuos orgánicos permanecen cerrados',
+    'Contenedor de aceite de fritura identificado y tapado',
+    'Correcta limpieza y desinfección de contenedores (visual)'
+  ]},
+  {id:'envasado',icon:'📦',label:'Envasado',items:[
+    'Se comprueban los envases antes de su uso',
+    'Se mantienen los alimentos en refrigeración hasta su envasado',
+    'Correcta L+D de utensilios empleados en envasado'
+  ]},
+  {id:'distrib',icon:'🚐',label:'Distribución y Servicio',items:[
+    'Los alimentos se distribuyen al cliente en el menor tiempo posible',
+    'Los alimentos se mantienen protegidos y separados del suelo',
+    'Correcta L+D de vehículo',
+    'Se cumplimenta el registro F4MA4 Registro de distribución'
+  ]},
+  {id:'ddd',icon:'🐛',label:'DDD (Desinsectación · Desratización · Desinfección)',items:[
+    'Orden y limpieza en todas las áreas',
+    'Estado correcto de cableado y arquetas',
+    'Eliminación de forma regular de las basuras durante la jornada',
+    'Ausencia de insectos y roedores o restos de excrementos (en el momento de la inspección)',
+    'Los contenedores de basura permanecen cerrados y disponen de apertura no manual',
+    'Correcto estado de barreras físicas: puertas de cocina cerradas, sumideros con rejilla',
+    'Insectocutores encendidos y en buen estado de L+D',
+    'Puertas de acceso cerradas excepto en carga/descarga de materias primas'
+  ]},
+  {id:'cext',icon:'⚙️',label:'Cuerpos Extraños',items:[
+    'Cortadora — sin piezas sueltas o dañadas',
+    'Batidora — sin piezas sueltas o dañadas',
+    'Vaso americano — sin piezas sueltas o dañadas',
+    'Robot de cocina — sin piezas sueltas o dañadas',
+    'Útiles (cuchillos, abrelatas, coladores, varillas...) — en buen estado'
+  ]},
+  {id:'cocinado',icon:'🍳',label:'Cocinado',items:[
+    'Correcto tratamiento térmico de los diferentes platos. Registro',
+    'Correcto abatimiento de los alimentos en frío. Registro',
+    'Correcta limpieza y desinfección visual de instalaciones y utensilios'
+  ]},
+  {id:'manip',icon:'👤',label:'BPM con Relación al Manipulador',items:[
+    'Manipulador con ropa protectora adecuada (uniforme, gorro, calzado)',
+    'Manos limpias y uñas cortas y sin esmalte',
+    'Sin joyas, relojes ni otros accesorios',
+    'Sin síntomas de enfermedad ni heridas descubiertas',
+    'Comportamiento higiénico correcto (no fumar, no comer, no toser sobre alimentos)',
+    'Correcto lavado de manos tras cambio de tarea y tras usar el baño',
+    'Formación en manipulación de alimentos al día'
+  ]},
+  {id:'almacen',icon:'❄️',label:'Almacenamiento en Refrigeración/Congelación',items:[
+    'Todos los productos se encuentran perfectamente protegidos',
+    'No se observa producto sin identificar / etiquetar',
+    'Se rellena el registro de congelación',
+    'Se cumplen las caducidades de los productos terminados y semielaborados almacenados',
+    'Se controlan y registran las temperaturas de almacenamiento en cámara de refrigeración',
+    'Temps. correctas: Ungulados/caza ≤7°C · Despojos ≤3°C · Aves/lagomorfos ≤4°C · Carnes preparadas ≤4°C · Carne picada ≤2°C · Pescado 0-4°C · Frutas/verduras cortadas ≤4°C',
+    'Se controlan y registran las temperaturas de almacenamiento en congelación (≤−18°C)'
+  ]}
 ];
+function bpmTotalItems(){return BPM_CATS.reduce((s,c)=>s+c.items.length,0);}
+
 function renderBpm(){
   const recs=ld(K.bpm).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const total=bpmTotalItems();
   document.getElementById('bpm-body').innerHTML=`
-    <div class="alert-box alert-ok" style="font-size:12px">📋 Auditoría <strong>MENSUAL</strong> — solo gerentes/responsables. Incluye todas las instalaciones.</div>
+    <div class="alert-box alert-ok" style="font-size:12px">📋 Auditoría BPM — ${BPM_CATS.length} categorías · ${total} puntos de control · Ref. F1 PA01</div>
     <div class="card" style="margin-top:10px">
       <div class="card-head"><h3>Auditorías BPM</h3>
-        <button class="btn btn-sm btn-green" onclick="openBpmModal()">+ Auditoría</button>
+        <button class="btn btn-sm btn-green" onclick="openBpmModal()">+ Nueva auditoría</button>
       </div>
-      <div>${recs.slice(0,10).map(r=>{
-        const pct=Math.round((r.conformes||0)/(BPM_CHECKS.length)*100);
+      <div>${recs.slice(0,15).map(r=>{
+        const tot=r.total||total;
+        const pct=Math.round((r.conformes||0)/tot*100);
+        const ncs=(r.results||[]).filter(x=>!x.ok).length;
         return`<div class="list-row" onclick="viewBpm('${r.id}')">
-          <div class="list-icon">✅</div>
+          <div class="list-icon">${pct>=80?'✅':pct>=60?'⚠️':'❌'}</div>
           <div class="list-main">
-            <div class="list-title">Auditoría BPM</div>
-            <div class="list-sub">${r.emp} · ${fmtDT(r.ts)} · Turno ${r.turno}</div>
+            <div class="list-title">Auditoría BPM · Turno ${r.turno||'—'}</div>
+            <div class="list-sub">${r.emp} · ${fmtDT(r.ts)}</div>
           </div>
           <div class="list-right">
             <span class="list-badge ${pct>=80?'badge-green':pct>=60?'badge-orange':'badge-red'}">${pct}%</span>
-            <div style="font-size:11px;color:#aaa">${r.conformes}/${BPM_CHECKS.length} conformes</div>
+            ${ncs>0?`<div style="font-size:11px;color:#e74c3c;font-weight:600">${ncs} NC</div>`:'<div style="font-size:11px;color:#2ecc71">✓ Todo OK</div>'}
           </div>
         </div>`;
-      }).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin auditorías</div>'}</div>
+      }).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin auditorías registradas</div>'}</div>
     </div>`;
 }
+
 function openBpmModal(){
   const emps=ld(K.emp);
-  const checks=BPM_CHECKS.map((c,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f0f0">
-    <div style="flex:1;font-size:14px">${c}</div>
-    <button class="moment-pill sel" id="bpm-c${i}" data-val="C" onclick="toggleBpmCheck(${i})">✓ Conforme</button>
-    <button class="moment-pill" id="bpm-nc${i}" data-val="NC" onclick="toggleBpmCheckNC(${i})">✗ No conf.</button>
-  </div>`).join('');
+  const wa=localStorage.getItem(K.wActive)||'';
+  let allCats='';
+  BPM_CATS.forEach((cat,ci)=>{
+    const items=cat.items.map((item,ii)=>{
+      const key='bpm_'+ci+'_'+ii;
+      return`<div style="border-bottom:1px solid #f0f0f0;padding:10px 0">
+        <div style="display:flex;align-items:flex-start;gap:8px">
+          <div style="flex:1;font-size:13px;line-height:1.4;padding-top:3px">${item}</div>
+          <div style="display:flex;gap:5px;flex-shrink:0">
+            <button id="${key}_ok" onclick="bpmSetOK(${ci},${ii},true)" style="padding:6px 12px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;background:#1a4fa8;color:#fff">✓</button>
+            <button id="${key}_nc" onclick="bpmSetOK(${ci},${ii},false)" style="padding:6px 10px;border:1.5px solid #ddd;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;background:#f8f8f8;color:#666">✗ NC</button>
+          </div>
+        </div>
+        <div id="${key}_ncf" style="display:none;margin-top:8px;padding:10px;background:#fff5f5;border-radius:8px;border-left:3px solid #e74c3c">
+          <div style="font-size:11px;font-weight:700;color:#e74c3c;margin-bottom:6px">⚠ NO CONFORME — obligatorio rellenar</div>
+          <textarea id="${key}_que" class="fc" rows="2" placeholder="¿Qué pasó? Describe la no conformidad..." style="margin-bottom:6px;border-color:#e74c3c;font-size:13px"></textarea>
+          <textarea id="${key}_como" class="fc" rows="2" placeholder="¿Cómo se corregirá? Acción correctiva..." style="font-size:13px"></textarea>
+        </div>
+      </div>`;
+    }).join('');
+    allCats+=`<div style="margin-top:12px">
+      <div style="background:#1a4fa8;color:#fff;padding:9px 14px;border-radius:10px 10px 0 0;font-size:13px;font-weight:700">${cat.icon} ${cat.label}</div>
+      <div style="border:1.5px solid #d0ddf5;border-top:none;border-radius:0 0 10px 10px;padding:0 12px">${items}</div>
+    </div>`;
+  });
   openModal(`<div class="modal-title">✅ Auditoría Cumplimiento BPM</div>
-    <div class="fc-group"><label class="fc-label">Turno</label>
-      <div class="moment-row">
-        <button class="moment-pill sel" id="bm-man" onclick="selMomento('bm','Mañana')">☀ Mañana</button>
-        <button class="moment-pill" id="bm-noch" onclick="selMomento('bm','Noche')">🌙 Noche</button>
-        <button class="moment-pill" id="bm-aho" onclick="selMomento('bm','Ahora')">⏱ Ahora</button>
-      </div><input type="hidden" id="bm-turno" value="Mañana">
+    <div class="fc-row" style="margin-bottom:4px">
+      <div class="fc-group">
+        <label class="fc-label">Turno</label>
+        <div style="display:flex;gap:5px">
+          <button class="moment-pill sel" id="bm-man" onclick="selMomento('bm','Mañana')" style="flex:1;padding:7px 4px;font-size:12px">☀ Mañana</button>
+          <button class="moment-pill" id="bm-noch" onclick="selMomento('bm','Noche')" style="flex:1;padding:7px 4px;font-size:12px">🌙 Noche</button>
+          <button class="moment-pill" id="bm-aho" onclick="selMomento('bm','Ahora')" style="flex:1;padding:7px 4px;font-size:12px">⏱ Ahora</button>
+        </div>
+        <input type="hidden" id="bm-turno" value="Mañana">
+      </div>
+      <div class="fc-group">
+        <label class="fc-label">Empleado</label>
+        <select class="fc" id="bm-emp"><option value="">— Seleccionar —</option>${emps.map(e=>`<option${e===wa?' selected':''}>${e}</option>`).join('')}</select>
+      </div>
     </div>
-    <div class="fc-group" style="margin-top:10px"><label class="fc-label">Empleado</label>
-      <select class="fc" id="bm-emp"><option value="">— Seleccionar —</option>${emps.map(e=>`<option>${e}</option>`).join('')}</select>
+    ${allCats}
+    <div class="fc-group" style="margin-top:12px">
+      <label class="fc-label">Observaciones generales</label>
+      <textarea class="fc" id="bm-obs" rows="2" placeholder="Observaciones adicionales..."></textarea>
     </div>
-    <div style="margin-top:14px">${checks}</div>
-    <input class="fc" style="margin-top:12px" id="bm-obs" placeholder="Observaciones generales...">
-    <div class="modal-row">
+    <div class="modal-row" style="margin-top:12px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-green" style="flex:1" onclick="saveBpm()">✓ Guardar auditoría</button>
     </div>`);
 }
-function toggleBpmCheck(i){
-  document.getElementById('bpm-c'+i).classList.add('sel');
-  document.getElementById('bpm-nc'+i).classList.remove('sel');
+
+function bpmSetOK(ci,ii,ok){
+  const key='bpm_'+ci+'_'+ii;
+  const okB=document.getElementById(key+'_ok');
+  const ncB=document.getElementById(key+'_nc');
+  const ncF=document.getElementById(key+'_ncf');
+  if(ok){
+    okB.style.background='#1a4fa8';okB.style.color='#fff';okB.style.border='none';
+    ncB.style.background='#f8f8f8';ncB.style.color='#666';ncB.style.border='1.5px solid #ddd';
+    ncF.style.display='none';
+  }else{
+    ncB.style.background='#e74c3c';ncB.style.color='#fff';ncB.style.border='none';
+    okB.style.background='#f8f8f8';okB.style.color='#666';okB.style.border='1.5px solid #ddd';
+    ncF.style.display='block';
+    setTimeout(()=>{const t=document.getElementById(key+'_que');if(t)t.focus();},50);
+  }
 }
-function toggleBpmCheckNC(i){
-  document.getElementById('bpm-nc'+i).classList.add('sel');
-  document.getElementById('bpm-c'+i).classList.remove('sel');
-}
+
 function saveBpm(){
-  const emp=document.getElementById('bm-emp').value;if(!emp){alert('Selecciona empleado');return}
+  const emp=document.getElementById('bm-emp').value;
+  if(!emp){alert('Selecciona el empleado');return;}
   const turno=document.getElementById('bm-turno').value;
-  const results=BPM_CHECKS.map((c,i)=>({check:c,ok:!document.getElementById('bpm-nc'+i).classList.contains('sel')}));
+  const results=[];
+  let hasBlank=false;
+  BPM_CATS.forEach((cat,ci)=>{
+    cat.items.forEach((item,ii)=>{
+      const key='bpm_'+ci+'_'+ii;
+      const ncB=document.getElementById(key+'_nc');
+      const isNC=ncB&&ncB.style.background==='rgb(231, 76, 60)';
+      if(isNC){
+        const queEl=document.getElementById(key+'_que');
+        const comoEl=document.getElementById(key+'_como');
+        const que=(queEl&&queEl.value.trim())||'';
+        const como=(comoEl&&comoEl.value.trim())||'';
+        if(!que||!como){
+          hasBlank=true;
+          if(queEl)queEl.style.borderColor='#e74c3c';
+          if(comoEl)comoEl.style.borderColor='#e74c3c';
+        }
+        results.push({cat:cat.id,catLabel:cat.label,check:item,ok:false,que,como});
+      }else{
+        results.push({cat:cat.id,catLabel:cat.label,check:item,ok:true});
+      }
+    });
+  });
+  if(hasBlank){alert('⚠ Rellena "¿Qué pasó?" y "¿Cómo se corregirá?" en todos los puntos No Conformes.');return;}
   const conformes=results.filter(x=>x.ok).length;
+  const total=results.length;
   const obs=document.getElementById('bm-obs').value;
   const recs=ld(K.bpm);
-  recs.push({id:genId(),emp,turno,results,conformes,obs,date:today(),ts:new Date().toISOString()});
+  recs.push({id:genId(),emp,turno,results,conformes,total,obs,date:today(),ts:new Date().toISOString()});
   sv(K.bpm,recs);closeModal();renderBpm();updateScoreChip();
 }
+
 function viewBpm(id){
   const r=ld(K.bpm).find(x=>x.id===id);if(!r)return;
-  const rows=(r.results||[]).map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f0">
-    <span style="color:${x.ok?'#2980b9':'#e74c3c'};font-size:16px">${x.ok?'✓':'✗'}</span>
-    <span style="font-size:13px">${x.check}</span>
-  </div>`).join('');
-  openModal(`<div class="modal-title">BPM — ${fmtDate(r.ts)}</div>
-    <div style="font-size:13px;color:#888;margin-bottom:12px">${r.emp} · ${r.turno}</div>
-    ${rows}
-    ${r.obs?`<div class="alert-box alert-warn" style="margin-top:12px">📝 ${r.obs}</div>`:''}
-    <button class="btn btn-outline btn-block" style="margin-top:14px" onclick="closeModal()">Cerrar</button>`);
+  const tot=r.total||bpmTotalItems();
+  const pct=Math.round((r.conformes||0)/tot*100);
+  const ncs=(r.results||[]).filter(x=>!x.ok);
+  const cats={};
+  (r.results||[]).forEach(x=>{
+    const k=x.catLabel||'General';
+    if(!cats[k])cats[k]=[];
+    cats[k].push(x);
+  });
+  const catRows=Object.entries(cats).map(([lbl,items])=>{
+    const allOk=items.every(x=>x.ok);
+    const rows=items.map(x=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid #f5f5f5">
+      <span style="color:${x.ok?'#2ecc71':'#e74c3c'};font-size:15px;flex-shrink:0;margin-top:1px">${x.ok?'✓':'✗'}</span>
+      <div style="flex:1">
+        <div style="font-size:13px">${x.check}</div>
+        ${!x.ok?`<div style="margin-top:4px;padding:6px 8px;background:#fff5f5;border-radius:6px;font-size:12px"><b>¿Qué pasó?</b> ${x.que||'—'}<br><b>Corrección:</b> ${x.como||'—'}</div>`:''}
+      </div>
+    </div>`).join('');
+    return`<div style="margin-bottom:10px">
+      <div style="background:${allOk?'#e8f5e9':'#fff3f3'};color:${allOk?'#1b5e20':'#c62828'};padding:8px 12px;border-radius:8px 8px 0 0;font-size:12px;font-weight:700">${allOk?'✓':'✗'} ${lbl}</div>
+      <div style="border:1px solid ${allOk?'#c8e6c9':'#ffcdd2'};border-top:none;border-radius:0 0 8px 8px;padding:0 12px">${rows}</div>
+    </div>`;
+  }).join('');
+  openModal(`<div class="modal-title">BPM · ${fmtDate(r.ts)}</div>
+    <div style="font-size:13px;color:#888;margin-bottom:8px">${r.emp} · Turno ${r.turno}</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="flex:1;background:#e8f5e9;border-radius:8px;padding:8px;text-align:center"><div style="font-size:22px;font-weight:700;color:#2e7d32">${r.conformes}</div><div style="font-size:11px;color:#555">Conformes</div></div>
+      <div style="flex:1;background:${ncs.length?'#fff3f3':'#e8f5e9'};border-radius:8px;padding:8px;text-align:center"><div style="font-size:22px;font-weight:700;color:${ncs.length?'#c62828':'#2e7d32'}">${ncs.length}</div><div style="font-size:11px;color:#555">No conformes</div></div>
+      <div style="flex:1;background:#e8f0fa;border-radius:8px;padding:8px;text-align:center"><div style="font-size:22px;font-weight:700;color:#1a4fa8">${pct}%</div><div style="font-size:11px;color:#555">Conformidad</div></div>
+    </div>
+    ${catRows}
+    ${r.obs?`<div class="alert-box alert-warn" style="margin-top:10px">📝 ${r.obs}</div>`:''}
+    <button class="btn btn-outline btn-block" style="margin-top:12px" onclick="closeModal()">Cerrar</button>`);
 }
 
 // ============================================================
@@ -2850,11 +3098,18 @@ function printInfBpm(){
   const{desde,hasta}=getDateRange();
   const recs=ld(K.bpm).filter(r=>inRange(r.ts||r.date,desde,hasta));
   const rows=recs.map(r=>{
-    const pct=Math.round((r.conformes||0)/BPM_CHECKS.length*100);
-    const ncs=(r.results||[]).filter(x=>!x.ok).map(x=>x.check).join(', ');
-    return`<tr><td>${fmtDate(r.ts)}</td><td>${r.turno}</td><td>${r.conformes}/${BPM_CHECKS.length}</td><td style="font-weight:700;color:${pct>=80?'#1a4fa8':'#e74c3c'}">${pct}%</td><td>${ncs||'—'}</td><td>${r.emp}</td><td>${r.obs||'—'}</td></tr>`;
+    const tot=r.total||bpmTotalItems();
+    const pct=Math.round((r.conformes||0)/tot*100);
+    const ncs=(r.results||[]).filter(x=>!x.ok);
+    const ncTxt=ncs.map(x=>{
+      let s=x.check;
+      if(x.que)s+=` | Qué: ${x.que}`;
+      if(x.como)s+=` | Corrección: ${x.como}`;
+      return s;
+    }).join(' / ')||'—';
+    return`<tr><td>${fmtDate(r.ts)}</td><td>${r.turno}</td><td>${r.conformes}/${tot}</td><td style="font-weight:700;color:${pct>=80?'#1a4fa8':'#e74c3c'}">${pct}%</td><td style="font-size:11px">${ncTxt}</td><td>${r.emp}</td><td>${r.obs||'—'}</td></tr>`;
   });
-  printReport('F1 PA01 · Registro Cumplimiento BPM','Rev.01',['Fecha','Turno','Conformes','%','No conformidades','Empleado','Observaciones'],rows,desde,hasta);
+  printReport('F1 PA01 · Registro Cumplimiento BPM','Rev.01',['Fecha','Turno','Conformes','%','No conformidades + Acciones correctivas','Empleado','Observaciones'],rows,desde,hasta);
 }
 function printInfAgua(){
   const{desde,hasta}=getDateRange();
@@ -3080,6 +3335,103 @@ function _printAllReports(desde,hasta){
 // ============================================================
 // CONFIG
 // ============================================================
+// ============================================================
+// MIS DOCUMENTOS
+// ============================================================
+const DOC_CATS=[
+  'Análisis Microbiológicos',
+  'Abastecimiento de Agua',
+  'Diagnóstico de Vigilancia del SGSA',
+  'Documentos Oficiales',
+  'Fichas Técnicas de Productos de Limpieza',
+  'Limpieza Diaria de Cocina',
+  'Personal',
+  'Plan de Lucha contra Plagas',
+  'Plan de Limpieza y Desinfección',
+  'F1-PA01 Check-list BPM',
+  'Otros'
+];
+function renderDocs(){
+  const recs=ld(K.docs).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  // Group by category
+  const bycat={};
+  DOC_CATS.forEach(c=>{bycat[c]=[];});
+  recs.forEach(r=>{const c=r.cat||'Otros';if(!bycat[c])bycat[c]=[];bycat[c].push(r);});
+  const catBlocks=DOC_CATS.map(cat=>{
+    const items=bycat[cat]||[];
+    if(items.length===0)return`<div style="margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8faff;border-radius:10px;border:1px solid #e0e8f5;cursor:pointer" onclick="openDocModal('${cat.replace(/'/g,'\\x27')}')">
+        <div style="font-size:13px;font-weight:600;color:#888">📁 ${cat}</div>
+        <div style="font-size:12px;color:#bbb">+ Añadir</div>
+      </div>
+    </div>`;
+    return`<div style="margin-bottom:8px">
+      <div style="background:#1a4fa8;color:#fff;padding:9px 14px;border-radius:10px 10px 0 0;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center">
+        <span>📁 ${cat}</span>
+        <button onclick="openDocModal('${cat.replace(/'/g,'\\x27')}')" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer">+ Añadir</button>
+      </div>
+      <div style="border:1.5px solid #d0ddf5;border-top:none;border-radius:0 0 10px 10px">
+        ${items.map(d=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid #f0f0f0">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${d.titulo}</div>
+            ${d.notas?`<div style="font-size:12px;color:#666;margin-top:2px">${d.notas}</div>`:''}
+            ${d.url?`<a href="${d.url}" target="_blank" style="font-size:12px;color:#1a4fa8;text-decoration:none">🔗 Ver documento</a>`:''}
+            <div style="font-size:11px;color:#aaa;margin-top:3px">${fmtDate(d.ts)}</div>
+          </div>
+          <button onclick="delDoc('${d.id}')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;flex-shrink:0;padding:2px 4px">🗑</button>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('docs-body').innerHTML=`
+    <div class="alert-box alert-ok" style="font-size:12px">📁 Gestión documental APPCC — ${recs.length} documento${recs.length!==1?'s':''} registrado${recs.length!==1?'s':''}</div>
+    <div style="margin-top:12px">${catBlocks}</div>`;
+}
+function openDocModal(catPre){
+  openModal(`<div class="modal-title">📁 Añadir Documento</div>
+    <div class="fc-group">
+      <label class="fc-label">Categoría</label>
+      <select class="fc" id="doc-cat">
+        ${DOC_CATS.map(c=>`<option${c===(catPre||'')?' selected':''}>${c}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fc-group" style="margin-top:10px">
+      <label class="fc-label">Título del documento</label>
+      <input class="fc" id="doc-titulo" placeholder="Ej: Certificado empresa control plagas 2026">
+    </div>
+    <div class="fc-group" style="margin-top:10px">
+      <label class="fc-label">Notas / descripción</label>
+      <textarea class="fc" id="doc-notas" rows="2" placeholder="Fecha de vigencia, observaciones..."></textarea>
+    </div>
+    <div class="fc-group" style="margin-top:10px">
+      <label class="fc-label">Enlace (opcional)</label>
+      <input class="fc" id="doc-url" placeholder="https://... o ruta del archivo" type="url">
+    </div>
+    <div class="modal-row" style="margin-top:14px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveDoc()">✓ Guardar</button>
+    </div>`);
+  if(catPre){setTimeout(()=>{const s=document.getElementById('doc-titulo');if(s)s.focus();},100);}
+}
+function saveDoc(){
+  const titulo=(document.getElementById('doc-titulo').value||'').trim();
+  if(!titulo){alert('Escribe un título para el documento');return;}
+  const recs=ld(K.docs);
+  recs.push({
+    id:genId(),
+    cat:document.getElementById('doc-cat').value,
+    titulo,
+    notas:document.getElementById('doc-notas').value,
+    url:document.getElementById('doc-url').value,
+    ts:new Date().toISOString()
+  });
+  sv(K.docs,recs);closeModal();renderDocs();
+}
+function delDoc(id){
+  if(!confirm('¿Eliminar este documento?'))return;
+  sv(K.docs,ld(K.docs).filter(x=>x.id!==id));renderDocs();
+}
+
 function renderCfg(){
   const emps=ld(K.emp);const zonas=ld(K.zonas);const provs=ld(K.provs);
   document.getElementById('cfg-body').innerHTML=`
@@ -3295,6 +3647,27 @@ function parseGS1(raw) {
   return out;
 }
 
+function parseInternalQR(raw) {
+  if (!raw.startsWith('ALB|')) return null;
+  const parts = raw.split('|');
+  return {
+    isInternal: true,
+    producto: parts[1] || '',
+    lot: parts[2] || '',
+    expiry: parts[3] || '',
+    emp: parts[4] || '',
+    ts: parts[5] || '',
+    raw
+  };
+}
+
+function parseScan(raw) {
+  const internal = parseInternalQR(raw);
+  if (internal) return internal;
+  const gs1 = parseGS1(raw);
+  return gs1;
+}
+
 function fmtExpiryDisplay(iso) {
   if (!iso) return '—';
   const [y,m,d] = iso.split('-');
@@ -3361,7 +3734,7 @@ function openScanModal(onResult) {
         if (!_scannerActive) return;
         _scannerActive = false;
         stopScanner();
-        const parsed = parseGS1(decodedText);
+        const parsed = parseScan(decodedText);
         document.getElementById('scan-result').innerHTML =
           '<span style="color:#27ae60;font-weight:700">✓ Código leído</span>';
         setTimeout(() => { closeModal(); onResult(parsed); }, 400);
@@ -3376,6 +3749,10 @@ function openScanModal(onResult) {
 
 // ── HANDLE SCAN RESULT IN RECEPCIÓN ─────────────────────────
 function handleScanForRecep(parsed) {
+  if (parsed.isInternal) {
+    applyScanToRecep(parsed, parsed.producto, '');
+    return;
+  }
   const known = parsed.gtin ? lookupGTIN(parsed.gtin) : null;
 
   if (known) {
@@ -3475,6 +3852,9 @@ function openAbatModal(){
   const emps=ld(K.emp);
   const elabs=ld(K.elab).filter(x=>x.estado==='elaborado'||x.estado==='en_nevera').slice(0,30);
   openModal(`<div class="modal-title">❄ Registro Abatidor</div>
+    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
+      <button onclick="scanToFields({prod:'ab-prod', lote:'ab-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+    </div>
     <div class="fc-group"><label class="fc-label">Producto / Elaboración</label>
       <input class="fc" id="ab-prod" list="ab-prod-list" placeholder="Nombre del producto...">
       <datalist id="ab-prod-list">${elabs.map(e=>`<option value="${e.producto} (${e.lote})">`).join('')}</datalist>
@@ -4202,14 +4582,16 @@ function imprimirDiseño(pid){
     .lb-row{font-size:8px;color:#333;line-height:1.4}.lb-lot{font-family:monospace;font-size:8px;font-weight:700;background:#f5f5f5;padding:1px 3px}
     .lb-dlc{font-size:9px;font-weight:700;color:#c0392b}.lb-free{font-size:8px;font-weight:600;color:#333;text-transform:uppercase}
     .btn-p{margin:8px;padding:6px 16px;background:#1a4fa8;color:#fff;border:none;border-radius:4px;cursor:pointer}
-  </style></head><body>
+  </style>  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">${'<'+'/script>'}
+</head><body>
   <div class="lb">
     ${empresa?`<div class="lb-co">${empresa}</div>`:''}
     ${pid==='libre'?`${t1?`<div style="font-size:14px;font-weight:900">${t1}</div>`:''}${t2?`<div class="lb-row">${t2}</div>`:''}${t3?`<div style="font-size:7px;color:#888">${t3}</div>`:''}`:
     `${producto?`<div class="lb-prod">${producto}</div>`:''}${proveedor?`<div class="lb-row">Prov: ${proveedor}</div>`:''}${lote?`<div><span class="lb-lot">LOTE: ${lote}</span></div>`:''}${fecha?`<div class="lb-row">Fecha: ${fecha}</div>`:''}${dlc?`<div class="lb-dlc">Consumir antes: ${dlc}</div>`:''}${alrgHtml}${txt1?`<div class="lb-free">${txt1}</div>`:''}${emp?`<div style="font-size:7px;color:#888;margin-top:auto">Resp: ${emp}</div>`:''}` }
+    ${pid!=='libre'&&producto?`<div id="alb-qr-dis" style="margin-top:4px;text-align:center"></div>`:''}
   </div>
   <button class="btn-p" onclick="window.print()">🖨 Imprimir</button>
-  <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1000)}${'<'+'/script>'}
+  <script>window.addEventListener('load',function(){window.print();setTimeout(()=>window.close(),1000);if(window.QRCode&&document.getElementById('alb-qr-dis')){new QRCode(document.getElementById('alb-qr-dis'),{text:'ALB|${(producto||'').replace(/'/g,"\'")}|${lote||''}|${dlc||''}|${emp||''}|'+new Date().toISOString(),width:60,height:60,correctLevel:QRCode.CorrectLevel.M})}})${'<'+'/script>'}
   </body></html>`);w.document.close();
 }
 function setLabelAuto(on){localStorage.setItem('a_label_auto',on?'on':'off');renderCfg();}
@@ -4244,3 +4626,4 @@ document.addEventListener('DOMContentLoaded',function(){
 </script>
 </body>
 </html>
+       
