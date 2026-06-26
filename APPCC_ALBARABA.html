@@ -462,12 +462,12 @@ function getGestorElabs(){
 // SEED DATA
 // ============================================================
 if(!localStorage.getItem('a_v5')){localStorage.setItem('a_v5','1');
-  sv(K.emp,['MANJON Lidia','ROMERO Jeni','CARDENAS Edwin','ANALY']);
+  sv(K.emp,['Lidia','Edwin','Gustavo','Jeni']);
   sv(K.zonas,[
     {id:'z1',name:'CÁMARA CONGELACIÓN',target:-18,alert:-15,unit:'°C',icon:'❄'},
-    {id:'z2',name:'CÁMARA MAT PRIMA',target:3,alert:8,unit:'°C',icon:'🌡'},
-    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:3,alert:8,unit:'°C',icon:'🌡'},
-    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:3,alert:8,unit:'°C',icon:'🌡'}
+    {id:'z2',name:'CÁMARA MAT PRIMA',target:4,alert:7,unit:'°C',icon:'🌡'},
+    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:4,alert:7,unit:'°C',icon:'🌡'},
+    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:4,alert:7,unit:'°C',icon:'🌡'}
   ]);
   sv(K.provs,[
     {id:'p1',name:'Agustín López de Arkaute'},
@@ -558,6 +558,23 @@ function saveCfgEmp(){
   localStorage.setItem('a_cfgemp', JSON.stringify(cfg));
   alert('✓ Datos guardados. Los informes usarán esta información.');
   renderCfg();
+}
+
+// ============================================================
+// MIGRACIÓN v7 — actualiza empleados y temperaturas en installs existentes
+// ============================================================
+if(!localStorage.getItem('a_v7')){
+  sv(K.emp,['Lidia','Edwin','Gustavo','Jeni']);
+  sv(K.zonas,[
+    {id:'z1',name:'CÁMARA CONGELACIÓN',target:-18,alert:-15,unit:'°C',icon:'❄'},
+    {id:'z2',name:'CÁMARA MAT PRIMA',target:4,alert:7,unit:'°C',icon:'🌡'},
+    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:4,alert:7,unit:'°C',icon:'🌡'},
+    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:4,alert:7,unit:'°C',icon:'🌡'}
+  ]);
+  // Limpiar worker activo inválido (email o nombre antiguo)
+  const w=localStorage.getItem(K.wActive)||'';
+  if(w&&!['Lidia','Edwin','Gustavo','Jeni'].includes(w))localStorage.removeItem(K.wActive);
+  localStorage.setItem('a_v7','1');
 }
 
 // ============================================================
@@ -750,10 +767,16 @@ function updateWorkerHeader(){
   const w=getActiveWorker();
   const sub=document.getElementById('header-worker-sub');
   const btn=document.getElementById('header-change-worker');
-  if(sub)sub.textContent=w?'👤 Hola, '+w:'Sistema APPCC · Catering';
-  if(btn)btn.style.display=w?'inline-block':'none';
+  if(sub)sub.textContent='Sistema APPCC · Catering';
+  if(btn){btn.style.display=w?'inline-block':'none';btn.textContent=w?'👤 '+w:'cambiar 👤';}
 }
 function initWorkerPicker(){
+  // Validar que el worker guardado sigue en la lista
+  const w=getActiveWorker();
+  const emps=ld(K.emp);
+  if(w&&emps.length>0&&!emps.includes(w)){
+    localStorage.removeItem(K.wActive);
+  }
   buildWorkerPickerBtns();
   if(getActiveWorker()){
     document.getElementById('worker-picker').style.display='none';
