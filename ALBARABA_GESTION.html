@@ -256,6 +256,7 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section active" id="section-dashboard">
   <div class="topbar">
     <div><div class="pg-title">Dashboard</div><div class="pg-sub">Resumen general de Albaraba SL</div></div>
+    <button class="btn btn-outline" onclick="descargarBackupCompleto()" style="font-size:12px" title="Backup completo JSON">💾 Backup completo</button>
     <button class="btn btn-gold" onclick="nav('pedidos')">🛒 Nuevo pedido</button>
   </div>
   <!-- RELOJ Y FECHA -->
@@ -295,7 +296,7 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section" id="section-proveedores">
   <div class="topbar">
     <div><div class="pg-title">Proveedores</div><div class="pg-sub">Gestión de proveedores</div></div>
-    <button class="btn btn-gold" onclick="openProvModal()">+ Añadir proveedor</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="descargarProveedores()" title="Descargar CSV">📥 Descargar</button><button class="btn btn-gold" onclick="openProvModal()">+ Añadir proveedor</button></div>
   </div>
   <div class="card">
     <div class="card-head">
@@ -310,7 +311,7 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section" id="section-productos">
   <div class="topbar">
     <div><div class="pg-title">Productos</div><div class="pg-sub">Ingredientes y materias primas</div></div>
-    <button class="btn btn-gold" onclick="openProdModal()">+ Añadir producto</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="descargarProductos()" title="Descargar CSV">📥 Descargar</button><button class="btn btn-gold" onclick="openProdModal()">+ Añadir producto</button></div>
   </div>
   <div class="card">
     <div class="card-head">
@@ -332,7 +333,7 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section" id="section-elaboraciones">
   <div class="topbar">
     <div><div class="pg-title">Elaboraciones</div><div class="pg-sub">Recetas y preparaciones</div></div>
-    <button class="btn btn-gold" onclick="openElabModal()">+ Añadir elaboración</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="descargarElaboraciones()" title="Descargar CSV">📥 Descargar</button><button class="btn btn-gold" onclick="openElabModal()">+ Añadir elaboración</button></div>
   </div>
   <div class="card">
     <div class="card-head">
@@ -392,6 +393,7 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section" id="section-stock">
   <div class="topbar">
     <div><div class="pg-title">Control de Stock</div><div class="pg-sub">Inventario actual</div></div>
+    <button class="btn btn-outline" onclick="descargarStock()">📥 Descargar</button>
     <button class="btn btn-gold" onclick="exportarStockExcel()">📊 Exportar Excel</button>
   </div>
   <div class="card">
@@ -441,6 +443,7 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section" id="section-hojas">
   <div class="topbar">
     <div><div class="pg-title">Hojas de Servicio</div><div class="pg-sub">Eventos y control de stock por servicio</div></div>
+    <button class="btn btn-outline" onclick="descargarHojas()">📥 Descargar</button>
     <button class="btn btn-gold" onclick="openHojaModal()">+ Nueva hoja</button>
   </div>
   <div class="card">
@@ -455,6 +458,7 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section" id="section-gastos">
   <div class="topbar">
     <div><div class="pg-title">💰 Gastos</div><div class="pg-sub">Coste por evento y por proveedor</div></div>
+    <button class="btn btn-outline" onclick="descargarGastos()">📥 Descargar</button>
     <button class="btn btn-gold" onclick="exportarGastosExcel()">📊 Exportar Excel</button>
   </div>
   <div class="card" style="padding:16px;margin-bottom:16px">
@@ -1108,7 +1112,7 @@ function renderRecetasList(){
     el.innerHTML = `<div class="empty-state"><div style="font-size:48px">📋</div>
       <h3>Sin recetas todavía</h3>
       <p>Crea tu primera receta con el botón "+ Nueva receta"</p>
-      <button class="btn btn-gold" onclick="openRecetaModal()">+ Nueva receta</button></div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="imprimirTodasFichas()" title="Imprimir todas">🖨 Todas las fichas</button><button class="btn btn-gold" onclick="openRecetaModal()">+ Nueva receta</button></div></div>`;
     return;
   }
   el.innerHTML = recetas.map((r,i)=>`
@@ -1454,7 +1458,7 @@ ${r.pasos?`<div class="section-hdr" style="margin-top:4px">PROCESO DE ELABORACI�
       <div class="pg-title">🧾 Leer albarán</div>
       <div class="pg-sub">Extrae precios y cantidades de caja · actualiza tus productos automáticamente</div>
     </div>
-    <button class="btn btn-gold" onclick="openNuevoAlbaran()">+ Nuevo albarán</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="descargarAlbaranes()" title="Descargar historial">📥 Historial CSV</button><button class="btn btn-gold" onclick="openNuevoAlbaran()">+ Nuevo albarán</button></div>
   </div>
   <div id="albaran-main"></div>
 </div>
@@ -1580,16 +1584,39 @@ function renderAlbaranes(){
   }
   el.innerHTML = `
     <div class="card" style="margin-bottom:12px">
-      <div class="card-head"><h3>📋 Albaranes procesados</h3></div>
-      ${hist.slice().reverse().map((h,i)=>`
-        <div class="list-row">
+      <div class="card-head">
+        <h3>📋 Albaranes procesados</h3>
+        <span style="font-size:12px;color:#888">${hist.length} albarán(es)</span>
+      </div>
+      ${hist.slice().reverse().map((h,ri)=>{
+        const realIdx = hist.length-1-ri;
+        return `<div class="list-row" style="flex-wrap:wrap;gap:8px">
           <div class="list-icon">🧾</div>
-          <div class="list-main">
+          <div class="list-main" style="flex:1">
             <div class="list-title">${esc(h.proveedor||'Sin proveedor')} · ${h.fecha||''}</div>
-            <div class="list-sub">${h.nLineas||0} líneas · ${h.actualizados||0} productos actualizados</div>
+            <div class="list-sub">${h.nLineas||0} líneas · <strong>${h.actualizados||0} productos actualizados</strong></div>
           </div>
-        </div>`).join('')}
+          <div style="display:flex;gap:6px;align-items:center">
+            ${h.imagen?`<button class="btn btn-sm" onclick="verImagenAlbaran(${realIdx})" style="background:#1a4fa8;color:#fff">📄 Ver albarán</button>`:'<span style="font-size:11px;color:#ccc">Sin imagen</span>'}
+          </div>
+        </div>`;
+      }).join('')}
     </div>`;
+}
+
+function verImagenAlbaran(idx){
+  const h = (DB.albaranesLog||[])[idx]; if(!h||!h.imagen){alert('Sin imagen adjunta');return;}
+  const w = window.open('','_blank','width=900,height=700');
+  if(h.imagenType&&h.imagenType.startsWith('image/')){
+    w.document.write(`<html><body style="margin:0;background:#111;display:flex;justify-content:center;align-items:flex-start;min-height:100vh">
+      <img src="${h.imagen}" style="max-width:100%;height:auto">
+    </body></html>`);
+  } else {
+    w.document.write(`<html><body style="margin:0">
+      <embed src="${h.imagen}" type="${h.imagenType||'application/pdf'}" width="100%" height="100%" style="min-height:100vh">
+    </body></html>`);
+  }
+  w.document.close();
 }
 
 function openNuevoAlbaran(){
@@ -1616,11 +1643,31 @@ function renderAlbaranPaso0(){
         <div class="fg"><label class="fl">Fecha del albarán</label>
           <input class="fc" id="alb-fecha" type="date" value="${_alb.fecha}">
         </div>
-        <div class="fg"><label class="fl">📸 Foto / imagen del albarán (opcional)</label>
-          <input type="file" class="fc" id="alb-img" accept="image/*,.pdf" capture="environment"
-            onchange="previewAlbaranImg(this)">
-          <div id="alb-img-prev" style="margin-top:8px"></div>
-          <div style="font-size:11px;color:#888;margin-top:4px">Solo para tener la referencia visual. Introduce las líneas manualmente en el paso 2.</div>
+        <div class="fg">
+          <label class="fl">📸 Foto / imagen del albarán</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+            <label style="flex:1;min-width:140px;cursor:pointer">
+              <input type="file" id="alb-img" accept="image/*" capture="environment"
+                onchange="previewAlbaranImg(this)" style="display:none">
+              <div style="background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;border-radius:10px;
+                padding:14px;text-align:center;font-size:13px;font-weight:700;border:none">
+                📷 Fotografiar albarán
+              </div>
+            </label>
+            <label style="flex:1;min-width:140px;cursor:pointer">
+              <input type="file" id="alb-img2" accept="image/*,.pdf"
+                onchange="previewAlbaranImg(this)" style="display:none">
+              <div style="background:#f5f7fa;color:#1a4fa8;border-radius:10px;border:2px dashed #1a4fa8;
+                padding:14px;text-align:center;font-size:13px;font-weight:700">
+                📁 Subir archivo / PDF
+              </div>
+            </label>
+          </div>
+          <div id="alb-img-prev" style="margin-top:4px"></div>
+          <div style="font-size:11px;color:#888;margin-top:6px;background:#f5f5f5;border-radius:6px;padding:8px">
+            💡 La foto del albarán queda guardada y visible para todo el equipo.<br>
+            En el paso siguiente introduces las líneas manualmente.
+          </div>
         </div>
         <div style="display:flex;gap:10px;margin-top:16px">
           <button class="btn btn-outline" onclick="renderAlbaranes()">Cancelar</button>
@@ -1631,6 +1678,12 @@ function renderAlbaranPaso0(){
 }
 
 function previewAlbaranImg(inp){
+  // sync both file inputs to the same preview
+  const other = inp.id==='alb-img' ? document.getElementById('alb-img2') : document.getElementById('alb-img');
+  // (only one has a file, that's fine)
+  _orig_previewAlbaranImg(inp);
+}
+function _orig_previewAlbaranImg(inp){
   const file = inp.files[0]; if(!file) return;
   const reader = new FileReader();
   reader.onload = e => {
@@ -1924,6 +1977,8 @@ function confirmarAlbaran(){
     fecha: _alb.fecha,
     nLineas: _alb.lineas.length,
     actualizados: actualizados + creados,
+    imagen: _alb.imagen || null,
+    imagenType: _alb.imagenType || null,
     ts: Date.now()
   });
 
@@ -1949,6 +2004,110 @@ function confirmarAlbaran(){
     </div>`;
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DESCARGAR / EXPORTAR TODO
+// ═══════════════════════════════════════════════════════════════════════════
+function _csvLine(vals){
+  return vals.map(v=>'"'+(String(v||'').replace(/"/g,'""'))+'"').join(',');
+}
+function _downloadCSV(rows, filename){
+  const bom = '﻿'; // UTF-8 BOM para Excel
+  const blob = new Blob([bom + rows.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+function _downloadJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
+function descargarProductos(){
+  const rows = [_csvLine(['Nombre','Categoría','Proveedor','Unidad','Precio compra €','Uds/caja','Rendimiento %','Alérgenos','Notas'])];
+  DB.productos.forEach(p=>{
+    rows.push(_csvLine([p.nombre,p.categoria||'',p.proveedor||'',p.unidad||'',
+      p.precio_compra||'',p.cantidad_caja||'',p.rendimiento||'100',
+      (p.alergenos||[]).join(' / '),p.notas||'']));
+  });
+  _downloadCSV(rows, 'productos_'+_hoy()+'.csv');
+}
+
+function descargarProveedores(){
+  const rows = [_csvLine(['Nombre','Teléfono','Email','Dirección','Contacto','Días antelación','Notas'])];
+  DB.proveedores.forEach(p=>{
+    rows.push(_csvLine([p.nombre,p.tel||'',p.email||'',p.dir||'',
+      p.contacto||'',p.dias_pedido||'',p.notas||'']));
+  });
+  _downloadCSV(rows, 'proveedores_'+_hoy()+'.csv');
+}
+
+function descargarElaboraciones(){
+  const rows = [_csvLine(['Nombre','Categoría','Raciones base','Ingredientes','Alérgenos','Notas'])];
+  DB.elaboraciones.forEach(e=>{
+    const ings = (e.ingredientes||[]).map(i=>`${i.nombre} ${i.cantidad||''}${i.unidad||''}`).join(' | ');
+    rows.push(_csvLine([e.nombre,e.categoria||'',e.raciones||1,ings,
+      (e.alergenos||[]).join(' / '),e.notas||'']));
+  });
+  _downloadCSV(rows, 'elaboraciones_'+_hoy()+'.csv');
+}
+
+function descargarAlbaranes(){
+  const rows = [_csvLine(['Proveedor','Fecha','Líneas','Productos actualizados'])];
+  (DB.albaranesLog||[]).forEach(h=>{
+    rows.push(_csvLine([h.proveedor||'',h.fecha||'',h.nLineas||0,h.actualizados||0]));
+  });
+  _downloadCSV(rows, 'albaranes_'+_hoy()+'.csv');
+}
+
+function descargarGastos(){
+  const rows = [_csvLine(['Tipo','Concepto','Proveedor','Importe €','Fecha','Notas'])];
+  (DB.gastos||[]).forEach(g=>{
+    rows.push(_csvLine([g.tipo||'',g.concepto||'',g.proveedor||'',g.importe||0,g.fecha||'',g.notas||'']));
+  });
+  _downloadCSV(rows, 'gastos_'+_hoy()+'.csv');
+}
+
+function descargarStock(){
+  const rows = [_csvLine(['Producto','Cantidad','Unidad','Ubicación','Fecha actualización'])];
+  (DB.stock||DB.productos||[]).forEach(p=>{
+    rows.push(_csvLine([p.nombre,p.stock||p.cantidad||'',p.unidad||'',p.ubicacion||'',p.fechaStock||'']));
+  });
+  _downloadCSV(rows, 'stock_'+_hoy()+'.csv');
+}
+
+function descargarHojas(){
+  const rows = [_csvLine(['Evento','Fecha','Cliente','Raciones','Total €','Estado'])];
+  (DB.hojas||[]).forEach(h=>{
+    rows.push(_csvLine([h.nombre||h.evento||'',h.fecha||'',h.cliente||'',h.raciones||'',h.total||'',h.estado||'']));
+  });
+  _downloadCSV(rows, 'hojas_servicio_'+_hoy()+'.csv');
+}
+
+function imprimirTodasFichas(){
+  const recetas = DB.recetas||[];
+  if(!recetas.length){alert('No hay recetas guardadas');return;}
+  if(!confirm(`¿Imprimir las ${recetas.length} fichas técnicas? Se abrirán como documento imprimible.`)) return;
+  // Build one page per recipe
+  recetas.forEach((_,i)=>{ setTimeout(()=>printFichaTecnicaMA03(i), i*300); });
+}
+
+function descargarBackupCompleto(){
+  const backup = {
+    fecha: new Date().toISOString(),
+    empresa: 'Albaraba SL · Alaboca',
+    ...DB
+  };
+  _downloadJSON(backup, 'backup_albaraba_'+_hoy()+'.json');
+}
+
+function _hoy(){
+  return new Date().toISOString().slice(0,10);
+}
 
 function saveDB(){
   localStorage.setItem('albaraba_v2',JSON.stringify(DB));
