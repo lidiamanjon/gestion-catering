@@ -229,12 +229,12 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="nav-label admin-only">Documentos</div>
     <div class="ni admin-only" id="ni-informes" onclick="nav('informes')"><span class="ic">📄</span> Informes</div>
     <div class="ni admin-only" id="ni-gastos" onclick="nav('gastos')"><span class="ic">💰</span> Gastos</div>
-    <div class="nav-label admin-only">APPCC / Sanidad</div>
-    <div class="ni admin-only" id="ni-appcc" onclick="nav('appcc')"><span class="ic">🧹</span> APPCC</div>
     <div class="nav-label">Equipo</div>
     <div class="ni" id="ni-mejoras" onclick="nav('mejoras')"><span class="ic">🔧</span> Mejoras</div>
     <div class="ni" id="ni-tareas" onclick="nav('tareas')"><span class="ic">📝</span> Tareas</div>
-    <div class="ni" id="ni-appcc-worker" onclick="window.open('APPCC_ALBARABA.html','_blank')"><span class="ic">🧹</span> APPCC Sanidad</div>
+    <div class="ni" id="ni-recetas" onclick="nav('recetas')"><span class="ic">📋</span> Recetas / Fichas</div>
+    <div class="ni" id="ni-albaranes" onclick="nav('albaranes')"><span class="ic">🧾</span> Leer albarán</div>
+    <div class="ni" id="ni-appcc-worker" onclick="window.open('APPCC_ALBARABA.html','_blank')"><span class="ic">🔬</span> App APPCC →</div>
     <div class="ni admin-only" id="ni-usuarios" onclick="nav('usuarios')"><span class="ic">👥</span> Usuarios</div>
     <div class="nav-label admin-only">Datos</div>
     <div class="ni admin-only" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
@@ -1069,7 +1069,886 @@ const PROVEEDORES_INICIAL=[
 // ═══════════════════════════════════════════════════
 // DATABASE
 // ═══════════════════════════════════════════════════
-let DB={proveedores:[],productos:[],elaboraciones:[],pedidos:[],hojas:[],appcc:{temperaturas:[],limpiezas:[],incidencias:[]}};
+let DB={proveedores:[],productos:[],elaboraciones:[],pedidos:[],hojas:[],recetas:[],fichasProveedor:[],appcc:{temperaturas:[],limpiezas:[],incidencias:[]}};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// RECETAS + FICHAS TÉCNICAS MA 03-1
+// ═══════════════════════════════════════════════════════════════════════════
+const ALERG_COLS = [
+  {key:'gluten',     label:'GLUTEN Y DERIVADOS'},
+  {key:'crustaceos', label:'CRUSTÁCEOS Y DERIVADOS'},
+  {key:'huevos',     label:'HUEVOS Y DERIVADOS'},
+  {key:'pescado',    label:'PESCADO Y DERIVADOS'},
+  {key:'cacahuetes', label:'CACAHUETES'},
+  {key:'soja',       label:'SOJA Y DERIVADOS'},
+  {key:'leche',      label:'LECHE Y DERIVADOS'},
+  {key:'frutoscascara',label:'FRUTOS CON CÁSCARA'},
+  {key:'apio',       label:'APIO'},
+  {key:'mostaza',    label:'MOSTAZA'},
+  {key:'sesamo',     label:'GRANOS DE SÉSAMO'},
+  {key:'dioxido',    label:'DIÓXIDO DE AZUFRE'},
+  {key:'altramuces', label:'ALTRAMUCES'},
+  {key:'moluscos',   label:'MOLUSCOS'}
+];
+
+function switchRecetasTab(el, tabId){
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  ['rt-lista','rt-fichas-prov'].forEach(id=>{
+    const d=document.getElementById(id); if(d) d.style.display = id===tabId ? '' : 'none';
+  });
+  if(tabId==='rt-lista') renderRecetasList();
+  if(tabId==='rt-fichas-prov') renderFichasProvList();
+}
+
+function renderRecetasList(){
+  const el = document.getElementById('recetas-lista'); if(!el) return;
+  const recetas = DB.recetas || [];
+  if(!recetas.length){
+    el.innerHTML = `<div class="empty-state"><div style="font-size:48px">📋</div>
+      <h3>Sin recetas todavía</h3>
+      <p>Crea tu primera receta con el botón "+ Nueva receta"</p>
+      <button class="btn btn-gold" onclick="openRecetaModal()">+ Nueva receta</button></div>`;
+    return;
+  }
+  el.innerHTML = recetas.map((r,i)=>`
+    <div class="card" style="margin-bottom:10px">
+      <div class="card-head">
+        <h3>📋 ${esc(r.nombre)}</h3>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" onclick="printFichaTecnicaMA03(${i})" style="background:#1a4fa8;color:#fff">🖨 Ficha MA 03-1</button>
+          <button class="btn btn-sm btn-outline" onclick="openRecetaModal(${i})">✏️</button>
+          <button class="btn btn-sm btn-outline" style="color:#e74c3c" onclick="deleteReceta(${i})">🗑</button>
+        </div>
+      </div>
+      <div style="padding:10px 14px">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:#666;margin-bottom:8px">
+          <span>🧂 ${(r.ingredientes||[]).length} ingredientes</span>
+          <span>🌡 ${r.conservacion||'—'}</span>
+          <span>⏱ ${r.vidaUtil||'—'}</span>
+        </div>
+        ${getAlergBadges(calcRecetaAlerg(r))}
+      </div>
+    </div>`).join('');
+}
+
+function getAlergBadges(alergSet){
+  if(!alergSet.size) return '<span style="font-size:11px;color:#aaa">Sin alérgenos declarados</span>';
+  return [...alergSet].map(k=>{
+    const a = ALERG_COLS.find(x=>x.key===k);
+    return `<span style="display:inline-block;background:#fff3cd;border:1px solid #f39c12;color:#856404;border-radius:4px;padding:2px 6px;font-size:10px;margin:2px">${a?a.label.split(' ')[0]:k}</span>`;
+  }).join('');
+}
+
+function calcRecetaAlerg(receta){
+  const set = new Set();
+  (receta.alergenos||[]).forEach(a=>set.add(a));
+  (receta.ingredientes||[]).forEach(ing=>{
+    const p = DB.productos.find(x=>x.id===ing.producto_id);
+    if(p)(p.alergenos||[]).forEach(a=>set.add(a));
+  });
+  return set;
+}
+
+// ── MODAL CREAR / EDITAR RECETA ────────────────────────────────────────────
+function openRecetaModal(idx){
+  const r = idx !== undefined ? (DB.recetas||[])[idx] : null;
+  const prods = DB.productos;
+  window._editRecetaIdx = idx;
+
+  const alergGrid = ALERG_COLS.map(a=>`
+    <label style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 8px;border:1px solid #e0e0e0;border-radius:6px;cursor:pointer;background:${r&&(r.alergenos||[]).includes(a.key)?'#fff3cd':'#fafafa'}">
+      <select style="font-size:11px;border:none;background:transparent;width:28px" id="al-${a.key}">
+        <option value="">—</option>
+        <option value="C" ${r&&(r.alergenos||[]).includes(a.key+'_C')?'selected':''}>C</option>
+        <option value="T" ${r&&(r.alergenos||[]).includes(a.key+'_T')?'selected':''}>T</option>
+      </select>
+      ${a.label.split(' ')[0]}
+    </label>`).join('');
+
+  const ingRows = (r&&r.ingredientes||[]).map((ing,i)=>`
+    <div class="ing-row" style="display:grid;grid-template-columns:1fr 80px 60px 30px;gap:6px;margin-bottom:6px" id="ingrow-${i}">
+      <input class="fc ing-nombre" list="prod-dl-rec" value="${esc(ing.nombre||'')}" placeholder="Ingrediente...">
+      <input class="fc ing-cant" value="${esc(ing.cantidad||'')}" placeholder="Cantidad">
+      <input class="fc ing-unidad" value="${esc(ing.unidad||'')}" placeholder="g/ml/ud">
+      <button onclick="this.closest('.ing-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
+    </div>`).join('');
+
+  openModal(`
+    <div class="modal-title">${r?'✏️ Editar receta':'📋 Nueva receta'}</div>
+    <div style="max-height:70vh;overflow-y:auto;padding-right:4px">
+      <datalist id="prod-dl-rec">${prods.map(p=>`<option value="${esc(p.nombre)}">`).join('')}</datalist>
+
+      <div class="fg"><label class="fl">Denominación del producto *</label>
+        <input class="fc" id="rec-nombre" value="${esc(r?r.nombre:'')}" placeholder="Nombre exacto del producto"></div>
+
+      <div class="fg" style="margin-top:10px"><label class="fl" style="font-weight:700">Ingredientes</label>
+        <div id="ing-list-rec">${ingRows}</div>
+        <button class="btn btn-sm btn-outline" style="margin-top:6px" onclick="addIngRowRec()">+ Añadir ingrediente</button>
+      </div>
+
+      <div class="fg" style="margin-top:10px"><label class="fl">Ingredientes (texto libre para etiquetado)</label>
+        <textarea class="fc" id="rec-ingtext" rows="3" placeholder="Leche en polvo, harina de trigo, aceite...">${esc(r?r.ingredientesTexto:'')}</textarea>
+        <div style="font-size:11px;color:#888;margin-top:3px">Este texto aparecerá en la ficha técnica. Pon en <strong>negrita</strong> los alérgenos.</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div class="fg"><label class="fl">Modo de conservación</label>
+          <input class="fc" id="rec-conserv" value="${esc(r?r.conservacion:'')}" placeholder="ej: Mantener en congelación a -18°C"></div>
+        <div class="fg"><label class="fl">Vida útil</label>
+          <input class="fc" id="rec-viutil" value="${esc(r?r.vidaUtil:'')}" placeholder="ej: 300 días desde fabricación"></div>
+      </div>
+
+      <div class="fg" style="margin-top:10px"><label class="fl">Formato de consumo</label>
+        <input class="fc" id="rec-consumo" value="${esc(r?r.consumo:'')}" placeholder="ej: Consumir previo tratamiento térmico"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div class="fg"><label class="fl">Aspecto</label><input class="fc" id="rec-aspecto" value="${esc(r?r.aspecto:'')}" placeholder="ej: Forma ovalada"></div>
+        <div class="fg"><label class="fl">Olor</label><input class="fc" id="rec-olor" value="${esc(r?r.olor:'Característico')}" placeholder="Característico"></div>
+        <div class="fg"><label class="fl">Sabor</label><input class="fc" id="rec-sabor" value="${esc(r?r.sabor:'Característico')}" placeholder="Característico"></div>
+        <div class="fg"><label class="fl">Consistencia</label><input class="fc" id="rec-consist" value="${esc(r?r.consistencia:'')}" placeholder="ej: Crujiente"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+        <div class="fg"><label class="fl">Formato de venta (material)</label><input class="fc" id="rec-vmat" value="${esc(r?r.ventaMaterial:'')}" placeholder="ej: Caja cartón"></div>
+        <div class="fg"><label class="fl">Unidades de venta</label><input class="fc" id="rec-vunid" value="${esc(r?r.ventaUnidades:'')}" placeholder="ej: 3 kg en caja"></div>
+      </div>
+
+      <div style="margin-top:14px"><label class="fl" style="font-weight:700;margin-bottom:8px">Alérgenos (C=Contiene · T=Trazas)</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${alergGrid}</div>
+      </div>
+
+      <div class="fg" style="margin-top:10px"><label class="fl">Pasos de elaboración</label>
+        <textarea class="fc" id="rec-pasos" rows="4" placeholder="1. Paso uno...&#10;2. Paso dos...">${esc(r?r.pasos:'')}</textarea>
+      </div>
+
+      <div class="fg" style="margin-top:10px"><label class="fl">Número de ficha (ej: MA 03-1)</label>
+        <input class="fc" id="rec-fichan" value="${esc(r?r.fichaNum:'MA 03-1')}" placeholder="MA 03-1"></div>
+    </div>
+
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-gold" style="flex:2" onclick="saveReceta()">✓ Guardar receta</button>
+    </div>`, 'lg');
+}
+
+function addIngRowRec(){
+  const list = document.getElementById('ing-list-rec');
+  const i = Date.now();
+  const prods = DB.productos;
+  const row = document.createElement('div');
+  row.className='ing-row';
+  row.style='display:grid;grid-template-columns:1fr 80px 60px 30px;gap:6px;margin-bottom:6px';
+  row.innerHTML=`
+    <input class="fc ing-nombre" list="prod-dl-rec" placeholder="Ingrediente...">
+    <input class="fc ing-cant" placeholder="Cantidad">
+    <input class="fc ing-unidad" placeholder="g/ml/ud">
+    <button onclick="this.closest('.ing-row').remove()" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>`;
+  list.appendChild(row);
+}
+
+function saveReceta(){
+  const nombre=(document.getElementById('rec-nombre')||{}).value?.trim()||'';
+  if(!nombre){alert('Introduce el nombre del producto');return;}
+  const ingredientes=[...document.querySelectorAll('#ing-list-rec .ing-row')].map(row=>({
+    nombre: row.querySelector('.ing-nombre')?.value?.trim()||'',
+    cantidad: row.querySelector('.ing-cant')?.value?.trim()||'',
+    unidad: row.querySelector('.ing-unidad')?.value?.trim()||''
+  })).filter(i=>i.nombre);
+  const alergenos=ALERG_COLS.map(a=>{
+    const v=(document.getElementById('al-'+a.key)||{}).value||'';
+    return v?{key:a.key,val:v}:null;
+  }).filter(Boolean);
+  const rec={
+    nombre,
+    ingredientes,
+    ingredientesTexto:(document.getElementById('rec-ingtext')||{}).value||'',
+    conservacion:(document.getElementById('rec-conserv')||{}).value||'',
+    vidaUtil:(document.getElementById('rec-viutil')||{}).value||'',
+    consumo:(document.getElementById('rec-consumo')||{}).value||'',
+    aspecto:(document.getElementById('rec-aspecto')||{}).value||'Característico',
+    olor:(document.getElementById('rec-olor')||{}).value||'Característico',
+    sabor:(document.getElementById('rec-sabor')||{}).value||'Característico',
+    consistencia:(document.getElementById('rec-consist')||{}).value||'',
+    ventaMaterial:(document.getElementById('rec-vmat')||{}).value||'',
+    ventaUnidades:(document.getElementById('rec-vunid')||{}).value||'',
+    alergenos: alergenos.map(a=>a.key),
+    alergenosDetalle: alergenos,
+    pasos:(document.getElementById('rec-pasos')||{}).value||'',
+    fichaNum:(document.getElementById('rec-fichan')||{}).value||'MA 03-1',
+    fechaRev: new Date().toLocaleDateString('es-ES',{month:'2-digit',year:'2-digit'})
+  };
+  if(!DB.recetas) DB.recetas=[];
+  if(window._editRecetaIdx !== undefined && window._editRecetaIdx !== null){
+    DB.recetas[window._editRecetaIdx]=rec;
+  } else {
+    DB.recetas.push(rec);
+  }
+  saveDB(); closeModal(); renderRecetasList();
+}
+
+function deleteReceta(i){
+  if(!confirm('¿Eliminar esta receta?')) return;
+  DB.recetas.splice(i,1); saveDB(); renderRecetasList();
+}
+
+// ── PRINT FICHA TÉCNICA MA 03-1 ────────────────────────────────────────────
+function printFichaTecnicaMA03(idx){
+  const r = (DB.recetas||[])[idx];
+  if(!r){alert('Receta no encontrada');return;}
+  const alergSet = new Set([...r.alergenos||[], ...r.alergenosDetalle?.map(a=>a.key)||[]]);
+  const alergDetalle = {};
+  (r.alergenosDetalle||[]).forEach(a=>alergDetalle[a.key]=a.val||'C');
+
+  const alergTable = ALERG_COLS.map(a=>`
+    <td style="text-align:center;border:1px solid #ccc;padding:2px 0;font-size:12px;font-weight:700">
+      ${alergSet.has(a.key) ? (alergDetalle[a.key]||'C') : ''}
+    </td>`).join('');
+
+  const alergHeaders = ALERG_COLS.map(a=>`
+    <th style="writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);border:1px solid #ccc;padding:4px 2px;font-size:9px;font-weight:700;background:#f5f5f5;white-space:nowrap;height:80px;vertical-align:bottom;text-align:center">
+      ${a.label}
+    </th>`).join('');
+
+  const ingredientes = r.ingredientesTexto || r.ingredientes.map(i=>`${i.nombre}${i.cantidad?' ('+i.cantidad+' '+i.unidad+')':''}`).join(', ');
+
+  const html = `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8">
+<title>Ficha Técnica · ${r.nombre}</title>
+<style>
+  @page{size:A4 portrait;margin:15mm}
+  body{font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#000;margin:0;padding:0}
+  table{width:100%;border-collapse:collapse}
+  td,th{border:1px solid #000;padding:4px 6px;vertical-align:top}
+  .title-box{border:2px solid #000;text-align:center;padding:6px;font-size:22px;font-weight:900;letter-spacing:1px;margin-bottom:0}
+  .section-hdr{background:#000;color:#fff;font-weight:700;font-size:10px;padding:3px 6px;margin-top:6px;margin-bottom:0}
+  .section-content{border:1px solid #000;padding:6px;margin-bottom:0}
+  .logo-area{display:flex;align-items:center;gap:10px;border:1px solid #ccc;padding:6px;margin-bottom:4px}
+  .logo-circle{width:44px;height:44px;border-radius:50%;background:#222;color:#fff;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .logo-name{font-size:14px;font-weight:700}
+  .logo-sub{font-size:10px;color:#666}
+  @media print{button{display:none!important}}
+</style>
+</head>
+<body>
+<button onclick="window.print()" style="position:fixed;top:10px;right:10px;padding:8px 18px;background:#1a4fa8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;z-index:999">🖨 IMPRIMIR</button>
+
+<div style="text-align:center;font-size:11px;font-weight:700;border:1px solid #ccc;padding:4px;margin-bottom:2px">FICHAS TECNICAS DE PRODUCTO FINAL</div>
+
+<table style="margin-bottom:2px">
+  <tr>
+    <td style="width:60%">
+      <div class="logo-area">
+        <div class="logo-circle">B</div>
+        <div><div class="logo-name">Alaboca</div><div class="logo-sub">Catering</div></div>
+      </div>
+    </td>
+    <td style="width:40%;vertical-align:middle">
+      <div class="title-box">${r.nombre.toUpperCase()}</div>
+    </td>
+  </tr>
+</table>
+
+<table style="margin-bottom:4px;font-size:9.5px">
+  <tr><td style="font-weight:700;width:35%">DATOS DE LA EMPRESA</td><td>Registro Sanitario: 26.015504/VI</td><td rowspan="5" style="width:22%;font-size:9px">
+    <div><strong>Ficha Nº:</strong> ${r.fichaNum||'MA 03-1'}</div>
+    <div style="margin-top:4px"><strong>Rev:</strong> 00</div>
+    <div style="margin-top:4px"><strong>Fecha:</strong> ${r.fechaRev||''}</div>
+    <div style="margin-top:4px"><strong>Página 1 de 1</strong></div>
+  </td></tr>
+  <tr><td style="font-weight:700">RAZÓN SOCIAL</td><td>Albaraba S.L (ALABOCA ELABORADOS)</td></tr>
+  <tr><td style="font-weight:700">DIRECCIÓN</td><td>Portal de Bergara 4, Pabellón 13. Vitoria. 01013</td></tr>
+  <tr><td style="font-weight:700">PERSONA DE CONTACTO</td><td>Jon Alberdi</td></tr>
+  <tr><td style="font-weight:700">TELÉFONO / Email</td><td>945 09 58 90 · contacto@alaboca.es</td></tr>
+</table>
+
+<div class="section-hdr">DENOMINACIÓN DE PRODUCTO</div>
+<div class="section-content" style="font-size:11px">${r.nombre}</div>
+
+<div class="section-hdr">INGREDIENTES</div>
+<div class="section-content">${ingredientes||'—'}</div>
+
+<div class="section-hdr">ALÉRGENOS</div>
+<div class="section-content" style="font-size:9px">
+  Según el Real Decreto 1245/2008 y Reglamento (UE) Nº 1169/2011 sobre información alimentaria. 
+  <strong>C: Contiene el alérgeno &nbsp;&nbsp; T: Puede contener trazas</strong>
+  <table style="margin-top:6px;table-layout:fixed">
+    <tr>${alergHeaders}</tr>
+    <tr style="height:28px">${alergTable}</tr>
+  </table>
+</div>
+
+<table style="margin-top:4px">
+  <tr>
+    <td style="width:50%"><strong class="section-hdr" style="display:block">MODO DE CONSERVACIÓN</strong>
+      <div style="padding:4px">${r.conservacion||'—'}</div></td>
+    <td style="width:50%"><strong class="section-hdr" style="display:block">VIDA ÚTIL DEL PRODUCTO</strong>
+      <div style="padding:4px">${r.vidaUtil||'—'}</div></td>
+  </tr>
+</table>
+
+<div class="section-hdr">FORMATO DE CONSUMO</div>
+<div class="section-content">${r.consumo||'—'}</div>
+
+<table style="margin-top:4px">
+  <tr>
+    <td style="width:50%">
+      <div class="section-hdr">CARACTERÍSTICAS FÍSICO QUÍMICAS</div>
+      <table style="margin-top:2px;font-size:9.5px">
+        <tr><td style="width:40%;font-weight:700">Aspecto</td><td>${r.aspecto||'—'}</td></tr>
+        <tr><td style="font-weight:700">Olor</td><td>${r.olor||'Característico'}</td></tr>
+        <tr><td style="font-weight:700">Sabor</td><td>${r.sabor||'Característico'}</td></tr>
+        <tr><td style="font-weight:700">Consistencia</td><td>${r.consistencia||'—'}</td></tr>
+      </table>
+    </td>
+    <td style="width:50%">
+      <div class="section-hdr">CARACTERÍSTICAS MICROBIOLÓGICAS*</div>
+      <table style="margin-top:2px;font-size:9px">
+        <tr><td style="font-weight:700">PARÁMETRO</td><td style="font-weight:700">LÍMITE</td></tr>
+        <tr><td>Rcto. E.coli</td><td>&lt; 100 ufc/g</td></tr>
+        <tr><td>Rcto. Estafilococos</td><td>&lt; 100 ufc/g</td></tr>
+        <tr><td>Inv. Listeria</td><td>Ausencia /25g</td></tr>
+        <tr><td>Inv Salmonella</td><td>Ausencia /25g</td></tr>
+      </table>
+      <div style="font-size:8px;margin-top:4px">* Criterios basados en Rgto CE 178/02; Rgto CE 2073/05 y Rgto CE 1441/07</div>
+    </td>
+  </tr>
+</table>
+
+<div class="section-hdr" style="margin-top:4px">FORMA DE VENTA</div>
+<table style="font-size:9.5px">
+  <tr><td style="font-weight:700;width:40%">Material</td><td style="font-weight:700">Unidades de venta</td></tr>
+  <tr><td>${r.ventaMaterial||'—'}</td><td>${r.ventaUnidades||'—'}</td></tr>
+</table>
+
+${r.pasos?`<div class="section-hdr" style="margin-top:4px">PROCESO DE ELABORACIÓN</div>
+<div class="section-content" style="white-space:pre-line;font-size:9.5px">${r.pasos}</div>`:''}
+
+
+<div id="section-recetas" class="section" style="display:none">
+  <div class="topbar">
+    <div><div class="pg-title">📋 Recetas y Fichas Técnicas</div><div class="pg-sub">MA 03-1 · Formato oficial sanidad</div></div>
+    <button class="btn btn-gold" onclick="openRecetaModal()">+ Nueva receta</button>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchRecetasTab(this,'rt-lista')">📋 Recetas</div>
+    <div class="tab" onclick="switchRecetasTab(this,'rt-fichas-prov')">📁 Fichas de proveedor</div>
+  </div>
+  <div id="rt-lista">
+    <div id="recetas-lista"></div>
+  </div>
+  <div id="rt-fichas-prov" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head"><h3>📁 Fichas técnicas de proveedor</h3>
+        <button class="btn btn-sm btn-gold" onclick="openFichaProvModal()">+ Subir ficha</button>
+      </div>
+      <div id="fichas-prov-lista" style="padding:14px"></div>
+    </div>
+  </div>
+</div>
+
+<div id="section-albaranes" class="section" style="display:none">
+  <div class="topbar">
+    <div>
+      <div class="pg-title">🧾 Leer albarán</div>
+      <div class="pg-sub">Extrae precios y cantidades de caja · actualiza tus productos automáticamente</div>
+    </div>
+    <button class="btn btn-gold" onclick="openNuevoAlbaran()">+ Nuevo albarán</button>
+  </div>
+  <div id="albaran-main"></div>
+</div>
+
+<!-- MODAL DINÁMICO UNIVERSAL (recetas / fichas) -->
+<div class="overlay" id="modal-universal" onclick="if(event.target===this)closeModal('modal-universal')">
+  <div class="modal" id="modal-universal-inner" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto"></div>
+</div>
+</body></html>`;
+
+  const w = window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+}
+
+// ── FICHAS DE PROVEEDOR ─────────────────────────────────────────────────────
+function renderFichasProvList(){
+  const el = document.getElementById('fichas-prov-lista'); if(!el) return;
+  const fichas = DB.fichasProveedor||[];
+  if(!fichas.length){
+    el.innerHTML='<div style="color:#aaa;text-align:center;padding:20px">Sin fichas subidas aún. Sube la ficha técnica que te envía el proveedor.</div>';
+    return;
+  }
+  el.innerHTML = fichas.map((f,i)=>`
+    <div class="list-row">
+      <div class="list-icon">📄</div>
+      <div class="list-main">
+        <div class="list-title">${esc(f.nombre)}</div>
+        <div class="list-sub">${esc(f.producto||'Sin producto')} · ${esc(f.proveedor||'—')} · ${f.fecha||''}</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="viewFichaProv(${i})">Ver</button>
+        <button class="btn btn-sm btn-outline" style="color:#e74c3c" onclick="deleteFichaProv(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+function openFichaProvModal(){
+  const prods = DB.productos;
+  const provs = DB.proveedores;
+  openModal(`<div class="modal-title">📁 Subir ficha técnica de proveedor</div>
+    <div class="fg"><label class="fl">Nombre / descripción</label>
+      <input class="fc" id="fp-nombre" placeholder="ej: Ficha técnica croqueta jamón Bidfood"></div>
+    <div class="fg"><label class="fl">Producto vinculado</label>
+      <input class="fc" id="fp-prod" list="fp-prod-dl" placeholder="Busca el producto...">
+      <datalist id="fp-prod-dl">${prods.map(p=>`<option value="${esc(p.nombre)}">`).join('')}</datalist></div>
+    <div class="fg"><label class="fl">Proveedor</label>
+      <input class="fc" id="fp-prov" list="fp-prov-dl" placeholder="Nombre del proveedor">
+      <datalist id="fp-prov-dl">${provs.map(p=>`<option value="${esc(p.nombre)}">`).join('')}</datalist></div>
+    <div class="fg"><label class="fl">Archivo (PDF, imagen, Word)</label>
+      <input type="file" class="fc" id="fp-file" accept=".pdf,.doc,.docx,image/*"></div>
+    <div class="modal-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-gold" style="flex:1" onclick="saveFichaProv()">✓ Guardar</button>
+    </div>`);
+}
+function saveFichaProv(){
+  const nombre=(document.getElementById('fp-nombre')||{}).value?.trim()||'';
+  if(!nombre){alert('Introduce un nombre');return;}
+  const file=(document.getElementById('fp-file')||{}).files?.[0];
+  const save=(dataUrl)=>{
+    if(!DB.fichasProveedor)DB.fichasProveedor=[];
+    DB.fichasProveedor.push({
+      nombre,
+      producto:(document.getElementById('fp-prod')||{}).value||'',
+      proveedor:(document.getElementById('fp-prov')||{}).value||'',
+      fecha:new Date().toLocaleDateString('es-ES'),
+      dataUrl: dataUrl||null,
+      fileType: file?file.type:null
+    });
+    saveDB(); closeModal(); renderFichasProvList();
+  };
+  if(file){
+    const reader=new FileReader();
+    reader.onload=e=>save(e.target.result);
+    reader.readAsDataURL(file);
+  } else { save(null); }
+}
+function viewFichaProv(i){
+  const f=(DB.fichasProveedor||[])[i]; if(!f)return;
+  if(!f.dataUrl){alert('No hay archivo adjunto para esta ficha.');return;}
+  const w=window.open('','_blank');
+  if(f.fileType&&f.fileType.startsWith('image/')){
+    w.document.write(`<html><body style="margin:0;background:#000"><img src="${f.dataUrl}" style="max-width:100%;height:auto"></body></html>`);
+  } else {
+    w.document.write(`<html><body style="margin:0"><embed src="${f.dataUrl}" type="${f.fileType||'application/pdf'}" width="100%" height="100%"></body></html>`);
+  }
+}
+function deleteFichaProv(i){
+  if(!confirm('¿Eliminar esta ficha?'))return;
+  DB.fichasProveedor.splice(i,1);saveDB();renderFichasProvList();
+}
+
+// recetas nav handled in nav() function
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MÓDULO: LEER ALBARÁN
+// Lee albaranes, extrae líneas (nombre proveedor · precio · uds/caja)
+// Cruza con productos existentes y rellena precio_compra + cantidad_caja
+// NO toca stock, NO toca APPCC, NO toca lotes
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Estado del albarán en curso
+let _alb = {
+  proveedor: '',
+  fecha: '',
+  imagen: null,
+  lineas: [],        // [{nombreAlb, precio, uds, _match, _accion}]
+  paso: 0            // 0=form inicial, 1=lineas, 2=revisar
+};
+
+function renderAlbaranes(){
+  const el = document.getElementById('albaran-main'); if(!el) return;
+  const hist = (DB.albaranesLog || []);
+  if(!hist.length){
+    el.innerHTML = `<div class="empty-state">
+      <div style="font-size:52px">🧾</div>
+      <h3>Sin albaranes procesados</h3>
+      <p>Sube o fotografía un albarán y la app extrae los precios y cantidades de caja</p>
+      <button class="btn btn-gold" onclick="openNuevoAlbaran()">+ Empezar</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head"><h3>📋 Albaranes procesados</h3></div>
+      ${hist.slice().reverse().map((h,i)=>`
+        <div class="list-row">
+          <div class="list-icon">🧾</div>
+          <div class="list-main">
+            <div class="list-title">${esc(h.proveedor||'Sin proveedor')} · ${h.fecha||''}</div>
+            <div class="list-sub">${h.nLineas||0} líneas · ${h.actualizados||0} productos actualizados</div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function openNuevoAlbaran(){
+  _alb = {proveedor:'',fecha:new Date().toISOString().slice(0,10),imagen:null,lineas:[],paso:0};
+  renderAlbaranPaso0();
+}
+
+// ── PASO 0: Proveedor + imagen ────────────────────────────────────────────
+function renderAlbaranPaso0(){
+  const el = document.getElementById('albaran-main'); if(!el) return;
+  const provs = [...new Set([
+    ...DB.proveedores.map(p=>p.nombre),
+    ...DB.productos.filter(p=>p.proveedor).map(p=>p.proveedor)
+  ])].sort();
+
+  el.innerHTML = `
+    <div class="card" style="max-width:600px;margin:0 auto">
+      <div class="card-head"><h3>🧾 Nuevo albarán — paso 1/3</h3></div>
+      <div style="padding:16px">
+        <div class="fg"><label class="fl">Proveedor *</label>
+          <input class="fc" id="alb-prov" list="alb-prov-dl" value="${esc(_alb.proveedor)}" placeholder="Nombre del proveedor">
+          <datalist id="alb-prov-dl">${provs.map(p=>`<option value="${esc(p)}">`).join('')}</datalist>
+        </div>
+        <div class="fg"><label class="fl">Fecha del albarán</label>
+          <input class="fc" id="alb-fecha" type="date" value="${_alb.fecha}">
+        </div>
+        <div class="fg"><label class="fl">📸 Foto / imagen del albarán (opcional)</label>
+          <input type="file" class="fc" id="alb-img" accept="image/*,.pdf" capture="environment"
+            onchange="previewAlbaranImg(this)">
+          <div id="alb-img-prev" style="margin-top:8px"></div>
+          <div style="font-size:11px;color:#888;margin-top:4px">Solo para tener la referencia visual. Introduce las líneas manualmente en el paso 2.</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button class="btn btn-outline" onclick="renderAlbaranes()">Cancelar</button>
+          <button class="btn btn-gold" style="flex:1" onclick="albaranPaso1()">Siguiente → Introducir líneas</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function previewAlbaranImg(inp){
+  const file = inp.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _alb.imagen = e.target.result;
+    _alb.imagenType = file.type;
+    const prev = document.getElementById('alb-img-prev');
+    if(prev){
+      if(file.type.startsWith('image/')){
+        prev.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:200px;border-radius:8px;border:1px solid #e0e0e0">`;
+      } else {
+        prev.innerHTML = `<div style="padding:8px;background:#f5f5f5;border-radius:6px;font-size:12px">📄 ${esc(file.name)} adjunto</div>`;
+      }
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function albaranPaso1(){
+  const prov = (document.getElementById('alb-prov')||{}).value?.trim()||'';
+  if(!prov){alert('Indica el proveedor');return;}
+  _alb.proveedor = prov;
+  _alb.fecha = (document.getElementById('alb-fecha')||{}).value || new Date().toISOString().slice(0,10);
+  renderAlbaranPaso1();
+}
+
+// ── PASO 1: Entrada rápida de líneas ─────────────────────────────────────
+function renderAlbaranPaso1(){
+  const el = document.getElementById('albaran-main'); if(!el) return;
+  const lineasHtml = _alb.lineas.map((l,i)=>`
+    <div style="display:grid;grid-template-columns:1fr 90px 80px 32px;gap:6px;margin-bottom:6px;align-items:center" id="alblin-${i}">
+      <input class="fc" style="font-size:13px" value="${esc(l.nombreAlb)}" onchange="_alb.lineas[${i}].nombreAlb=this.value" placeholder="Nombre en el albarán">
+      <input class="fc" style="font-size:13px" type="number" min="0" step="0.01" value="${l.precio||''}" onchange="_alb.lineas[${i}].precio=parseFloat(this.value)||0" placeholder="Precio €">
+      <input class="fc" style="font-size:13px" type="number" min="1" step="1" value="${l.uds||''}" onchange="_alb.lineas[${i}].uds=parseInt(this.value)||1" placeholder="Uds/caja">
+      <button onclick="quitarLineaAlb(${i})" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:18px;padding:0">✕</button>
+    </div>`).join('');
+
+  const imgHtml = _alb.imagen && _alb.imagenType?.startsWith('image/') ? `
+    <div style="text-align:center;margin-bottom:14px">
+      <img src="${_alb.imagen}" style="max-width:100%;max-height:260px;border-radius:8px;border:1px solid #ddd;cursor:zoom-in"
+        onclick="window.open('${_alb.imagen}','_blank')">
+      <div style="font-size:11px;color:#888;margin-top:4px">Toca para ampliar</div>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      ${_alb.imagen ? `<div style="flex:0 0 300px;max-width:300px">${imgHtml}</div>` : ''}
+      <div style="flex:1;min-width:280px">
+        <div class="card">
+          <div class="card-head">
+            <h3>🧾 ${esc(_alb.proveedor)} · ${_alb.fecha}</h3>
+            <span style="font-size:12px;color:#888">paso 2/3 — líneas del albarán</span>
+          </div>
+          <div style="padding:14px">
+            <div style="display:grid;grid-template-columns:1fr 90px 80px 32px;gap:6px;margin-bottom:6px">
+              <div style="font-size:11px;color:#888;font-weight:700">NOMBRE EN ALBARÁN</div>
+              <div style="font-size:11px;color:#888;font-weight:700">PRECIO €</div>
+              <div style="font-size:11px;color:#888;font-weight:700">UDS/CAJA</div>
+              <div></div>
+            </div>
+            <div id="alb-lineas-list">${lineasHtml}</div>
+            <button class="btn btn-outline" style="width:100%;margin-top:6px;font-size:13px" onclick="addLineaAlb()">+ Añadir línea</button>
+            <div style="background:#e8f4fd;border-radius:8px;padding:10px;margin-top:14px;font-size:12px;color:#1a4fa8">
+              💡 <strong>Copia los nombres tal como aparecen en el albarán.</strong><br>
+              En el paso siguiente la app los cruza con tus productos y te pregunta si hay dudas.
+            </div>
+            <div style="display:flex;gap:10px;margin-top:14px">
+              <button class="btn btn-outline" onclick="renderAlbaranPaso0()">← Atrás</button>
+              <button class="btn btn-gold" style="flex:1" onclick="albaranPaso2()" ${_alb.lineas.length===0?'disabled':''}>
+                Siguiente → Revisar y guardar (${_alb.lineas.length} líneas)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  // Auto-add one empty row if none
+  if(_alb.lineas.length===0) setTimeout(addLineaAlb,50);
+}
+
+function addLineaAlb(){
+  _alb.lineas.push({nombreAlb:'',precio:0,uds:1});
+  renderAlbaranPaso1();
+  // Focus last input
+  setTimeout(()=>{
+    const rows = document.querySelectorAll('#alb-lineas-list > div');
+    if(rows.length) rows[rows.length-1].querySelector('input')?.focus();
+  },80);
+}
+
+function quitarLineaAlb(i){
+  _alb.lineas.splice(i,1);
+  renderAlbaranPaso1();
+}
+
+// ── PASO 2: Revisión y cruce con productos ────────────────────────────────
+function albaranPaso2(){
+  // Sync values from DOM before moving on
+  document.querySelectorAll('#alb-lineas-list > div').forEach((row,i)=>{
+    const inputs = row.querySelectorAll('input');
+    if(_alb.lineas[i]){
+      _alb.lineas[i].nombreAlb = inputs[0]?.value?.trim()||'';
+      _alb.lineas[i].precio = parseFloat(inputs[1]?.value)||0;
+      _alb.lineas[i].uds = parseInt(inputs[2]?.value)||1;
+    }
+  });
+  _alb.lineas = _alb.lineas.filter(l=>l.nombreAlb);
+  if(!_alb.lineas.length){alert('Introduce al menos una línea');return;}
+
+  // Match each line against productos
+  _alb.lineas.forEach(l=>{
+    l._match = buscarProductoParaAlbaran(l.nombreAlb);
+    // _match = {producto, score} o null
+    // _accion: 'actualizar' | 'nuevo' | 'ignorar' | 'pendiente'
+    l._accion = l._match ? 'actualizar' : 'nuevo';
+    l._nombreProd = l._match ? l._match.nombre : l.nombreAlb;
+    l._provMatch = l._match ? (l._match.proveedor||'') : _alb.proveedor;
+  });
+
+  renderAlbaranPaso2();
+}
+
+function buscarProductoParaAlbaran(nombre){
+  const norm = s => s.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9 ]/g,'').trim();
+  const n = norm(nombre);
+  let best = null, bestScore = 0;
+  DB.productos.forEach(p=>{
+    const pn = norm(p.nombre);
+    // Exact
+    if(pn === n){best=p;bestScore=100;return;}
+    // Contains
+    const score = calcSimilitud(n, pn);
+    if(score > bestScore && score >= 55){bestScore=score;best=p;}
+  });
+  return best;
+}
+
+function calcSimilitud(a, b){
+  if(a===b) return 100;
+  const wordsA = a.split(' ').filter(Boolean);
+  const wordsB = b.split(' ').filter(Boolean);
+  let matches = 0;
+  wordsA.forEach(w=>{ if(wordsB.some(wb=>wb.includes(w)||w.includes(wb))) matches++; });
+  const base = matches / Math.max(wordsA.length, wordsB.length) * 100;
+  // Bonus if starts with same word
+  if(wordsA[0]&&wordsB[0]&&(wordsA[0]===wordsB[0]||wordsA[0].startsWith(wordsB[0])||wordsB[0].startsWith(wordsA[0]))) return Math.min(100,base+20);
+  return base;
+}
+
+function renderAlbaranPaso2(){
+  const el = document.getElementById('albaran-main'); if(!el) return;
+
+  const filas = _alb.lineas.map((l,i)=>{
+    const accionBadge = l._accion==='actualizar'
+      ? `<span style="background:#d1fae5;color:#065f46;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700">✓ Actualizar</span>`
+      : l._accion==='nuevo'
+      ? `<span style="background:#fef3c7;color:#92400e;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700">+ Crear nuevo</span>`
+      : `<span style="background:#f3f4f6;color:#6b7280;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:700">Ignorar</span>`;
+
+    const matchInfo = l._accion==='actualizar'
+      ? `<div style="font-size:11px;color:#065f46;margin-top:3px">→ ${esc(l._match.nombre)}</div>`
+      : l._accion==='nuevo'
+      ? `<div style="font-size:11px;color:#92400e;margin-top:3px">→ Se creará como nuevo producto</div>`
+      : `<div style="font-size:11px;color:#9ca3af;margin-top:3px">→ Sin cambios</div>`;
+
+    return `
+      <div style="display:grid;grid-template-columns:1fr 90px 70px auto;gap:10px;align-items:start;
+        padding:10px 12px;border-bottom:1px solid #f0f0f0;${l._accion==='ignorar'?'opacity:0.5':''}" id="albrev-${i}">
+        <div>
+          <div style="font-size:13px;font-weight:600">${esc(l.nombreAlb)}</div>
+          ${l._accion!=='ignorar'?`
+          <input class="fc" style="font-size:12px;margin-top:4px" id="albn-${i}" value="${esc(l._nombreProd)}"
+            placeholder="Nombre producto en tu app" onchange="_alb.lineas[${i}]._nombreProd=this.value">
+          `:''}
+          ${matchInfo}
+        </div>
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:2px">Precio €</div>
+          <input class="fc" style="font-size:13px" type="number" min="0" step="0.01"
+            id="albp-${i}" value="${l.precio||''}"
+            onchange="_alb.lineas[${i}].precio=parseFloat(this.value)||0">
+        </div>
+        <div>
+          <div style="font-size:11px;color:#888;margin-bottom:2px">Uds/caja</div>
+          <input class="fc" style="font-size:13px" type="number" min="1" step="1"
+            id="albu-${i}" value="${l.uds||1}"
+            onchange="_alb.lineas[${i}].uds=parseInt(this.value)||1">
+        </div>
+        <div style="text-align:right">
+          ${accionBadge}
+          <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px">
+            ${l._accion!=='ignorar'?`<button onclick="toggleIgnorarLinea(${i})" style="font-size:10px;color:#9ca3af;background:none;border:none;cursor:pointer;text-decoration:underline">Ignorar</button>`:''}
+            ${l._accion==='ignorar'?`<button onclick="toggleIgnorarLinea(${i})" style="font-size:10px;color:#1a4fa8;background:none;border:none;cursor:pointer;text-decoration:underline">Recuperar</button>`:''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const nActualizar = _alb.lineas.filter(l=>l._accion==='actualizar').length;
+  const nNuevo = _alb.lineas.filter(l=>l._accion==='nuevo').length;
+  const nIgnorar = _alb.lineas.filter(l=>l._accion==='ignorar').length;
+
+  el.innerHTML = `
+    <div class="card" style="max-width:760px;margin:0 auto">
+      <div class="card-head">
+        <h3>🧾 Revisar — ${esc(_alb.proveedor)} · ${_alb.fecha}</h3>
+        <span style="font-size:12px;color:#888">paso 3/3</span>
+      </div>
+      <div style="display:flex;gap:12px;padding:12px 14px;border-bottom:1px solid #f0f0f0;flex-wrap:wrap">
+        <div style="background:#d1fae5;padding:6px 12px;border-radius:6px;font-size:12px;color:#065f46">
+          ✓ <strong>${nActualizar}</strong> productos a actualizar
+        </div>
+        <div style="background:#fef3c7;padding:6px 12px;border-radius:6px;font-size:12px;color:#92400e">
+          + <strong>${nNuevo}</strong> productos nuevos
+        </div>
+        <div style="background:#f3f4f6;padding:6px 12px;border-radius:6px;font-size:12px;color:#6b7280">
+          — <strong>${nIgnorar}</strong> ignorados
+        </div>
+      </div>
+      <div style="background:#e8f4fd;padding:10px 14px;font-size:12px;color:#1a4fa8;border-bottom:1px solid #f0f0f0">
+        💡 Revisa los nombres y corrígelos si no coinciden. Luego pulsa <strong>Confirmar y guardar</strong>.
+        Solo se actualizan <strong>precio de compra</strong> y <strong>unidades/caja</strong> — sin stock, sin lotes.
+      </div>
+      ${filas}
+      <div style="display:flex;gap:10px;padding:14px">
+        <button class="btn btn-outline" onclick="renderAlbaranPaso1()">← Atrás</button>
+        <button class="btn btn-gold" style="flex:1" onclick="confirmarAlbaran()">
+          ✓ Confirmar y guardar (${nActualizar + nNuevo} cambios)
+        </button>
+      </div>
+    </div>`;
+}
+
+function toggleIgnorarLinea(i){
+  _alb.lineas[i]._accion = _alb.lineas[i]._accion==='ignorar'
+    ? (_alb.lineas[i]._match?'actualizar':'nuevo')
+    : 'ignorar';
+  renderAlbaranPaso2();
+}
+
+// ── CONFIRMAR: guarda precios y cantidades en DB.productos ────────────────
+function confirmarAlbaran(){
+  // Sync values from DOM
+  _alb.lineas.forEach((l,i)=>{
+    const np = document.getElementById('albn-'+i);
+    const pp = document.getElementById('albp-'+i);
+    const up = document.getElementById('albu-'+i);
+    if(np) l._nombreProd = np.value.trim()||l._nombreProd;
+    if(pp) l.precio = parseFloat(pp.value)||0;
+    if(up) l.uds = parseInt(up.value)||1;
+  });
+
+  let actualizados = 0, creados = 0;
+
+  _alb.lineas.forEach(l=>{
+    if(l._accion==='ignorar') return;
+
+    if(l._accion==='actualizar' && l._match){
+      // Update existing producto
+      const idx = DB.productos.findIndex(p=>p.nombre===l._match.nombre);
+      if(idx>=0){
+        if(l.precio>0) DB.productos[idx].precio_compra = l.precio;
+        if(l.uds>0) DB.productos[idx].cantidad_caja = l.uds;
+        if(!DB.productos[idx].proveedor && _alb.proveedor) DB.productos[idx].proveedor = _alb.proveedor;
+        actualizados++;
+      }
+    } else if(l._accion==='nuevo'){
+      // Create new producto
+      const nuevo = {
+        id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        nombre: l._nombreProd || l.nombreAlb,
+        proveedor: l._provMatch || _alb.proveedor || '',
+        precio_compra: l.precio || 0,
+        cantidad_caja: l.uds || 1,
+        categoria: '',
+        rendimiento: 100,
+        unidad: 'kg',
+        notas: 'Creado desde albarán · ' + _alb.proveedor + ' · ' + _alb.fecha
+      };
+      DB.productos.push(nuevo);
+      creados++;
+    }
+  });
+
+  // Log
+  if(!DB.albaranesLog) DB.albaranesLog = [];
+  DB.albaranesLog.push({
+    proveedor: _alb.proveedor,
+    fecha: _alb.fecha,
+    nLineas: _alb.lineas.length,
+    actualizados: actualizados + creados,
+    ts: Date.now()
+  });
+
+  saveDB();
+
+  // Show result
+  const el = document.getElementById('albaran-main');
+  el.innerHTML = `
+    <div class="card" style="max-width:500px;margin:40px auto;text-align:center;padding:32px">
+      <div style="font-size:56px;margin-bottom:12px">✅</div>
+      <h2 style="margin-bottom:8px">¡Albarán procesado!</h2>
+      <div style="color:#065f46;background:#d1fae5;border-radius:8px;padding:12px;margin-bottom:8px">
+        <strong>${actualizados}</strong> productos actualizados · <strong>${creados}</strong> productos nuevos
+      </div>
+      <p style="font-size:13px;color:#666;margin-bottom:20px">
+        Los precios de compra y unidades/caja ya están en tus productos.<br>
+        Puedes revisarlos en el apartado <strong>Productos</strong>.
+      </p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="openNuevoAlbaran()">+ Otro albarán</button>
+        <button class="btn btn-gold" onclick="nav('productos')">Ver productos →</button>
+      </div>
+    </div>`;
+}
+
 
 function saveDB(){
   localStorage.setItem('albaraba_v2',JSON.stringify(DB));
@@ -1206,6 +2085,8 @@ function nav(s){
   else if(s==='gastos')renderGastos();
   else if(s==='appcc')renderAppcc();
   else if(s==='mejoras')renderMejoras();
+  else if(s==='recetas')renderRecetasList();
+  else if(s==='albaranes')renderAlbaranes();
   else if(s==='tareas')renderTareas();
   else if(s==='usuarios'){renderUsuarios();}
   _applyRoleDOM();
@@ -1215,8 +2096,23 @@ function nav(s){
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('mobOvl').classList.toggle('open')}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobOvl').classList.remove('open')}
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobOvl').classList.add('open');_applyRoleDOM();}
-function openModal(id){document.getElementById(id).classList.add('open')}
-function closeModal(id){document.getElementById(id).classList.remove('open')}
+function openModal(idOrHtml,size){
+  if(typeof idOrHtml==='string'&&(idOrHtml.startsWith('<')||idOrHtml.includes('<div'))){
+    // Dynamic HTML content
+    const inner=document.getElementById('modal-universal-inner');
+    if(inner){inner.innerHTML=idOrHtml;if(size==='lg')inner.style.maxWidth='760px';else inner.style.maxWidth='680px';}
+    document.getElementById('modal-universal').classList.add('open');
+  } else {
+    const el=document.getElementById(idOrHtml);if(el)el.classList.add('open');
+  }
+}
+function closeModal(id){
+  if(!id||id==='modal-universal'||id===undefined){
+    document.getElementById('modal-universal').classList.remove('open');
+    return;
+  }
+  const el=document.getElementById(id);if(el)el.classList.remove('open');
+}
 function switchTab(el,tabId){
   el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
