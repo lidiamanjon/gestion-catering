@@ -244,16 +244,16 @@ input,select,textarea{font-family:inherit;font-size:15px}
     <div class="header-right">
       <button id="header-change-worker" onclick="showWorkerPicker()" style="display:none;background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">cambiar 👤</button>
       <div id="scoreChip" class="score-chip" onclick="showMod('inf')">—</div>
-      <button class="icon-btn" onclick="showMod('cfg')">⚙️</button>
+      <button class="icon-btn" onclick="if(isAdmin()){showMod('cfg');}else{alert('⚙️ Solo los administradores pueden acceder a la configuración.');}" title="Solo admins">⚙️</button>
     </div>
   </div>
   <div class="tile-grid" id="tileGrid"></div>
   <div id="home-alerts"></div>
   <div class="home-footer">
-    <button class="home-footer-btn" onclick="showMod('inf')">📄 Informes</button>
+    <button class="home-footer-btn" onclick="if(isAdmin()){showMod('inf');}else{alert('Los informes son solo para administradores.');}">📄 Informes</button>
     <button class="home-footer-btn" onclick="showMod('traz')">🔗 Trazabilidad</button>
     <button class="home-footer-btn" onclick="showMod('noconf')">⚠ No Conf.</button>
-    <button class="home-footer-btn" onclick="showMod('cfg')">⚙ Config</button>
+    <button class="home-footer-btn" onclick="if(isAdmin()){showMod('cfg');}else{alert('Solo los administradores pueden acceder a la configuración.');}">⚙ Config</button>
   </div>
 </div>
 
@@ -1548,23 +1548,44 @@ function openRecepModal(prefill){
     </div>`;
 }
 function renderRecep(){
-  recepStep=0;recepProv=null;
+  recepStep=0;recepProv=null;recepAlbaranData={};
   const provs=getUnifiedProvs();const recs=ld(K.recep);
+  const worker=getActiveWorker();
   document.getElementById('recep-body').innerHTML=`
+    <!-- BLOQUE ESCÁNER — SIEMPRE ARRIBA -->
+    <div style="background:linear-gradient(135deg,#1a4fa8,#0d2d6e);border-radius:14px;padding:16px;margin-bottom:12px;color:#fff">
+      <div style="font-size:15px;font-weight:800;margin-bottom:10px">📦 Recepción de Mercancías</div>
+      <button onclick="openScanModal(handleScanForRecep)"
+        style="width:100%;padding:16px;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.5);color:#fff;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:8px">
+        📷 Escanear código de barras<br>
+        <span style="font-size:11px;font-weight:400;opacity:.8">GS1-128 · EAN-13 · QR etiqueta — rellena todo automáticamente</span>
+      </button>
+      <button onclick="openRecepManual()"
+        style="width:100%;padding:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;margin-bottom:6px">
+        ✏️ Introducir manualmente
+      </button>
+      <button onclick="openAlbaranUpload()"
+        style="width:100%;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);border-radius:10px;font-size:12px;cursor:pointer">
+        📄 Subir albarán del repartidor
+      </button>
+    </div>
+
+    <!-- O ELIGE PROVEEDOR -->
     <div class="card">
-      <div class="card-body">
-        <input class="fc" id="prov-srch" placeholder="🔍 Buscar proveedor..." oninput="filterProvs(this.value)" style="margin-bottom:12px">
+      <div class="card-body" style="padding:12px">
+        <div style="font-size:12px;color:#888;margin-bottom:10px;text-align:center">— o selecciona proveedor directamente —</div>
+        <input class="fc" id="prov-srch" placeholder="🔍 Buscar proveedor..." oninput="filterProvs(this.value)" style="margin-bottom:10px">
         <div id="prov-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          ${provs.map(p=>`<button class="dest-btn" onclick="selectProv('${p.id}','${p.name.replace(/'/g,"\\'")}')">
+          ${provs.map(p=>`<button class="dest-btn" onclick="selectProv('${p.id}','${p.name.replace(/'/g,"\'")}')">
             <div style="font-size:11px;font-weight:700">${p.name}</div>
           </button>`).join('')}
         </div>
-        <button style="width:100%;margin-bottom:12px;padding:16px;background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:0.3px" onclick="openScanModal(handleScanForRecep)">📷 Escanear código de caja<br><span style="font-size:11px;font-weight:400;opacity:.85">GS1-128 · EAN-13 · QR etiqueta</span></button>
-        <button class="btn btn-outline btn-sm" style="margin-top:4px;width:100%" onclick="openAlbaranUpload()">📄 Subir albarán del repartidor</button>
       </div>
     </div>
+
+    <!-- PRODUCTOS APRENDIDOS -->
     <div class="card">
-      <div class="card-head"><h3>📚 Productos aprendidos por escaneo</h3>
+      <div class="card-head"><h3>📚 Productos recordados</h3>
         <button class="btn btn-sm btn-outline" onclick="toggleGtinDB(this)">Ver</button>
       </div>
       <div id="gtin-db-panel" style="display:none;padding:10px">
@@ -1578,21 +1599,125 @@ function renderRecep(){
         })()}
       </div>
     </div>
+
+    <!-- ÚLTIMAS RECEPCIONES -->
     <div class="card">
       <div class="card-head"><h3>Últimas recepciones</h3></div>
-      <div>${recs.slice(-10).reverse().map(r=>`<div class="list-row">
+      <div>${recs.slice(-15).reverse().map(r=>`<div class="list-row">
         <div class="list-icon">📦</div>
         <div class="list-main">
           <div class="list-title">${r.producto}</div>
-          <div class="list-sub">${r.proveedor} · ${fmtDate(r.ts)}</div>
+          <div class="list-sub">${r.proveedor||'—'} · ${r.emp||'—'} · ${fmtDate(r.ts)}</div>
         </div>
         <div class="list-right">
           ${r.lote?`<div class="lot-code">${r.lote}</div>`:''}
-          <div style="font-size:11px;color:#aaa;margin-top:3px">${r.temp!==undefined?r.temp+'°C':''}</div>
+          <div style="font-size:11px;color:#aaa;margin-top:3px">${r.temp!=null?r.temp+'°C':''}</div>
         </div>
       </div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin registros</div>'}</div>
     </div>`;
 }
+
+function openRecepManual(){
+  recepAlbaranData={};
+  recepProv={id:'manual',name:'Sin proveedor'};
+  showRecepForm({});
+}
+
+function showRecepForm(prefill){
+  const emps=ld(K.emp);
+  const worker=getActiveWorker();
+  const prov=recepProv||{name:prefill.proveedor||''};
+  document.getElementById('recep-body').innerHTML=`
+    <div class="card">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+          <button class="btn btn-sm btn-outline" onclick="renderRecep()">← Volver</button>
+          <div style="font-size:14px;font-weight:700">Nueva recepción${prov.name&&prov.name!=='Sin proveedor'?' · '+prov.name:''}</div>
+        </div>
+
+        ${prefill._fromScan?`<div class="alert-box alert-ok" style="margin-bottom:12px;font-size:12px">✓ Datos cargados del código escaneado — revisa y valida</div>`:''}
+
+        <div class="fc-group"><label class="fc-label">Producto *</label>
+          <input class="fc" id="re-prod" value="${prefill.producto||''}" placeholder="Nombre del producto" ${prefill.producto?'style="border-color:#27ae60"':''}></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <div class="fc-group"><label class="fc-label">Nº Lote</label>
+            <input class="fc" id="re-lote" value="${prefill.lote||''}" placeholder="Lote proveedor" ${prefill.lote?'style="border-color:#27ae60"':''}></div>
+          <div class="fc-group"><label class="fc-label">Caducidad</label>
+            <input class="fc" type="date" id="re-cad" value="${prefill.caducidad||''}" ${prefill.caducidad?'style="border-color:#27ae60"':''}></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <div class="fc-group"><label class="fc-label">Proveedor</label>
+            <input class="fc" id="re-prov-txt" value="${prov.name!=='Sin proveedor'?prov.name:''}" list="recep-prov-dl" placeholder="Proveedor...">
+            <datalist id="recep-prov-dl">${getUnifiedProvs().map(p=>`<option>${p.name}</option>`).join('')}</datalist></div>
+          <div class="fc-group"><label class="fc-label">Cantidad</label>
+            <input class="fc" id="re-cant" value="${prefill.cantidad||''}" placeholder="ej: 5 kg"></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+          <div class="fc-group"><label class="fc-label">Temperatura (°C)</label>
+            <div class="numpad-display" id="re-np-disp" style="font-size:22px;padding:10px">—</div>
+            <div class="numpad" id="re-np-pad"></div></div>
+          <div>
+            <div class="fc-group"><label class="fc-label">Empleado</label>
+              <select class="fc" id="re-emp">
+                <option value="">— Seleccionar —</option>
+                ${emps.map(e=>`<option ${e===worker?'selected':''}>${e}</option>`).join('')}
+              </select></div>
+            <div class="fc-group" style="margin-top:8px"><label class="fc-label">Turno</label>
+              <select class="fc" id="re-turno">
+                <option>Mañana</option><option>Tarde</option><option>Noche</option>
+              </select></div>
+          </div>
+        </div>
+
+        <div class="fc-group" style="margin-top:8px"><label class="fc-label">Observaciones</label>
+          <textarea class="fc" id="re-obs" rows="2" placeholder="Sin incidencias...">${prefill.obs||''}</textarea></div>
+        <label style="display:flex;align-items:center;gap:10px;margin-top:10px;cursor:pointer">
+          <input type="checkbox" id="re-conforme" checked style="width:20px;height:20px">
+          <span style="font-weight:600">Recepción conforme ✓</span>
+        </label>
+
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button class="btn btn-outline" style="flex:1" onclick="renderRecep()">✕ Cancelar</button>
+          <button class="btn btn-green" style="flex:2" onclick="saveRecep2()">✓ Guardar recepción</button>
+        </div>
+      </div>
+    </div>`;
+  initNumpad('re-np-pad','re-np-disp');
+  if(prefill.temp){const d=document.getElementById('re-np-disp');d.textContent=String(prefill.temp);d._val=String(prefill.temp);}
+}
+
+function saveRecep2(){
+  const prod=(document.getElementById('re-prod')||{}).value?.trim()||'';
+  if(!prod){alert('Introduce el nombre del producto');return;}
+  const disp=document.getElementById('re-np-disp');
+  const temp=parseFloat(disp._val||disp.textContent);
+  const emp=(document.getElementById('re-emp')||{}).value||getActiveWorker();
+  const turno=(document.getElementById('re-turno')||{}).value||'Mañana';
+  const lote=(document.getElementById('re-lote')||{}).value||'';
+  const cad=(document.getElementById('re-cad')||{}).value||'';
+  const obs=(document.getElementById('re-obs')||{}).value||'';
+  const conforme=(document.getElementById('re-conforme')||{}).checked!==false;
+  const provTxt=(document.getElementById('re-prov-txt')||{}).value||recepProv?.name||'';
+  const cant=(document.getElementById('re-cant')||{}).value||'';
+  const recs=ld(K.recep);
+  const rec={id:genId(),proveedor:provTxt,proveedor_id:recepProv?.id||'',
+    producto:prod,categoria:'General',cantidad:cant,
+    temp:isNaN(temp)?null:temp,emp,turno,lote,caducidad:cad,obs,conforme,
+    date:today(),ts:new Date().toISOString()};
+  recs.push(rec);sv(K.recep,recs);
+  recepAlbaranData=null;
+  updateScoreChip();renderRecep();
+  autoLabel({tipo:'RECEPCIÓN MERCANCÍA',producto:rec.producto,lote:rec.lote,
+    emp:rec.emp,fecha:fmtDate(rec.ts),
+    linea2:'Proveedor: '+provTxt+(rec.temp!=null?' · T°: '+rec.temp+'°C':''),
+    linea3:rec.caducidad?'Cad: '+rec.caducidad:'',
+    dlc:rec.caducidad,color:'#2980b9'});
+}
+
+
 function filterProvs(q){
   const provs=getUnifiedProvs().filter(p=>!q||p.name.toLowerCase().includes(q.toLowerCase()));
   document.getElementById('prov-grid').innerHTML=provs.map(p=>`<button class="dest-btn" onclick="selectProv('${p.id}','${p.name.replace(/'/g,"\\'")}')">
@@ -1601,7 +1726,8 @@ function filterProvs(q){
 }
 function selectProv(pid,pname){
   recepProv={id:pid,name:pname};
-  showRecepEntry('General'); // skip category step — programa lo recuerda automáticamente
+  recepAlbaranData={};
+  showRecepForm({});
 }
 function showRecepProdSelect(){
   const emps=ld(K.emp);
@@ -1690,30 +1816,7 @@ function recepTabSwitch(el,tabId){
     const el2=document.getElementById(t);if(el2)el2.style.display=t===tabId?'':'none'
   });
 }
-function saveRecep(cat){
-  const prod=document.getElementById('re-prod').value;if(!prod){alert('Introduce el nombre del producto');return}
-  const disp=document.getElementById('re-np-disp');
-  const tempStr=disp._val||disp.textContent;
-  const temp=parseFloat(tempStr);
-  const emp=document.getElementById('re-emp').value;
-  const turno=document.getElementById('re-turno').value;
-  const lote=document.getElementById('re-lote').value;
-  const cad=document.getElementById('re-cad').value;
-  const obs=document.getElementById('re-obs')?document.getElementById('re-obs').value:'';
-  const conforme=document.getElementById('re-conforme')?document.getElementById('re-conforme').checked:true;
-  const recs=ld(K.recep);
-  const rec={id:genId(),proveedor:recepProv.name,proveedor_id:recepProv.id,producto:prod,categoria:cat,
-    temp:isNaN(temp)?null:temp,emp,turno,lote,caducidad:cad,obs,conforme,date:today(),ts:new Date().toISOString()};
-  recs.push(rec);sv(K.recep,recs);
-  recepAlbaranData=null;
-  updateScoreChip();renderRecep();
-  // Auto etiqueta recepción
-  autoLabel({tipo:'RECEPCIÓN MERCANCÍA',producto:rec.producto,lote:rec.lote,
-    emp:rec.emp,fecha:fmtDate(rec.ts),
-    linea2:'Proveedor: '+rec.proveedor+(rec.temp!=null?' · T°: '+rec.temp+'°C':''),
-    linea3:'Categoría: '+cat+(rec.caducidad?' · Cad: '+rec.caducidad:''),
-    dlc:rec.caducidad,color:'#2980b9'});
-}
+function saveRecep(cat){saveRecep2();}
 
 // ============================================================
 // ALBARÁN UPLOAD + PDF TEXT EXTRACTION
@@ -1805,12 +1908,14 @@ function extractPDFText(file){
   reader.readAsArrayBuffer(file);
 }
 function applyAlbaran(){
-  const lote=document.getElementById('alb-lote').value;
-  const cad=document.getElementById('alb-cad').value;
-  const prod=document.getElementById('alb-prod').value;
-  recepAlbaranData={lote,caducidad:cad,producto:prod};
+  const lote=(document.getElementById('alb-lote')||{}).value||'';
+  const cad=(document.getElementById('alb-cad')||{}).value||'';
+  const prod=(document.getElementById('alb-prod')||{}).value||'';
+  const prefill={lote,caducidad:cad,producto:prod};
+  recepAlbaranData=prefill;
+  if(!recepProv){recepProv={id:'albaran',name:'Albarán'};}
   closeModal();
-  if(recepProv){showRecepProdSelect()}else{renderRecep()}
+  showRecepForm(prefill);
 }
 
 // ============================================================
@@ -3871,6 +3976,7 @@ function delDoc(id){
 }
 
 function renderCfg(){
+  if(!isAdmin()){alert("Solo administradores pueden acceder a configuración.");showHome();return;}
   const emps=ld(K.emp);const zonas=ld(K.zonas);const provs=ld(K.provs);
   document.getElementById('cfg-body').innerHTML=`
     <div class="card">
@@ -3952,47 +4058,90 @@ function saveQLIp(){
   alert(ip?'✓ IP guardada: '+ip:'IP borrada');
 }
 function getQLIp(){return localStorage.getItem('a_ql_ip')||''}
-function openAddEmpModal(){
-  openModal(`<div class="modal-title">👤 Nuevo Empleado</div>
+function openAddWorkerModal(){
+  openModal(`<div class="modal-title">👤 Nuevo trabajador</div>
     <div class="fc-group"><label class="fc-label">Nombre completo</label>
-      <input class="fc" id="emp-new-name" placeholder="Ej: María García" autofocus>
+      <input class="fc" id="wk-name" placeholder="Ej: María García" autofocus></div>
+    <div class="fc-group"><label class="fc-label">Rol</label>
+      <select class="fc" id="wk-role">
+        <option value="worker">👤 Trabajador</option>
+        <option value="admin">🔑 Administrador</option>
+      </select></div>
+    <div id="wk-pin-wrap" style="display:none">
+      <div class="fc-group"><label class="fc-label">PIN de administrador (mín. 4 dígitos)</label>
+        <input class="fc" type="password" inputmode="numeric" id="wk-pin" placeholder="ej: 1234"></div>
     </div>
     <div class="modal-row">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-green" style="flex:1" onclick="saveNewEmp()">✓ Añadir</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveNewWorker()">✓ Añadir</button>
     </div>`);
-  setTimeout(()=>{const el=document.getElementById('emp-new-name');if(el)el.focus();},100);
+  setTimeout(()=>{
+    document.getElementById('wk-name').focus();
+    document.getElementById('wk-role').onchange=function(){
+      document.getElementById('wk-pin-wrap').style.display=this.value==='admin'?'block':'none';
+    };
+  },100);
 }
-function saveNewEmp(){
-  const n=(document.getElementById('emp-new-name')||{}).value||'';
-  if(!n.trim()){alert('Introduce un nombre');return;}
-  const emps=ld(K.emp);emps.push(n.trim());sv(K.emp,emps);
+function saveNewWorker(){
+  const name=(document.getElementById('wk-name')||{}).value?.trim()||'';
+  const role=(document.getElementById('wk-role')||{}).value||'worker';
+  const pin=(document.getElementById('wk-pin')||{}).value?.trim()||'';
+  if(!name){alert('Introduce el nombre');return;}
+  if(role==='admin'&&pin.length<4){alert('El PIN debe tener al menos 4 dígitos');return;}
+  const workers=getWorkers();
+  workers.push({name,role,pin:role==='admin'?pin:''});
+  sv(K.workers,workers);
+  // Keep K.emp in sync
+  sv(K.emp,workers.map(w=>w.name));
   buildWorkerPickerBtns();closeModal();renderCfg();
 }
-function openEditEmpModal(i,current){
-  openModal(`<div class="modal-title">✏️ Editar Empleado</div>
+function openEditWorkerModal(i){
+  const ws=getWorkers();const w=ws[i];if(!w)return;
+  openModal(`<div class="modal-title">✏️ Editar trabajador</div>
     <div class="fc-group"><label class="fc-label">Nombre</label>
-      <input class="fc" id="emp-edit-name" value="${current}">
+      <input class="fc" id="wk-edit-name" value="${w.name}"></div>
+    <div class="fc-group"><label class="fc-label">Rol</label>
+      <select class="fc" id="wk-edit-role">
+        <option value="worker" ${w.role!=='admin'?'selected':''}>👤 Trabajador</option>
+        <option value="admin" ${w.role==='admin'?'selected':''}>🔑 Administrador</option>
+      </select></div>
+    <div id="wk-edit-pin-wrap" style="${w.role==='admin'?'':'display:none'}">
+      <div class="fc-group"><label class="fc-label">PIN de administrador</label>
+        <input class="fc" type="password" inputmode="numeric" id="wk-edit-pin" placeholder="Dejar vacío para no cambiar"></div>
     </div>
     <div class="modal-row">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-green" style="flex:1" onclick="saveEditEmp(${i})">✓ Guardar</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveEditWorker(${i})">✓ Guardar</button>
     </div>`);
-  setTimeout(()=>{const el=document.getElementById('emp-edit-name');if(el){el.focus();el.select();}},100);
+  setTimeout(()=>{
+    document.getElementById('wk-edit-role').onchange=function(){
+      document.getElementById('wk-edit-pin-wrap').style.display=this.value==='admin'?'block':'none';
+    };
+  },100);
 }
-function saveEditEmp(i){
-  const n=(document.getElementById('emp-edit-name')||{}).value||'';
-  if(!n.trim()){alert('Introduce un nombre');return;}
-  const emps=ld(K.emp);emps[i]=n.trim();sv(K.emp,emps);
+function saveEditWorker(i){
+  const name=(document.getElementById('wk-edit-name')||{}).value?.trim()||'';
+  const role=(document.getElementById('wk-edit-role')||{}).value||'worker';
+  const pinVal=(document.getElementById('wk-edit-pin')||{}).value?.trim()||'';
+  if(!name){alert('Introduce el nombre');return;}
+  const workers=getWorkers();
+  const oldPin=workers[i]?.pin||'';
+  const pin=role==='admin'?(pinVal||oldPin):'';
+  if(role==='admin'&&!pin){alert('El administrador necesita un PIN');return;}
+  workers[i]={name,role,pin};
+  sv(K.workers,workers);
+  sv(K.emp,workers.map(w=>w.name));
   buildWorkerPickerBtns();closeModal();renderCfg();
 }
-function addEmp(){openAddEmpModal();}
-function delEmp(i){
-  const emps=ld(K.emp);
-  if(!confirm('¿Eliminar a '+emps[i]+'?'))return;
-  emps.splice(i,1);sv(K.emp,emps);
+function addEmp(){openAddWorkerModal();}
+function openAddEmpModal(){openAddWorkerModal();}
+function delWorker(i){
+  const ws=getWorkers();
+  if(!confirm('¿Eliminar a '+ws[i].name+'?'))return;
+  ws.splice(i,1);sv(K.workers,ws);sv(K.emp,ws.map(w=>w.name));
   buildWorkerPickerBtns();renderCfg();
 }
+function delEmp(i){delWorker(i);}
 function addZona(){
   const name=prompt('Nombre de la cámara/zona:');if(!name)return;
   const target=parseFloat(prompt('Temperatura objetivo (°C):'));if(isNaN(target))return;
@@ -4350,7 +4499,6 @@ function saveNewProductAndApply() {
 }
 
 function applyScanToRecep(parsed, nombre, proveedor) {
-  // Ensure recepción modal is open with this data pre-filled
   const prefill = {
     producto: nombre || '',
     lote: parsed.lot || '',
@@ -4359,7 +4507,11 @@ function applyScanToRecep(parsed, nombre, proveedor) {
     cantidad: parsed.pesoKg ? parsed.pesoKg + ' kg' : (parsed.qty || ''),
     _fromScan: true
   };
-  openRecepModal(prefill);
+  recepAlbaranData = prefill;
+  const provs = getUnifiedProvs();
+  const matchedProv = provs.find(p=>p.name.toLowerCase().includes((proveedor||'').toLowerCase()));
+  recepProv = matchedProv || {id:'scan', name: proveedor||'Escaneado'};
+  showRecepForm(prefill);
 }
 
 // ============================================================
@@ -5302,4 +5454,23 @@ document.addEventListener('DOMContentLoaded',function(){
 
 </script>
 </body>
-</html>
+</html>      <div class="card">
+      <div class="card-head"><h3>👥 Equipo de trabajo</h3>
+        <button class="btn btn-sm btn-green" onclick="openAddWorkerModal()">+ Añadir</button>
+      </div>
+      <div id="emp-list">${(()=>{
+        const ws=getWorkers();
+        if(!ws.length) return '<div style="padding:14px;color:#aaa;text-align:center">Sin trabajadores configurados.</div>';
+        return ws.map((w,i)=>`<div class="list-row">
+          <div class="list-icon">${w.role==='admin'?'🔑':'👤'}</div>
+          <div class="list-main">
+            <div class="list-title">${w.name}</div>
+            <div class="list-sub">${w.role==='admin'?'<span style=\"color:#f39c12;font-weight:700\">Administrador</span>':'Trabajador'}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-icon" onclick="openEditWorkerModal(${i})">✏️</button>
+            <button class="btn-icon" onclick="delWorker(${i})" style="color:#e74c3c">🗑</button>
+          </div>
+        </div>`).join('');
+      })()}</div>
+    </div>

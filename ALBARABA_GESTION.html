@@ -222,9 +222,9 @@ textarea.fc{resize:vertical;min-height:70px}
     <div class="ni" id="ni-hojas" onclick="nav('hojas')"><span class="ic">📋</span> Hojas de Servicio</div>
     <div class="ni" id="ni-pedidos" onclick="nav('pedidos')"><span class="ic">🛒</span> Generar Pedido</div>
     <div class="ni" id="ni-stock" onclick="nav('stock')"><span class="ic">📦</span> Stock</div>
-    <div class="nav-label admin-only">Formularios</div>
-    <div class="ni admin-only" onclick="window.open('Hoja_Servicio_ALABOCA.html','_blank')"><span class="ic">📋</span> Hoja Alaboca</div>
-    <div class="ni admin-only" onclick="window.open('Hoja_Servicio_PV.html','_blank')"><span class="ic">🌿</span> Hoja PV</div>
+    <div class="nav-label">Formularios</div>
+    <div class="ni" onclick="window.open('Hoja_Servicio_ALABOCA.html','_blank')"><span class="ic">📋</span> Hoja Alaboca</div>
+    <div class="ni" onclick="window.open('Hoja_Servicio_PV.html','_blank')"><span class="ic">🌿</span> Hoja PV</div>
     <div class="ni admin-only" onclick="window.open('Presupuesto_Catering.html','_blank')"><span class="ic">💼</span> Presupuesto</div>
     <div class="nav-label admin-only">Documentos</div>
     <div class="ni admin-only" id="ni-informes" onclick="nav('informes')"><span class="ic">📄</span> Informes</div>
@@ -257,6 +257,35 @@ textarea.fc{resize:vertical;min-height:70px}
   <div class="topbar">
     <div><div class="pg-title">Dashboard</div><div class="pg-sub">Resumen general de Albaraba SL</div></div>
     <button class="btn btn-gold" onclick="nav('pedidos')">🛒 Nuevo pedido</button>
+  </div>
+  <!-- RELOJ Y FECHA -->
+  <div id="dash-clock" style="display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;border-radius:14px;padding:14px 22px;margin-bottom:14px">
+    <div>
+      <div id="dash-clock-time" style="font-size:32px;font-weight:800;letter-spacing:2px;font-family:monospace">00:00:00</div>
+      <div id="dash-clock-date" style="font-size:13px;opacity:.75;margin-top:2px"></div>
+    </div>
+    <div style="text-align:right;opacity:.8;font-size:13px">
+      <div style="font-weight:700">🍽 ALBARABA SL</div>
+      <div style="font-size:11px;margin-top:3px">Panel de gestión</div>
+    </div>
+  </div>
+  <!-- ACCESO RÁPIDO — siempre visible -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
+    <div onclick="nav('hojas')" style="background:#fff;border:2px solid #1a4fa8;border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 18px rgba(26,79,168,.18)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:34px">📋</div>
+      <div style="font-weight:800;font-size:13px;color:#1a4fa8;margin-top:7px">Hojas de Servicio</div>
+      <div style="font-size:11px;color:#888;margin-top:2px">Ver servicios realizados</div>
+    </div>
+    <div onclick="nav('pedidos')" style="background:#fffbeb;border:2px solid #d97706;border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 18px rgba(217,119,6,.18)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:34px">🛒</div>
+      <div style="font-weight:800;font-size:13px;color:#d97706;margin-top:7px">Pedidos</div>
+      <div style="font-size:11px;color:#888;margin-top:2px">Gestión de pedidos</div>
+    </div>
+    <div onclick="window.open('APPCC_ALBARABA.html','_blank')" style="background:linear-gradient(135deg,#1a4fa8 0%,#0d2d6e 100%);border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 18px rgba(13,45,110,.35)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:34px">🧪</div>
+      <div style="font-weight:800;font-size:13px;color:#fff;margin-top:7px">APPCC</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.65);margin-top:2px">Control Sanitario</div>
+    </div>
   </div>
   <div class="stats" id="dash-stats"></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap" id="dash-grids"></div>
@@ -1238,13 +1267,28 @@ function numProdsDeProveedor(pid){return DB.productos.filter(p=>p.proveedor_id==
 // DASHBOARD
 // ═══════════════════════════════════════════════════
 function renderDashboard(){
-  const lowStock=DB.productos.filter(p=>p.stock_actual!==undefined&&p.stock_min>0&&p.stock_actual<p.stock_min).length;
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const en7=new Date(hoy);en7.setDate(en7.getDate()+7);
+  const serviciosSemana=DB.hojas.filter(h=>{if(!h.fecha)return false;const d=new Date(h.fecha+'T00:00:00');return d>=hoy&&d<=en7;}).length;
+  const pedPend=DB.hojas.filter(h=>!h.realizado&&h.fecha).length;
+  const appccNC=(()=>{try{const r=JSON.parse(localStorage.getItem('a_noconf')||'[]');return r.filter(x=>x.estado!=='cerrada').length;}catch(e){return 0;}})();
+  const appccSchedCount=(()=>{
+    try{
+      const scheds=JSON.parse(localStorage.getItem('a_sched')||'[]');
+      const now2=new Date();
+      return scheds.filter(s=>{
+        const recs=(()=>{try{return JSON.parse(localStorage.getItem('a_'+s.mod)||'[]');}catch(e){return[];}})();
+        if(s.freq==='diario'){const c=new Date(now2-(s.maxH||26)*3600000);return!recs.some(r=>new Date(r.ts||r.date)>c);}
+        if(s.freq==='semanal'){const mon=new Date(now2);mon.setDate(now2.getDate()-now2.getDay()+1);mon.setHours(0,0,0,0);return!recs.some(r=>new Date(r.ts||r.date)>=mon);}
+        const f=new Date(now2.getFullYear(),now2.getMonth(),1);return!recs.some(r=>new Date(r.ts||r.date)>=f);
+      }).length;
+    }catch(e){return 0;}
+  })();
+  const appccTotal=appccNC+appccSchedCount;
   document.getElementById('dash-stats').innerHTML=`
-    <div class="sc"><div class="sc-ic g">🏭</div><div><div class="sc-v">${DB.proveedores.length}</div><div class="sc-l">Proveedores</div></div></div>
-    <div class="sc"><div class="sc-ic b">📦</div><div><div class="sc-v">${DB.productos.length}</div><div class="sc-l">Productos</div></div></div>
-    <div class="sc"><div class="sc-ic gr">👨‍🍳</div><div><div class="sc-v">${DB.elaboraciones.length}</div><div class="sc-l">Elaboraciones</div></div></div>
-    <div class="sc" style="cursor:pointer" onclick="nav('hojas')"><div class="sc-ic" style="background:rgba(99,102,241,.12)">📋</div><div><div class="sc-v">${DB.hojas.length}</div><div class="sc-l">Servicios</div></div></div>
-    <div class="sc"><div class="sc-ic r">⚠️</div><div><div class="sc-v">${lowStock}</div><div class="sc-l">Stock bajo</div></div></div>`;
+    <div class="sc" style="cursor:pointer" onclick="nav('hojas')"><div class="sc-ic" style="background:rgba(99,102,241,.12)">📋</div><div><div class="sc-v">${serviciosSemana}</div><div class="sc-l">Servicios esta semana</div></div></div>
+    <div class="sc" style="cursor:pointer" onclick="nav('pedidos')"><div class="sc-ic b">🛒</div><div><div class="sc-v">${pedPend}</div><div class="sc-l">Pedidos pendientes</div></div></div>
+    <div class="sc" style="cursor:pointer" onclick="window.open('APPCC_ALBARABA.html','_blank')"><div class="sc-ic" style="background:${appccTotal>0?'rgba(230,126,34,.15)':'rgba(26,79,168,.1)'}">🧪</div><div><div class="sc-v" style="color:${appccTotal>0?'#e67e22':'inherit'}">${appccTotal}</div><div class="sc-l">Tareas APPCC${appccNC>0?' ('+appccNC+' NC)':''}</div></div></div>`;
   // Category breakdown
   const cats={};DB.elaboraciones.forEach(e=>{cats[e.categoria]=(cats[e.categoria]||0)+1});
   const catHTML=Object.entries(cats).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span>${CAT_LABELS[k]||k}</span><strong>${v}</strong></div>`).join('');
@@ -1270,14 +1314,14 @@ function renderDashboard(){
   });
   const pedAlertHTML=pedidosAlert.length?`<div class="card" style="margin-bottom:16px;grid-column:span 2"><div class="card-head"><h3>📦 Pedidos urgentes</h3><button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver hojas</button></div><div style="padding:12px">${pedidosAlert.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)"><span style="font-size:18px">${a.icon}</span><div style="flex:1"><strong>${esc(a.h.cliente)}</strong> — ${esc(a.h.servicio||'')} · ${new Date(a.h.fecha+'T00:00:00').toLocaleDateString('es-ES')}<div style="font-size:11px;color:var(--muted)">PAX: ${a.h.pax}</div></div><span class="pedido-badge ${a.cls}">${a.diffDays<0?'PEDIDO VENCIDO':a.diffDays===0?'Pedir HOY':'Pedir en '+a.diffDays+' día'+(a.diffDays>1?'s':'')}</span></div>`).join('')}</div></div>`:'';
   // Agenda próximos 7 días
-  const hoy7=new Date();hoy7.setHours(0,0,0,0);
-  const en7=new Date(hoy7);en7.setDate(en7.getDate()+7);
+  const agHoy=new Date();agHoy.setHours(0,0,0,0);
+  const agEn7=new Date(agHoy);agEn7.setDate(agEn7.getDate()+7);
   const proximos=DB.hojas.filter(h=>{
     if(!h.fecha||h.realizado)return false;
     const d=new Date(h.fecha+'T00:00:00');
-    return d>=hoy7&&d<=en7;
+    return d>=agHoy&&d<=agEn7;
   }).sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
-  const todayStr=hoy7.toISOString().slice(0,10);
+  const todayStr=agHoy.toISOString().slice(0,10);
   const agendaHTML=proximos.length?proximos.map(h=>{
     const d=new Date(h.fecha+'T00:00:00');
     const esHoy=h.fecha===todayStr;
@@ -1317,11 +1361,83 @@ function renderDashboard(){
       <div style="font-size:12px;font-weight:700;background:rgba(255,255,255,.2);padding:8px 16px;border-radius:20px;white-space:nowrap">Abrir APPCC →</div>
     </div>
   </div>`;
-  document.getElementById('dash-grids').innerHTML=appccBtn+elabAlert+hojasAlert+sinPrecioAlert+appccAlert+mejorasAlert+tarAlert+pedAlertHTML+`
-    <div class="card" style="grid-column:span 2"><div class="card-head"><h3>📅 Agenda — próximos 7 días</h3><button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver todos</button></div><div style="padding:0 16px 4px">${agendaHTML}</div></div>
-    <div class="card"><div class="card-head"><h3>📊 Elaboraciones por categoría</h3></div><div style="padding:16px">${catHTML||'<div class="empty"><p>Sin elaboraciones</p></div>'}</div></div>
-    <div class="card"><div class="card-head"><h3>📦 Últimos productos añadidos</h3><button class="btn btn-sm btn-gold" onclick="nav('productos')">Ver todos</button></div>
-    <div style="padding:16px">${recentProds.length?recentProds.map(p=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)"><div class="tbl-photo">${p.foto?`<img src="${p.foto}" style="width:36px;height:36px;border-radius:6px;object-fit:cover">`:'📦'}</div><div><div style="font-size:13px;font-weight:500">${esc(p.nombre)}</div><div style="font-size:11px;color:var(--muted)">${provNombre(p.proveedor_id)}</div></div></div>`).join(''):'<div class="empty"><p>Sin productos</p></div>'}</div></div>`;
+  // Gráfico barras: servicios por mes (últimos 6 meses)
+  const chartMonths=[];
+  for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);chartMonths.push(d);}
+  const chartData=chartMonths.map(d=>{
+    const y=d.getFullYear(),m=d.getMonth();
+    const count=DB.hojas.filter(h=>{if(!h.fecha)return false;const hd=new Date(h.fecha+'T00:00:00');return hd.getFullYear()===y&&hd.getMonth()===m;}).length;
+    const lbl=d.toLocaleDateString('es-ES',{month:'short'}).replace('.','');
+    return{lbl,count};
+  });
+  const maxBar=Math.max(...chartData.map(d=>d.count),1);
+  const barChart=`<div style="display:flex;align-items:flex-end;gap:8px;height:90px;padding:0 4px">
+    ${chartData.map(d=>{
+      const pct=Math.round((d.count/maxBar)*100);
+      return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="font-size:10px;font-weight:700;color:#1a4fa8">${d.count||''}</div>
+        <div style="width:100%;background:linear-gradient(180deg,#1a4fa8,#3b7ed4);border-radius:4px 4px 0 0;height:${Math.max(pct,2)}%;min-height:${d.count?6:2}px"></div>
+        <div style="font-size:10px;color:#888;text-transform:capitalize">${d.lbl}</div>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  // Tareas pendientes
+  const tareasPend=(DB.tareas||[]).filter(t=>t.estado!=='completada'&&t.estado!=='hecha').slice(0,5);
+  const tareasHTML=tareasPend.length
+    ?tareasPend.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:16px">${t.prioridad==='alta'?'🔴':t.prioridad==='media'?'🟡':'⚪'}</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${esc(t.titulo||t.text||t.descripcion||'Tarea')}</div>
+          ${t.responsable?`<div style="font-size:11px;color:var(--muted)">${esc(t.responsable)}</div>`:''}
+        </div>
+        <span style="font-size:11px;background:#f0f4ff;color:#1a4fa8;padding:3px 8px;border-radius:10px;font-weight:600">${t.estado||'pendiente'}</span>
+      </div>`).join('')
+    :'<div style="padding:14px;text-align:center;color:var(--muted);font-size:13px">✅ Sin tareas pendientes</div>';
+
+  // ── APPCC tareas pendientes (lee a_sched de localStorage) ──
+  const appccScheds=(()=>{try{return JSON.parse(localStorage.getItem('a_sched')||'[]');}catch(e){return[];}})();
+  const appccPendTar=[];
+  const _now=new Date();
+  appccScheds.forEach(s=>{
+    let done=false;
+    const key='a_'+s.mod;
+    const recs=(()=>{try{return JSON.parse(localStorage.getItem(key)||'[]');}catch(e){return[];}})();
+    if(s.freq==='diario'){
+      const cutoff=new Date(_now-(s.maxH||26)*3600000);
+      done=recs.some(r=>new Date(r.ts||r.date)>cutoff);
+    }else if(s.freq==='semanal'){
+      const mon=new Date(_now);mon.setDate(_now.getDate()-_now.getDay()+1);mon.setHours(0,0,0,0);
+      done=recs.some(r=>new Date(r.ts||r.date)>=mon);
+    }else if(s.freq==='mensual'){
+      const f=new Date(_now.getFullYear(),_now.getMonth(),1);
+      done=recs.some(r=>new Date(r.ts||r.date)>=f);
+    }
+    if(!done) appccPendTar.push(s);
+  });
+  const appccTarCard=appccPendTar.length>0?`
+    <div class="card" style="grid-column:span 2;border-left:4px solid #e67e22">
+      <div class="card-head" style="background:linear-gradient(135deg,#fff8f0,#fff)">
+        <h3>⚠️ APPCC — ${appccPendTar.length} tarea${appccPendTar.length>1?'s':''} pendiente${appccPendTar.length>1?'s':''}</h3>
+        <button class="btn btn-sm btn-gold" onclick="window.open('APPCC_ALBARABA.html','_blank')">Ir al APPCC →</button>
+      </div>
+      <div style="padding:0 16px 8px">
+        ${appccPendTar.map(s=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+            <span style="font-size:20px">${s.icon||'📋'}</span>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600">${s.label}</div>
+              <div style="font-size:11px;color:var(--muted)">${s.freq==='diario'?'Frecuencia: diaria':s.freq==='semanal'?'Frecuencia: semanal':'Frecuencia: mensual'}</div>
+            </div>
+            <span style="font-size:11px;background:#fff3e0;color:#e67e22;padding:3px 10px;border-radius:10px;font-weight:700">PENDIENTE</span>
+          </div>`).join('')}
+      </div>
+    </div>`:'';
+
+  document.getElementById('dash-grids').innerHTML=appccBtn+hojasAlert+appccAlert+mejorasAlert+tarAlert+pedAlertHTML+appccTarCard+`
+    <div class="card" style="grid-column:span 2"><div class="card-head"><h3>📅 Próximos eventos</h3><button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver todos</button></div><div style="padding:0 16px 4px">${agendaHTML}</div></div>
+    <div class="card"><div class="card-head"><h3>📊 Servicios por mes</h3></div><div style="padding:14px 16px 8px">${barChart}</div></div>
+    <div class="card"><div class="card-head"><h3>📝 Tareas pendientes</h3><button class="btn btn-sm btn-gold" onclick="nav('tareas')">Ver todas</button></div><div style="padding:0 16px 4px">${tareasHTML}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -2974,7 +3090,7 @@ function renderMejoras(){
       </div>
     </div>
   </div>`;
-  const lp=document.getElementById('mej-list-pendientes');
+  const lp=document.ggetElementById('mej-list-pendientes');
   const lc=document.getElementById('mej-list-completadas');
   if(lp)lp.innerHTML=pendientes.length?pendientes.map(cardPend).join(''):'<div style="text-align:center;padding:30px;color:var(--muted)">✅ Sin mejoras pendientes</div>';
   if(lc)lc.innerHTML=completadas.length?completadas.map(cardComp).join(''):'<div style="text-align:center;padding:30px;color:var(--muted)">Sin mejoras completadas aún</div>';
@@ -3010,6 +3126,21 @@ function deleteMejora(id){
 function cerrarSesion(){
   if(fbAuth){fbAuth.signOut().then(()=>{localStorage.removeItem('albaraba_v2_user');location.reload();});}
 }
+// ═══════════════════════════════════════════════════
+// RELOJ MADRID
+// ═══════════════════════════════════════════════════
+function _tickClock(){
+  const el_time=document.getElementById('dash-clock-time');
+  const el_date=document.getElementById('dash-clock-date');
+  if(!el_time||!el_date)return;
+  const now=new Date();
+  const opts_time={timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false};
+  const opts_date={timeZone:'Europe/Madrid',weekday:'long',day:'numeric',month:'long',year:'numeric'};
+  el_time.textContent=now.toLocaleTimeString('es-ES',opts_time);
+  el_date.textContent=now.toLocaleDateString('es-ES',opts_date).replace(/^./,c=>c.toUpperCase());
+}
+setInterval(_tickClock,1000);
+_tickClock();
 
 function doLogin(){
   const email=document.getElementById('login-email').value.trim();
@@ -3073,5 +3204,6 @@ window.addEventListener('DOMContentLoaded',()=>{
     <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--muted)">🔒 Acceso seguro con Firebase</div>
   </div>
 </div>
+
 </body>
 </html>
