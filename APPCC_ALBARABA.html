@@ -209,6 +209,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 
@@ -1568,6 +1569,10 @@ function renderRecep(){
         style="width:100%;padding:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.7);border-radius:10px;font-size:12px;cursor:pointer">
         📄 Subir albarán del repartidor
       </button>
+      <button onclick="abrirFotoLoteBolsa('recep')"
+        style="width:100%;padding:12px;background:rgba(243,156,18,.25);border:1px solid rgba(243,156,18,.5);color:#fff;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:6px">
+        📸 Bolsa / sobre interior sin código de barras
+      </button>
     </div>
 
     <!-- O ELIGE PROVEEDOR -->
@@ -1689,6 +1694,421 @@ function showRecepForm(prefill){
   if(prefill.temp){const d=document.getElementById('re-np-disp');d.textContent=String(prefill.temp);d._val=String(prefill.temp);}
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+// MULTI-ESCANEO — confirma y ofrece escanear siguiente inmediatamente
+// ═══════════════════════════════════════════════════════════════════════
+function printElabLabelN(r, qty){
+  if(!r){return;} if(!qty)qty=1;
+  // Build and open print window with qty copies of the label
+  // Reuse existing printElabLabel logic but multiply
+  const w=window.open('','_blank','width=460,height=400');
+  let labels='';
+  for(let i=0;i<qty;i++){
+    labels+=`<div class="label" style="${i>0?'page-break-before:always':''}">
+      <div class="lb-brand">ALBARABA SL</div>
+      <div class="lb-prod">${r.producto}</div>
+      <div><span class="lb-lot">LOTE: ${r.lote}</span></div>
+      <div class="lb-row">Elaborado: ${fmtDate(r.ts)} · ${r.emp}</div>
+      <div class="lb-row">${r.cantidad} ${r.unidad}</div>
+      <div class="lb-dlc">Consumir antes: ${r.dlc}</div>
+      <div class="lb-dest">${r.destino==='congelador'?'❄ CONGELADOR':'🌡 NEVERA'}</div>
+      <div class="lb-alg">⚠ ${(r.alergenos&&r.alergenos.length)?r.alergenos.join(', '):'Sin alérgenos'}</div>
+    </div>`;
+  }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      @page{size:62mm 50mm;margin:0}
+      body{font-family:Arial,sans-serif;margin:0;padding:0}
+      .label{width:62mm;min-height:48mm;padding:4mm;border:0.5px solid #000;box-sizing:border-box}
+      .lb-brand{font-size:8px;font-weight:900;color:#1a4fa8}
+      .lb-prod{font-size:14px;font-weight:700;margin:1mm 0;line-height:1.2}
+      .lb-lot{font-family:monospace;font-size:9px;background:#f0f0f0;padding:1mm 2mm;border-radius:1mm;display:inline-block}
+      .lb-row{font-size:8px;color:#333;margin-top:0.5mm}
+      .lb-dlc{font-size:11px;font-weight:700;color:#c0392b;margin-top:1.5mm}
+      .lb-dest{font-size:9px;font-weight:700;color:#2980b9;margin-top:1mm}
+      .lb-alg{font-size:7px;color:#7d3c98;margin-top:1.5mm;border-top:0.5px solid #ddd;padding-top:1mm}
+      @media print{button{display:none!important}}
+    </style></head><body>
+    <button onclick="window.print()" style="position:fixed;top:4px;right:4px;padding:6px 14px;background:#1a4fa8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">🖨 Imprimir</button>
+    ${labels}
+  </body></html>`);
+  w.document.close();
+}
+
+function printCongelLabel(r, qty){
+  if(!qty)qty=1; if(!r)return;
+  const w=window.open('','_blank','width=460,height=360');
+  let labels='';
+  for(let i=0;i<qty;i++){
+    labels+=`<div class="lbl" style="${i>0?'page-break-before:always':''}">
+      <div class="lb-brand">ALBARABA SL</div>
+      <div class="lb-tipo">❄ CONGELACIÓN</div>
+      <div class="lb-prod">${r.producto}</div>
+      ${r.lote?`<div class="lb-lot">LOTE: ${r.lote}</div>`:''}
+      <div class="lb-row">${r.cantidad||''} ${r.unidad||''}</div>
+      ${r.temp_entrada!=null?`<div class="lb-row">T° entrada: ${r.temp_entrada}°C</div>`:''}
+      <div class="lb-row">${r.emp||''} · ${r.date||''}</div>
+    </div>`;
+  }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>@page{size:62mm 40mm;margin:0}body{font-family:Arial,sans-serif;margin:0;padding:0}
+    .lbl{width:62mm;min-height:38mm;padding:3mm;border:.5px solid #000;box-sizing:border-box}
+    .lb-brand{font-size:8px;font-weight:900;color:#1a4fa8}.lb-tipo{font-size:7px;font-weight:700;color:#2980b9;margin-bottom:1mm}
+    .lb-prod{font-size:13px;font-weight:700;margin:1mm 0;line-height:1.2}.lb-lot{font-family:monospace;font-size:9px;background:#f0f0f0;padding:1mm 2mm;border-radius:1mm;display:inline-block;margin:1mm 0}
+    .lb-row{font-size:8px;color:#333;margin-top:.5mm}@media print{button{display:none!important}}</style></head><body>
+    <button onclick="window.print()" style="position:fixed;top:4px;right:4px;padding:6px 14px;background:#1a4fa8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">🖨 Imprimir</button>
+    ${labels}</body></html>`);
+  w.document.close();
+}
+
+function printSimpleLabel(tipo, producto, qty){
+  if(!qty)qty=1; if(!producto)return;
+  const fecha=new Date().toLocaleDateString('es-ES');
+  const emp=getActiveWorker()||'';
+  const w=window.open('','_blank','width=460,height=320');
+  let labels='';
+  for(let i=0;i<qty;i++){
+    labels+=`<div class="lbl" style="${i>0?'page-break-before:always':''}">
+      <div class="lb-brand">ALBARABA SL</div>
+      <div class="lb-tipo">${tipo}</div>
+      <div class="lb-prod">${producto}</div>
+      <div class="lb-row">${emp} · ${fecha}</div>
+    </div>`;
+  }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>@page{size:62mm 35mm;margin:0}body{font-family:Arial,sans-serif;margin:0;padding:0}
+    .lbl{width:62mm;min-height:33mm;padding:3mm;border:.5px solid #000;box-sizing:border-box}
+    .lb-brand{font-size:8px;font-weight:900;color:#1a4fa8}.lb-tipo{font-size:9px;font-weight:700;color:#c0392b;margin-bottom:1.5mm}
+    .lb-prod{font-size:14px;font-weight:700;margin:1mm 0;line-height:1.2}
+    .lb-row{font-size:8px;color:#333;margin-top:1mm}@media print{button{display:none!important}}</style></head><body>
+    <button onclick="window.print()" style="position:fixed;top:4px;right:4px;padding:6px 14px;background:#1a4fa8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">🖨 Imprimir</button>
+    ${labels}</body></html>`);
+  w.document.close();
+}
+
+function printRecepLabel(rec, qty){
+  if(!qty) qty=1;
+  const w=window.open('','_blank','width=460,height=400');
+  let labels='';
+  for(let i=0;i<qty;i++){
+    labels+=`<div class="lbl" style="${i>0?'page-break-before:always':''}">
+      <div class="lb-brand">ALBARABA SL</div>
+      <div class="lb-tipo">RECEPCIÓN MERCANCÍA</div>
+      <div class="lb-prod">${rec.producto}</div>
+      ${rec.lote?`<div class="lb-lot">LOTE: ${rec.lote}</div>`:''}
+      <div class="lb-row">Proveedor: ${rec.proveedor||'—'}</div>
+      ${rec.temp!=null?`<div class="lb-row">T° recepción: ${rec.temp}°C</div>`:''}
+      ${rec.caducidad?`<div class="lb-dlc">Cad: ${rec.caducidad}</div>`:''}
+      <div class="lb-row">${rec.emp||''} · ${rec.date||''}</div>
+    </div>`;
+  }
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      @page{size:62mm 40mm;margin:0}
+      body{font-family:Arial,sans-serif;margin:0;padding:0}
+      .lbl{width:62mm;min-height:38mm;padding:3mm;border:0.5px solid #000;box-sizing:border-box}
+      .lb-brand{font-size:8px;font-weight:900;color:#1a4fa8;letter-spacing:.5px}
+      .lb-tipo{font-size:7px;color:#666;margin-bottom:1mm}
+      .lb-prod{font-size:13px;font-weight:700;margin:1mm 0;line-height:1.2}
+      .lb-lot{font-family:monospace;font-size:9px;background:#f0f0f0;padding:1mm 2mm;border-radius:1mm;display:inline-block;margin:1mm 0}
+      .lb-row{font-size:8px;color:#333;margin-top:0.5mm}
+      .lb-dlc{font-size:10px;font-weight:700;color:#c0392b;margin-top:1mm}
+      @media print{button{display:none!important}}
+    </style></head><body>
+    <button onclick="window.print()" style="position:fixed;top:4px;right:4px;padding:6px 14px;background:#1a4fa8;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700">🖨 Imprimir</button>
+    ${labels}
+  </body></html>`);
+  w.document.close();
+}
+
+function showMultiScanConfirm(nombreProducto, fnSiguiente, fnTerminar, labelFn){
+  // labelFn: optional string with JS to call for printing, receives qty param
+  // e.g. "printRecepLabel(rec, QTY)"
+  const labelBlock = labelFn ? `
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#555;margin-bottom:8px;text-align:center">🏷 ¿Imprimir etiquetas?</div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+        ${[1,2,3,5,10].map(n=>`<button onclick="(function(){${labelFn.replace(/QTY/g,n)};document.querySelectorAll('.qty-btn').forEach(b=>b.style.background='#f5f5f5');this.style.background='#d1fae5'}).call(this)"
+          class="qty-btn" style="min-width:44px;padding:10px 8px;font-size:16px;font-weight:700;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;cursor:pointer">${n}</button>`).join('')}
+      </div>
+    </div>` : '';
+
+  openModal(`
+    <div style="text-align:center;padding:10px 0 4px">
+      <div style="font-size:48px;margin-bottom:6px">✅</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:4px">Guardado correctamente</div>
+      <div style="font-size:13px;color:#555;margin-bottom:16px;background:#f5f5f5;border-radius:8px;padding:8px">${nombreProducto}</div>
+      ${labelBlock}
+      <button class="btn btn-primary" style="width:100%;padding:16px;font-size:16px;font-weight:700;margin-bottom:8px;border-radius:12px"
+        onclick="closeModal();setTimeout(()=>{${fnSiguiente}},200)">
+        📷 Escanear siguiente producto
+      </button>
+      <button class="btn btn-outline" style="width:100%;padding:12px;font-size:14px"
+        onclick="closeModal();setTimeout(()=>{${fnTerminar}},100)">
+        ✓ Terminar
+      </button>
+    </div>`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// LOTE BOLSA INTERIOR — foto + nº lote manual para bolsas sin QR/EAN
+// ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// LOTE BOLSA INTERIOR — flujo rediseñado
+// 1. Usuario escribe/fotografía el nº lote
+// 2. App busca en TODOS los registros qué productos tienen ese lote
+// 3. Usuario confirma cuál es el producto que va a usar
+// ═══════════════════════════════════════════════════════════════════════
+
+function abrirFotoLoteBolsa(contextModule){
+  window._flbFotoData = null;
+  window._flbModule = contextModule;
+  openModal(`
+    <div class="modal-title">📸 Bolsa / Sobre interior</div>
+    <div style="font-size:12px;color:#555;margin-bottom:12px;background:#fff9e6;padding:10px;border-radius:8px;border-left:3px solid #f39c12">
+      Fotografía el número de lote y la app lo leerá automáticamente.
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <label style="flex:1;cursor:pointer">
+        <input type="file" accept="image/*" capture="environment" id="flb-foto"
+          onchange="leerFotoLote(this)" style="display:none">
+        <div style="background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;border-radius:12px;
+          padding:16px;text-align:center;font-size:15px;font-weight:700">
+          📷 Fotografiar número de lote
+        </div>
+      </label>
+      <label style="flex:0 0 auto;cursor:pointer">
+        <input type="file" accept="image/*" id="flb-foto2"
+          onchange="leerFotoLote(this)" style="display:none">
+        <div style="background:#f5f7fa;color:#1a4fa8;border-radius:12px;border:2px dashed #1a4fa8;
+          padding:16px;text-align:center;font-size:13px;font-weight:700">
+          📁 Subir
+        </div>
+      </label>
+    </div>
+
+    <div id="flb-ocr-area"></div>
+
+    <div id="flb-resultados" style="margin-top:8px"></div>
+
+    <div class="modal-row" id="flb-bottom-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+    </div>
+  `);
+}
+
+function leerFotoLote(inp){
+  const file = inp.files[0]; if(!file) return;
+  const ocrArea = document.getElementById('flb-ocr-area');
+  const resultados = document.getElementById('flb-resultados');
+
+  // Show preview + loading
+  const reader = new FileReader();
+  reader.onload = async e => {
+    window._flbFotoData = e.target.result;
+
+    ocrArea.innerHTML = `
+      <div style="position:relative;margin-bottom:10px">
+        <img src="${e.target.result}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid #ddd;display:block">
+      </div>
+      <div id="flb-ocr-status" style="display:flex;align-items:center;gap:10px;padding:10px;background:#f0f4ff;border-radius:8px;margin-bottom:8px">
+        <div class="spin" style="width:20px;height:20px;border:3px solid #1a4fa8;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#1a4fa8">Leyendo el número de lote...</div>
+          <div id="flb-ocr-prog" style="font-size:11px;color:#888">Iniciando OCR...</div>
+        </div>
+      </div>`;
+
+    // Add spin animation if needed
+    if(!document.getElementById('spin-style')){
+      const s=document.createElement('style');
+      s.id='spin-style';
+      s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(s);
+    }
+
+    // Run Tesseract OCR
+    try {
+      const result = await Tesseract.recognize(e.target.result, 'spa+eng', {
+        logger: m => {
+          if(m.status==='recognizing text'){
+            const prog = document.getElementById('flb-ocr-prog');
+            if(prog) prog.textContent = `${Math.round((m.progress||0)*100)}%`;
+          }
+        }
+      });
+
+      const rawText = result.data.text;
+      const status = document.getElementById('flb-ocr-status');
+      if(status) status.innerHTML = `<div style="font-size:12px;color:#555;padding:4px 0">📄 Texto leído de la imagen</div>`;
+
+      // Extract lot number candidates
+      const candidates = extraerCandidatosLote(rawText);
+      mostrarCandidatosOCR(rawText, candidates);
+
+    } catch(err) {
+      const status = document.getElementById('flb-ocr-status');
+      if(status) status.innerHTML = `
+        <div style="color:#e74c3c;font-size:13px">⚠ No se pudo leer automáticamente.</div>`;
+      // Fallback: manual entry
+      mostrarEntradaManual();
+      console.error('OCR error:', err);
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function extraerCandidatosLote(text){
+  const candidates = new Set();
+  // Common lot number patterns
+  const patterns = [
+    /[Ll][Oo][Tt][Ee]?\s*[:\-#]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,20})/g,  // LOTE: ABC123
+    /[Ll][:\-]?\s*([A-Z0-9][A-Z0-9\-\.]{3,18})/g,                        // L: or L240615
+    /\b([A-Z]{1,3}[\-]?\d{4,8}[A-Z]?)\b/g,                               // L240615A, AB-20240615
+    /\b(\d{2}[\/\.\-]\d{2}[\/\.\-]\d{2,4})\b/g,                          // 15/06/24, 15.06.2024
+    /\b(\d{6,8}[A-Z]{0,3})\b/g,                                           // 20240615, 240615A
+    /\b([A-Z]{2,4}\d{4,10})\b/g,                                          // LAB20240615
+  ];
+  patterns.forEach(re=>{
+    let m;
+    const rex = new RegExp(re.source, re.flags);
+    while((m=rex.exec(text))!==null){
+      const val = (m[1]||m[0]).trim().replace(/\s+/g,'');
+      if(val.length>=4 && val.length<=25) candidates.add(val);
+    }
+  });
+  return [...candidates].slice(0,8);
+}
+
+function mostrarCandidatosOCR(rawText, candidates){
+  const el = document.getElementById('flb-resultados'); if(!el) return;
+  const bottom = document.getElementById('flb-bottom-row'); 
+
+  if(candidates.length){
+    el.innerHTML = `
+      <div style="font-size:12px;font-weight:700;color:#1a4fa8;margin-bottom:8px">
+        ✅ Posibles números de lote detectados — toca el correcto:
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        ${candidates.map(c=>`
+          <button onclick="usarLoteOCR('${c.replace(/'/g,"\\'")}',this)"
+            style="padding:10px 16px;font-size:15px;font-weight:700;font-family:monospace;
+              background:#f0f4ff;border:2px solid #1a4fa8;border-radius:8px;cursor:pointer;
+              color:#1a4fa8;letter-spacing:.5px">
+            ${c}
+          </button>`).join('')}
+      </div>
+      <details style="margin-bottom:8px">
+        <summary style="font-size:11px;color:#aaa;cursor:pointer">Ver todo el texto leído</summary>
+        <pre style="font-size:10px;background:#f5f5f5;padding:8px;border-radius:6px;white-space:pre-wrap;max-height:100px;overflow-y:auto;margin-top:6px">${rawText.trim()}</pre>
+      </details>
+      <div style="font-size:12px;color:#888;margin-top:4px">¿No está el correcto?</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <input class="fc" id="flb-lote-manual" placeholder="Escribe el lote manualmente..." style="flex:1;font-size:15px;letter-spacing:.5px;font-family:monospace">
+        <button onclick="usarLoteManual()" class="btn btn-outline">✓ Usar este</button>
+      </div>`;
+  } else {
+    el.innerHTML = `
+      <div style="background:#fff9e6;border-radius:8px;padding:10px;margin-bottom:8px;font-size:12px">
+        ⚠ No se detectó un lote claro. Puede que la foto sea poco nítida o el lote esté grabado en relieve.
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:6px">Texto leído:</div>
+      <pre style="font-size:10px;background:#f5f5f5;padding:8px;border-radius:6px;white-space:pre-wrap;max-height:80px;overflow-y:auto;margin-bottom:8px">${rawText.trim()||'(sin texto)'}</pre>`;
+    mostrarEntradaManual();
+  }
+}
+
+function mostrarEntradaManual(){
+  const el = document.getElementById('flb-resultados'); if(!el) return;
+  el.innerHTML += `
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input class="fc" id="flb-lote-manual" placeholder="Escribe el número de lote..." 
+        style="flex:1;font-size:16px;letter-spacing:1px;font-family:monospace">
+      <button onclick="usarLoteManual()" class="btn btn-green">✓ Buscar</button>
+    </div>`;
+}
+
+function usarLoteOCR(lote, btn){
+  // Highlight selected
+  document.querySelectorAll('[onclick^="usarLoteOCR"]').forEach(b=>{
+    b.style.background='#f0f4ff'; b.style.borderColor='#1a4fa8'; b.style.color='#1a4fa8';
+  });
+  btn.style.background='#1a4fa8'; btn.style.color='#fff';
+  // Proceed to search
+  setTimeout(()=>_buscarYConfirmarLote(lote), 200);
+}
+
+function usarLoteManual(){
+  const inp = document.getElementById('flb-lote-manual');
+  const lote = inp?.value?.trim()||'';
+  if(!lote){alert('Escribe el número de lote');return;}
+  _buscarYConfirmarLote(lote);
+}
+
+function _buscarYConfirmarLote(lote){
+  // Reuse the existing buscarProductosPorLote logic but render into results area
+  const el = document.getElementById('flb-resultados'); if(!el) return;
+  const q = lote.toLowerCase();
+
+  const matches = [];
+  const seen = new Set();
+  const add = (producto, orig, extra) => {
+    if(!producto) return;
+    const key = producto+'|'+lote;
+    if(!seen.has(key)){ seen.add(key); matches.push({producto, lote, origen:orig, extra:extra||''}); }
+  };
+
+  (ld('a_recep')||[]).forEach(r=>{ if(r.lote&&r.lote.toLowerCase().includes(q)) add(r.producto,'📦 Recepción',r.proveedor+' · '+r.date); });
+  (ld('a_elab')||[]).forEach(r=>{
+    if(r.lote&&r.lote.toLowerCase().includes(q)) add(r.producto,'🍳 Elaboración','Elab: '+r.date);
+    (r.ingredientes||[]).forEach(ing=>{ if(ing.lote&&ing.lote.toLowerCase().includes(q)) add(ing.nombre,'🧂 Ingrediente',r.producto); });
+  });
+  (ld('a_lotes_bolsas')||[]).forEach(r=>{ if(r.lote&&r.lote.toLowerCase().includes(q)) add(r.producto,'📸 Bolsa anterior',r.fecha); });
+
+  el.innerHTML = matches.length
+    ? `<div style="background:#e8f4fd;border-radius:8px;padding:10px;margin-bottom:8px;font-size:13px;font-weight:700;color:#1a4fa8">
+        ✅ Lote <code style="background:#fff;padding:2px 6px;border-radius:4px">${lote}</code> encontrado — elige el producto:
+       </div>
+       ${matches.map((m,i)=>`
+         <div onclick="confirmarLoteBolsa('${m.producto.replace(/'/g,"\\'")}','${lote.replace(/'/g,"\\'")}');void(0)"
+           style="border:2px solid #e0e0e0;border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer"
+           onmouseover="this.style.borderColor='#1a4fa8';this.style.background='#e8f4fd'"
+           onmouseout="this.style.borderColor='#e0e0e0';this.style.background=''">
+           <div style="font-size:15px;font-weight:700">${m.producto}</div>
+           <div style="font-size:11px;color:#888;margin-top:3px">${m.origen} · ${m.extra}</div>
+         </div>`).join('')}
+       <div style="font-size:11px;color:#888;margin-top:4px;text-align:center">Toca el producto para confirmar</div>`
+    : `<div style="background:#fff9e6;border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:22px;margin-bottom:6px">🔍</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px">Lote <code>${lote}</code> — primera vez</div>
+        <div style="font-size:12px;color:#666;margin-bottom:10px">¿De qué producto es esta bolsa?</div>
+        <input class="fc" id="flb-prod-nuevo" placeholder="Nombre del producto..."
+          list="flb-prod-new-dl" style="margin-bottom:10px">
+        <datalist id="flb-prod-new-dl">
+          ${[...new Set((ld('a_recep')||[]).map(r=>r.producto).filter(Boolean))].map(p=>`<option value="${p}">`).join('')}
+        </datalist>
+        <button class="btn btn-green" style="width:100%;padding:12px;font-size:14px"
+          onclick="confirmarLoteBolsaNuevo('${lote.replace(/'/g,"\\'")}')">
+          ✓ Confirmar
+        </button>
+      </div>`;
+}
+
+
+function previewLoteFoto(inp){
+  const file = inp.files[0]; if(!file) return;
+  window._flbFotoData = null;
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._flbFotoData = e.target.result;
+    const prev = document.getElementById('flb-foto-prev');
+    if(prev) prev.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #ddd">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+
 function saveRecep2(){
   const prod=(document.getElementById('re-prod')||{}).value?.trim()||'';
   if(!prod){alert('Introduce el nombre del producto');return;}
@@ -1709,12 +2129,19 @@ function saveRecep2(){
     date:today(),ts:new Date().toISOString()};
   recs.push(rec);sv(K.recep,recs);
   recepAlbaranData=null;
-  updateScoreChip();renderRecep();
+  updateScoreChip();
   autoLabel({tipo:'RECEPCIÓN MERCANCÍA',producto:rec.producto,lote:rec.lote,
     emp:rec.emp,fecha:fmtDate(rec.ts),
     linea2:'Proveedor: '+provTxt+(rec.temp!=null?' · T°: '+rec.temp+'°C':''),
     linea3:rec.caducidad?'Cad: '+rec.caducidad:'',
     dlc:rec.caducidad,color:'#2980b9'});
+  const _rr=rec;
+  showMultiScanConfirm(
+    rec.producto+(rec.proveedor?' · '+rec.proveedor:''),
+    'openRecepScanMulti()',
+    'renderRecep()',
+    'printRecepLabel(_rr,QTY)'
+  );
 }
 
 
@@ -2142,9 +2569,16 @@ function saveElab(){
   const ingredientes=getElabIngRows();
   const rec={id:genId(),lote,producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,temp:temp_el,alergenos,ingredientes,estado:'en_stock',date:today(),ts:new Date().toISOString()};
   recs.push(rec);sv(K.elab,recs);
-  closeModal();renderElab();updateScoreChip();
-  // Auto-offer label print
-  setTimeout(()=>{if(confirm('¿Imprimir etiqueta para este lote?'))printElabLabel(rec.id)},200);
+  closeModal();updateScoreChip();
+  const _er=rec;
+  setTimeout(()=>{
+    showMultiScanConfirm(
+      _er.producto+' · '+_er.cantidad+' '+_er.unidad,
+      'openElabScan()',
+      'renderElab()',
+      'printElabLabelN(_er,QTY)'
+    );
+  }, 150);
 }
 function printElabLabel(rid){
   const r=ld(K.elab).find(x=>x.id===rid);if(!r)return;
@@ -2403,6 +2837,7 @@ function renderTraz(){
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input class="fc" id="traz-search" placeholder="🔍 Buscar por lote o producto..." oninput="renderTraz()" style="flex:1">
           <button onclick="scanToTraz()" style="background:#1a4fa8;color:#fff;border:none;border-radius:10px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">📷 Escanear</button>
+          <button onclick="abrirFotoLoteBolsa('traz')" style="background:#f39c12;color:#fff;border:none;border-radius:10px;padding:0 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">📸 Bolsa</button>
         </div>
       </div>
     </div>
@@ -2552,13 +2987,21 @@ function saveCongel(){
     emp,lote:document.getElementById('cg-lote').value,
     caducidad:document.getElementById('cg-dlc')?document.getElementById('cg-dlc').value:'',
     date:today(),ts:new Date().toISOString()});
-  sv(K.congel,recs);closeModal();renderCongel();
+  sv(K.congel,recs);
   const last=recs[recs.length-1];
+  closeModal();
   autoLabel({tipo:'CONGELACIÓN',producto:last.producto,lote:last.lote||'—',
     emp:last.emp,fecha:fmtDate(last.ts),
     linea2:'Cantidad: '+(last.cantidad||'—')+' '+(last.unidad||''),
     linea3:'T° entrada: '+(last.temp_entrada||'—')+'°C',
     dlc:null,color:'#2980b9'});
+  const _cgRec=last;
+  showMultiScanConfirm(
+    last.producto+' · '+(last.cantidad||'')+' '+(last.unidad||''),
+    "openScanModal(handleScanForCongel)",
+    "renderCongel()",
+    "printCongelLabel(_cgRec,QTY)"
+  );
 }
 
 // ============================================================
@@ -2681,7 +3124,15 @@ function saveDescongel2(){
   recs.push({id:genId(),lote_ref:document.getElementById('dc2-lote').value,producto:prod,emp,
     temp_inicio:parseFloat(document.getElementById('dc2-temp').value)||null,
     date:today(),ts:new Date().toISOString()});
-  sv(K.descongel,recs);closeModal();renderDescongel();
+  sv(K.descongel,recs);
+  const _dcprod = document.getElementById('dc2-prod').value;
+  closeModal();
+  showMultiScanConfirm(
+    _dcprod,
+    "openScanModal(handleScanForDescongel)",
+    "renderDescongel()",
+    "printSimpleLabel('DESCONGELACIÓN',_dcprod,QTY)"
+  );
 }
 
 // ============================================================
@@ -2815,7 +3266,15 @@ function saveRegen2(){
   const recs=ld(K.regen);
   recs.push({id:genId(),lote_ref:document.getElementById('rg2-lote').value,producto:prod,emp,
     temp_centro:temp,conforme:temp>=70,date:today(),ts:new Date().toISOString()});
-  sv(K.regen,recs);closeModal();renderRegen();
+  sv(K.regen,recs);
+  const _rgprod = document.getElementById('rg2-prod').value;
+  closeModal();
+  showMultiScanConfirm(
+    _rgprod,
+    "openScanModal(handleScanForRegen)",
+    "renderRegen()",
+    "printSimpleLabel('REGENERACIÓN',_rgprod,QTY)"
+  );
 }
 
 // ============================================================
@@ -3480,7 +3939,9 @@ function renderInf(){
         {svg:SVG_ICONS.tool,label:'Mantenimiento',fn:'printInfMant'},
         {svg:SVG_ICONS.book,label:'Formación Personal',fn:'printInfFormacion'},
         {svg:SVG_ICONS.shield,label:'Plagas DDD',fn:'printInfPlagas'},
-        {svg:SVG_ICONS.filetext,label:'MA04 Análisis Peligros',fn:'printMA04'}
+        {svg:SVG_ICONS.filetext,label:'MA04 Análisis Peligros',fn:'printMA04'},
+        {svg:SVG_ICONS.clipboard,label:'Tareas completadas',fn:'printInfTareas'},
+        {svg:SVG_ICONS.warning,label:'Mejoras pendientes',fn:'printInfMejoras'}
       ].map(r=>`<button class="tile" onclick="${r.fn}()" style="min-height:80px">
         <div class="tile-icon">${r.svg||''}</div>
         <div class="tile-label" style="font-size:11px">${r.label}</div>
@@ -3597,8 +4058,47 @@ function printReport(title,code,tableHead,rows,desde,hasta){
     <div class="sbox"><div class="sline">Revisado por</div></div>
   </div>
   <div class="page-note">Documento generado automáticamente · Sistema APPCC Digital ALBARABA</div>
-  <script>window.onload=function(){window.print();setTimeout(()=>window.close(),1200)}${'<'+'/script>'}
+  <button onclick="window.print()" style="position:fixed;top:8px;right:8px;padding:8px 18px;background:#1a4fa8;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;z-index:999">🖨 Imprimir / Guardar PDF</button>
+  <script>window.onload=function(){window.print()}${'<'+'/script>'}
   </body></html>`);w.document.close();
+}
+
+function printInfTareas(){
+  const{desde,hasta}=getDateRange();
+  // Limp records are the task completion records
+  const completions=ld(K.limp).filter(r=>inRange(r.ts||r.date,desde,hasta));
+  const tareas=ld(K.tar);
+  const rows=completions.map(r=>{
+    const t=tareas.find(x=>x.id===r.tarea_id)||{};
+    return`<tr>
+      <td>${fmtDate(r.ts||r.date)}</td>
+      <td>${fmtTime(r.ts||r.date)}</td>
+      <td>${t.name||r.tarea||'—'}</td>
+      <td>${t.zona||r.zona||'—'}</td>
+      <td>${r.turno||'—'}</td>
+      <td style="color:${r.conforme===false?'#e74c3c':'#1a4fa8'};font-weight:700">${r.conforme===false?'No conforme':'Conforme'}</td>
+      <td>${r.emp||'—'}</td>
+      <td style="font-size:9px">${r.notas||r.obs||'—'}</td>
+    </tr>`;
+  });
+  printReport('Registro de Tareas Realizadas · Limpieza y Control','Rev.01',
+    ['Fecha','Hora','Tarea','Zona','Turno','Estado','Empleado','Notas'],rows,desde,hasta);
+}
+
+function printInfMejoras(){
+  const{desde,hasta}=getDateRange();
+  const recs=ld(K.noconf).filter(r=>inRange(r.ts||r.date,desde,hasta));
+  const rows=recs.map(r=>`<tr>
+    <td>${fmtDate(r.ts||r.date)}</td>
+    <td>${r.tipo||'—'}</td>
+    <td>${r.mod||r.modulo||'—'}</td>
+    <td style="font-size:9px">${r.desc||r.que||'—'}</td>
+    <td style="font-size:9px">${r.accion||'—'}</td>
+    <td style="font-weight:700;color:${r.estado==='Cerrada'?'#1a4fa8':'#e74c3c'}">${r.estado||'Pendiente'}</td>
+    <td>${r.emp||r.responsable||'—'}</td>
+  </tr>`);
+  printReport('PA09 · No Conformidades y Mejoras','Rev.01',
+    ['Fecha','Tipo','Módulo','Descripción','Acción correctiva','Estado','Responsable'],rows,desde,hasta);
 }
 
 function printInfTemps(){
