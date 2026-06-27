@@ -1434,43 +1434,6 @@ ${r.pasos?`<div class="section-hdr" style="margin-top:4px">PROCESO DE ELABORACI�
 <div class="section-content" style="white-space:pre-line;font-size:9.5px">${r.pasos}</div>`:''}
 
 
-<div id="section-recetas" class="section">
-  <div class="topbar">
-    <div><div class="pg-title">📋 Recetas y Fichas Técnicas</div><div class="pg-sub">MA 03-1 · Formato oficial sanidad</div></div>
-    <button class="btn btn-gold" onclick="openRecetaModal()">+ Nueva receta</button>
-  </div>
-  <div class="tabs">
-    <div class="tab active" onclick="switchRecetasTab(this,'rt-lista')">📋 Recetas</div>
-    <div class="tab" onclick="switchRecetasTab(this,'rt-fichas-prov')">📁 Fichas de proveedor</div>
-  </div>
-  <div id="rt-lista">
-    <div id="recetas-lista"></div>
-  </div>
-  <div id="rt-fichas-prov" style="display:none">
-    <div class="card" style="margin-bottom:12px">
-      <div class="card-head"><h3>📁 Fichas técnicas de proveedor</h3>
-        <button class="btn btn-sm btn-gold" onclick="openFichaProvModal()">+ Subir ficha</button>
-      </div>
-      <div id="fichas-prov-lista" style="padding:14px"></div>
-    </div>
-  </div>
-</div>
-
-<div id="section-albaranes" class="section">
-  <div class="topbar">
-    <div>
-      <div class="pg-title">🧾 Leer albarán</div>
-      <div class="pg-sub">Extrae precios y cantidades de caja · actualiza tus productos automáticamente</div>
-    </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="descargarAlbaranes()" title="Descargar historial">📥 Historial CSV</button><button class="btn btn-gold" onclick="openNuevoAlbaran()">+ Nuevo albarán</button></div>
-  </div>
-  <div id="albaran-main"></div>
-</div>
-
-<!-- MODAL DINÁMICO UNIVERSAL (recetas / fichas) -->
-<div class="overlay" id="modal-universal" onclick="if(event.target===this)closeModal('modal-universal')">
-  <div class="modal" id="modal-universal-inner" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto"></div>
-</div>
 </body></html>`;
 
   const w = window.open('','_blank','width=900,height=700');
@@ -4397,6 +4360,46 @@ window.addEventListener('DOMContentLoaded',()=>{
     <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--muted)">🔒 Acceso seguro con Firebase</div>
   </div>
 </div>
+
+
+<div id="section-recetas" class="section">
+  <div class="topbar">
+    <div><div class="pg-title">📋 Recetas y Fichas Técnicas</div><div class="pg-sub">MA 03-1 · Formato oficial sanidad</div></div>
+    <button class="btn btn-gold" onclick="openRecetaModal()">+ Nueva receta</button>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchRecetasTab(this,'rt-lista')">📋 Recetas</div>
+    <div class="tab" onclick="switchRecetasTab(this,'rt-fichas-prov')">📁 Fichas de proveedor</div>
+  </div>
+  <div id="rt-lista">
+    <div id="recetas-lista"></div>
+  </div>
+  <div id="rt-fichas-prov" style="display:none">
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-head"><h3>📁 Fichas técnicas de proveedor</h3>
+        <button class="btn btn-sm btn-gold" onclick="openFichaProvModal()">+ Subir ficha</button>
+      </div>
+      <div id="fichas-prov-lista" style="padding:14px"></div>
+    </div>
+  </div>
+</div>
+
+<div id="section-albaranes" class="section">
+  <div class="topbar">
+    <div>
+      <div class="pg-title">🧾 Leer albarán</div>
+      <div class="pg-sub">Extrae precios y cantidades de caja · actualiza tus productos automáticamente</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="descargarAlbaranes()" title="Descargar historial">📥 Historial CSV</button><button class="btn btn-gold" onclick="openNuevoAlbaran()">+ Nuevo albarán</button></div>
+  </div>
+  <div id="albaran-main"></div>
+</div>
+
+<!-- MODAL DINÁMICO UNIVERSAL (recetas / fichas) -->
+<div class="overlay" id="modal-universal" onclick="if(event.target===this)closeModal('modal-universal')">
+  <div class="modal" id="modal-universal-inner" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto"></div>
+</div>
+
 
 </body>
 </html>
