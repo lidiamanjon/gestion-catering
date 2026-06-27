@@ -558,6 +558,7 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section" id="section-mejoras">
   <div class="topbar">
     <div><div class="pg-title">🔧 Mejoras</div><div class="pg-sub">Registro de mejoras pendientes y completadas</div></div>
+    <button class="btn btn-outline" onclick="imprimirInformeMejoras()">🖨 Informe imprimible</button>
   </div>
 
   <!-- FORM NUEVA MEJORA -->
@@ -643,7 +644,10 @@ textarea.fc{resize:vertical;min-height:70px}
 <div class="section" id="section-tareas">
   <div class="topbar">
     <div><div class="pg-title">📝 Tareas</div><div class="pg-sub">Pendientes y realizadas por el equipo</div></div>
-    <button class="btn btn-gold" onclick="exportarTareasExcel()">📊 Exportar informe</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="imprimirInformeTareas()">🖨 Informe imprimible</button>
+      <button class="btn btn-gold" onclick="exportarTareasExcel()">📊 Exportar informe</button>
+    </div>
   </div>
 
   <!-- FORM NUEVA TAREA -->
@@ -2107,6 +2111,140 @@ function descargarBackupCompleto(){
 
 function _hoy(){
   return new Date().toISOString().slice(0,10);
+}
+
+// ── INFORMES IMPRIMIBLES: MEJORAS Y TAREAS ────────────────────────────────
+function _abrirInformePrintable(titulo, subtitulo, tableHead, rows, desde, hasta){
+  const w = window.open('','_blank');
+  const rangeStr = desde && hasta ? `${desde} — ${hasta}` : 'Todos los registros';
+  const rowsHtml = rows.length
+    ? rows.join('')
+    : `<tr><td colspan="${tableHead.length}" style="text-align:center;color:#aaa;padding:16px">Sin registros en este período</td></tr>`;
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Arial,sans-serif;font-size:11px;margin:15mm}
+    .rh{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1a4fa8;padding-bottom:10px;margin-bottom:12px}
+    .brand{font-size:16px;font-weight:900;color:#1a4fa8}
+    .sub{font-size:10px;color:#555;margin-top:3px}
+    .rh-right{text-align:right;font-size:10px;color:#444;line-height:1.8}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th{background:#1a4fa8;color:#fff;padding:5px 7px;text-align:left;font-size:9px}
+    td{padding:4px 7px;border-bottom:1px solid #e8e8e8;font-size:9px;vertical-align:top}
+    tr:nth-child(even) td{background:#f7f9ff}
+    .footer{margin-top:24px;border-top:1px solid #ccc;padding-top:10px;display:flex;justify-content:space-between;font-size:9px;color:#888}
+    @media print{body{margin:8mm}button{display:none!important}}
+  </style></head><body>
+  <button onclick="window.print()" style="position:fixed;top:8px;right:8px;padding:8px 18px;background:#1a4fa8;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700">🖨 Imprimir / PDF</button>
+  <div class="rh">
+    <div><div class="brand">ALBARABA SL · Alaboca</div><div class="sub">${subtitulo}</div><div class="sub">Registro Sanitario: 26.015504/VI</div></div>
+    <div class="rh-right"><div style="font-size:12px;font-weight:700;color:#1a4fa8">${titulo}</div><div>Período: <strong>${rangeStr}</strong></div><div>Generado: ${new Date().toLocaleString('es-ES')}</div></div>
+  </div>
+  <table><thead><tr>${tableHead.map(h=>`<th>${h}</th>`).join('')}</tr></thead>
+  <tbody>${rowsHtml}</tbody></table>
+  <div class="footer"><div>Responsable: ___________________________</div><div>Fecha verificación: _______________</div><div>Firma: ___________________________</div></div>
+  <script>window.onload=function(){window.print()}<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+function imprimirInformeMejoras(){
+  openModal(`<div class="modal-title">🖨 Informe de Mejoras</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="fg"><label class="fl">Desde</label><input class="fc" type="date" id="mej-inf-desde" value="${_hace30()}"></div>
+      <div class="fg"><label class="fl">Hasta</label><input class="fc" type="date" id="mej-inf-hasta" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="fg"><label class="fl">Estado</label>
+      <select class="fc" id="mej-inf-estado">
+        <option value="">Todos</option>
+        <option value="pendiente">Solo pendientes</option>
+        <option value="completada">Solo completadas</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-gold" style="flex:2" onclick="_generarInformeMejoras()">🖨 Generar informe</button>
+    </div>`);
+}
+
+function _hace30(){
+  const d=new Date();d.setDate(d.getDate()-30);return d.toISOString().slice(0,10);
+}
+
+function _generarInformeMejoras(){
+  const desde=(document.getElementById('mej-inf-desde')||{}).value||'';
+  const hasta=(document.getElementById('mej-inf-hasta')||{}).value||'';
+  const estadoFiltro=(document.getElementById('mej-inf-estado')||{}).value||'';
+  closeModal();
+  let mejoras = DB.mejoras||[];
+  if(desde) mejoras=mejoras.filter(m=>!m.fecha||(m.fecha>=desde));
+  if(hasta) mejoras=mejoras.filter(m=>!m.fecha||(m.fecha<=hasta));
+  if(estadoFiltro) mejoras=mejoras.filter(m=>m.estado===estadoFiltro);
+  const prio={alta:'🔴',media:'🟡',baja:'🟢'};
+  const rows=mejoras.map(m=>`<tr>
+    <td>${m.fecha||'—'}</td>
+    <td>${m.titulo||m.descripcion||'—'}</td>
+    <td>${m.zona||'—'}</td>
+    <td>${prio[m.prioridad]||''} ${m.prioridad||'—'}</td>
+    <td style="font-size:9px">${m.descripcion||'—'}</td>
+    <td style="font-weight:700;color:${m.estado==='completada'?'#1a4fa8':'#e74c3c'}">${m.estado||'Pendiente'}</td>
+    <td>${m.responsable||m.autor||'—'}</td>
+    <td style="font-size:9px">${m.accion||m.notas||'—'}</td>
+  </tr>`);
+  _abrirInformePrintable(
+    'Registro de Mejoras y No Conformidades',
+    'Gestión de Mejoras · Albaraba SL',
+    ['Fecha','Mejora / Incidencia','Zona','Prioridad','Descripción','Estado','Responsable','Acción tomada'],
+    rows, desde, hasta
+  );
+}
+
+function imprimirInformeTareas(){
+  openModal(`<div class="modal-title">🖨 Informe de Tareas</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="fg"><label class="fl">Desde</label><input class="fc" type="date" id="tar-inf-desde" value="${_hace30()}"></div>
+      <div class="fg"><label class="fl">Hasta</label><input class="fc" type="date" id="tar-inf-hasta" value="${new Date().toISOString().slice(0,10)}"></div>
+    </div>
+    <div class="fg"><label class="fl">Estado</label>
+      <select class="fc" id="tar-inf-estado">
+        <option value="">Todos</option>
+        <option value="pendiente">Solo pendientes</option>
+        <option value="realizada">Solo realizadas</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-gold" style="flex:2" onclick="_generarInformeTareas()">🖨 Generar informe</button>
+    </div>`);
+}
+
+function _generarInformeTareas(){
+  const desde=(document.getElementById('tar-inf-desde')||{}).value||'';
+  const hasta=(document.getElementById('tar-inf-hasta')||{}).value||'';
+  const estadoFiltro=(document.getElementById('tar-inf-estado')||{}).value||'';
+  closeModal();
+  let tareas = DB.tareas||[];
+  if(desde) tareas=tareas.filter(t=>!t.fecha||(t.fecha>=desde)||(!t.fechaLimite||(t.fechaLimite>=desde)));
+  if(hasta) tareas=tareas.filter(t=>!t.fecha||(t.fecha<=hasta)||(!t.fechaLimite||(t.fechaLimite<=hasta)));
+  if(estadoFiltro) tareas=tareas.filter(t=>t.estado===estadoFiltro);
+  const prio={alta:'🔴',media:'🟡',baja:'🟢'};
+  const rows=tareas.map(t=>`<tr>
+    <td>${t.fecha||t.fechaCreacion||'—'}</td>
+    <td style="font-weight:700">${t.titulo||'—'}</td>
+    <td style="font-size:9px">${t.descripcion||'—'}</td>
+    <td>${t.trabajador||t.asignado||'—'}</td>
+    <td>${t.encargado||'—'}</td>
+    <td>${prio[t.prioridad]||''} ${t.prioridad||'—'}</td>
+    <td>${t.fechaLimite||'—'}</td>
+    <td style="font-weight:700;color:${t.estado==='realizada'?'#1a4fa8':'#e74c3c'}">${t.estado||'Pendiente'}</td>
+    <td style="font-size:9px">${t.notas||t.obs||'—'}</td>
+  </tr>`);
+  _abrirInformePrintable(
+    'Registro de Tareas del Equipo',
+    'Control de tareas · Albaraba SL',
+    ['Fecha','Tarea','Descripción','Trabajador','Encargado','Prioridad','Fecha límite','Estado','Notas'],
+    rows, desde, hasta
+  );
 }
 
 function saveDB(){
