@@ -204,6 +204,9 @@ input,select,textarea{font-family:inherit;font-size:15px}
 }
 </style>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
@@ -211,17 +214,25 @@ input,select,textarea{font-family:inherit;font-size:15px}
 
 <!-- WORKER PICKER OVERLAY -->
 <div id="worker-picker" style="position:fixed;inset:0;background:linear-gradient(160deg,#1a4fa8 0%,#0d2d6e 100%);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:0">
-  <div style="font-size:30px;font-weight:800;color:#fff;margin-bottom:8px">👋 ¿Quién eres?</div>
-  <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:32px;text-align:center">ALBARABA SL · APPCC<br>Selecciona tu nombre para continuar</div>
-  <div id="worker-picker-btns" style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px"></div>
+  <div style="font-size:48px;margin-bottom:8px">👤</div>
+  <div style="font-size:26px;font-weight:800;color:#fff;margin-bottom:4px">¿Quién eres?</div>
+  <div style="font-size:12px;color:rgba(255,255,255,.65);margin-bottom:28px;text-align:center">ALBARABA SL · APPCC · Tu nombre aparecerá en todos los registros</div>
+  <div id="worker-picker-btns" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:340px"></div>
   <div id="worker-picker-empty" style="display:none;margin-top:8px;background:rgba(255,255,255,.1);border-radius:12px;padding:16px;text-align:center;max-width:340px;width:100%">
-    <div style="font-size:13px;color:rgba(255,255,255,.8);margin-bottom:12px">No hay trabajadores configurados aún.<br>Entra como administrador para añadirlos.</div>
-    <button onclick="setActiveWorker('Admin')" style="background:#fff;border:none;color:#1a4fa8;padding:14px 28px;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;width:100%">🔑 Entrar como Admin</button>
+    <div style="font-size:13px;color:rgba(255,255,255,.8);margin-bottom:12px">No hay trabajadores configurados.<br>Entra como administrador para configurarlos.</div>
   </div>
-  <div style="margin-top:24px;width:100%;max-width:340px">
-    <button onclick="setActiveWorker('Admin')" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;padding:14px 20px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;width:100%;letter-spacing:.3px">➜ Entrar directamente</button>
+  <div style="margin-top:20px;width:100%;max-width:340px">
+    <button onclick="showAdminPinEntry()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.7);padding:12px 20px;border-radius:10px;font-size:13px;cursor:pointer;width:100%">🔑 Acceso administrador</button>
   </div>
-  <div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.4);text-align:center">Añade trabajadores en ⚙ Configuración → Empleados</div>
+  <div id="worker-pin-box" style="display:none;margin-top:12px;width:100%;max-width:340px;background:rgba(255,255,255,.12);border-radius:12px;padding:16px">
+    <div style="font-size:13px;color:#fff;font-weight:700;margin-bottom:10px">PIN de administrador</div>
+    <input id="worker-pin-input" type="password" inputmode="numeric" maxlength="8" placeholder="Introduce tu PIN..." class="fc" style="margin-bottom:10px" onkeydown="if(event.key==='Enter')checkAdminPin()">
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('worker-pin-box').style.display='none'" style="flex:1;background:rgba(255,255,255,.1);border:none;color:#fff;padding:10px;border-radius:8px;cursor:pointer">Cancelar</button>
+      <button onclick="checkAdminPin()" style="flex:1;background:#fff;border:none;color:#1a4fa8;padding:10px;border-radius:8px;font-weight:700;cursor:pointer">✓ Entrar</button>
+    </div>
+    <div id="worker-pin-err" style="display:none;color:#ffb3b3;font-size:12px;margin-top:8px;text-align:center">PIN incorrecto</div>
+  </div>
 </div>
 
 <div id="home" class="screen home-screen">
@@ -458,12 +469,80 @@ const K={
   noconf:'a_noconf', formacion:'a_form', mant:'a_mant',
   contras:'a_contras', plagas:'a_plagas', cfg_emp:'a_cfgemp',
   gtindb:'a_gtindb',
+  workers:'a_workers', wRole:'a_wrole',
   wActive:'a_worker_active',
   docs:'a_docs',
   tempnc:'a_tempnc'
 };
-const ld=k=>JSON.parse(localStorage.getItem(k)||'[]');
-const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const ld=k=>{try{return JSON.parse(localStorage.getItem(k)||'[]');}catch(e){return[];}};
+const sv=(k,v)=>{
+  try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}
+  if(window._appccDB){
+    window._ownWrite=true;
+    window._appccDB.ref('appcc/'+k).set(v).then(()=>{
+      setTimeout(()=>{window._ownWrite=false;},600);
+    }).catch(()=>{window._ownWrite=false;});
+  }
+};
+
+// ── FIREBASE APPCC SYNC ──────────────────────────────────────────────────
+const _FB_APPCC_CFG={
+  apiKey:'AIzaSyBe7hKPXIanf49ZUgJ3NiXp8CHvjcGsw0M',
+  authDomain:'albaraba-gestion.firebaseapp.com',
+  databaseURL:'https://albaraba-gestion-default-rtdb.europe-west1.firebasedatabase.app',
+  projectId:'albaraba-gestion'
+};
+window._appccDB=null;
+window._ownWrite=false;
+
+function initFirebaseSync(onReady){
+  if(typeof firebase==='undefined'){console.warn('Firebase SDK no cargado');onReady&&onReady();return;}
+  try{
+    const app=firebase.apps.find(a=>a.name==='appcc')||firebase.initializeApp(_FB_APPCC_CFG,'appcc');
+    window._appccDB=firebase.database(app);
+    const ref=window._appccDB.ref('appcc');
+    ref.once('value').then(snap=>{
+      const fbData=snap.val()||{};
+      const fbHasData=Object.keys(fbData).length>0;
+      if(fbHasData){
+        // Firebase tiene datos — sobreescribir localStorage
+        Object.keys(fbData).forEach(k=>{
+          try{localStorage.setItem(k,JSON.stringify(fbData[k]));}catch(e){}
+        });
+      } else {
+        // Firebase vacío — subir datos actuales de localStorage (primera migración)
+        const allKeys=Object.values(K).filter(Boolean);
+        const upload={};
+        allKeys.forEach(k=>{
+          const v=localStorage.getItem(k);
+          if(v&&v!=='[]'&&v!=='null'){try{upload[k]=JSON.parse(v);}catch(e){}}
+        });
+        if(Object.keys(upload).length>0){ref.set(upload).catch(()=>{});}
+      }
+      onReady&&onReady();
+      // Listener en tiempo real para cambios de otros dispositivos
+      ref.on('value',snap=>{
+        if(window._ownWrite)return;
+        const d=snap.val()||{};
+        let changed=false;
+        Object.keys(d).forEach(k=>{
+          const nv=JSON.stringify(d[k]);
+          if(localStorage.getItem(k)!==nv){try{localStorage.setItem(k,nv);changed=true;}catch(e){}}
+        });
+        if(changed&&window.currentMod){
+          try{renderMod(window.currentMod);}catch(e){}
+          try{updateScoreChip();}catch(e){}
+        }
+      });
+    }).catch(err=>{
+      console.warn('Firebase APPCC carga fallida:',err);
+      onReady&&onReady();
+    });
+  }catch(e){
+    console.warn('Firebase APPCC init error:',e);
+    onReady&&onReady();
+  }
+}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function genLot(){const n=new Date(),p=x=>String(x).padStart(2,'0');return String(n.getFullYear()).slice(2)+p(n.getMonth()+1)+p(n.getDate())+p(n.getHours())+p(n.getMinutes())+p(n.getSeconds())}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -478,6 +557,19 @@ function daysLeft(d){if(!d)return null;const diff=Math.ceil((new Date(d)-new Dat
 function getGestorElabs(){
   try{const db=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');return db.elaboraciones||[];}catch(e){return[]}
 }
+function getGestorProds(){
+  try{const db=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');return db.productos||[];}catch(e){return[]}
+}
+function getUnifiedProvs(){
+  const appccProvs=ld(K.provs);
+  try{
+    const db=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');
+    const gestorProvs=(db.proveedores||[]).map(p=>({id:p.id||p.nombre,name:p.nombre}));
+    const names=new Set(appccProvs.map(p=>p.name.toLowerCase()));
+    const extra=gestorProvs.filter(p=>!names.has(p.name.toLowerCase()));
+    return[...appccProvs,...extra];
+  }catch(e){return appccProvs;}
+}
 
 // ============================================================
 // SEED DATA
@@ -486,9 +578,9 @@ if(!localStorage.getItem('a_v5')){localStorage.setItem('a_v5','1');
   sv(K.emp,['Lidia','Edwin','Gustavo','Jeni']);
   sv(K.zonas,[
     {id:'z1',name:'CÁMARA CONGELACIÓN',target:-18,alert:-15,unit:'°C',icon:'❄'},
-    {id:'z2',name:'CÁMARA MAT PRIMA',target:4,alert:7,unit:'°C',icon:'🌡'},
-    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:4,alert:7,unit:'°C',icon:'🌡'},
-    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:4,alert:7,unit:'°C',icon:'🌡'}
+    {id:'z2',name:'CÁMARA MAT PRIMA',target:4,alert:8,unit:'°C',icon:'🌡'},
+    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:4,alert:8,unit:'°C',icon:'🌡'},
+    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:4,alert:8,unit:'°C',icon:'🌡'}
   ]);
   sv(K.provs,[
     {id:'p1',name:'Agustín López de Arkaute'},
@@ -522,26 +614,27 @@ if(!localStorage.getItem('a_v5')){localStorage.setItem('a_v5','1');
   sv(K.sched,[
     {id:1,mod:'temps',label:'Temperatura Mañana',freq:'diario',maxH:14,pts:5,icon:'🌡'},
     {id:2,mod:'temps',label:'Temperatura Noche',freq:'diario',maxH:14,pts:5,icon:'🌡'},
-    {id:3,mod:'bpm',label:'Auditoría BPM',freq:'mensual',pts:10,icon:'✅'},
+    {id:3,mod:'bpm',label:'BPM Inicio jornada',freq:'diario',maxH:14,pts:10,icon:'✅'},
     {id:4,mod:'limp',label:'Limpieza diaria',freq:'diario',maxH:26,pts:5,icon:'🧹'},
-    {id:5,mod:'preop',label:'Inspección preoperativa',freq:'diario',maxH:26,pts:5,icon:'🔍'},
+    {id:5,mod:'preop',label:'Inspección preoperativa',freq:'semanal',pts:5,icon:'🔍'},
     {id:6,mod:'aceite',label:'Seguimiento aceites',freq:'semanal',pts:8,icon:'🍟'},
     {id:7,mod:'agua',label:'Control del agua',freq:'mensual',pts:15,icon:'💧'},
     {id:8,mod:'abat',label:'Registro abatidor',freq:'diario',maxH:26,pts:5,icon:'❄'},
     {id:9,mod:'lava',label:'Temp. lavavajillas',freq:'diario',maxH:26,pts:5,icon:'🍽'},
     {id:10,mod:'basura',label:'Peso basura orgánica',freq:'semanal',pts:3,icon:'♻'},
-    {id:8,mod:'recep',label:'Registro recepciones',freq:'semanal',pts:5,icon:'📦'},
-    {id:9,mod:'elab',label:'Elaboraciones diarias',freq:'diario',maxH:26,pts:8,icon:'🍳'}
+    {id:11,mod:'recep',label:'Registro recepciones',freq:'semanal',pts:5,icon:'📦'},
+    {id:12,mod:'elab',label:'Elaboraciones diarias',freq:'diario',maxH:26,pts:8,icon:'🍳'},
+    {id:13,mod:'bpm',label:'BPM Fin jornada',freq:'diario',maxH:26,pts:10,icon:'✅'}
   ]);
   localStorage.setItem('a_v5','1');
 }
 // Migración v6 — rangos de temperatura correctos (neveras 0-6°C crit.7, congelador -30/-18 crit.-15)
 if(!localStorage.getItem('a_v6_zones')){
   sv(K.zonas,[
-    {id:'z1',name:'CÁMARA CONGELACIÓN',target:-20,alert:-15,unit:'°C',icon:'❄'},
-    {id:'z2',name:'CÁMARA MAT PRIMA',target:4,alert:7,unit:'°C',icon:'🌡'},
-    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:4,alert:7,unit:'°C',icon:'🌡'},
-    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:4,alert:7,unit:'°C',icon:'🌡'}
+    {id:'z1',name:'CÁMARA CONGELACIÓN',target:-18,alert:-15,unit:'°C',icon:'❄'},
+    {id:'z2',name:'CÁMARA MAT PRIMA',target:4,alert:8,unit:'°C',icon:'🌡'},
+    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:4,alert:8,unit:'°C',icon:'🌡'},
+    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:4,alert:8,unit:'°C',icon:'🌡'}
   ]);
   localStorage.setItem('a_v6_zones','1');
 }
@@ -588,14 +681,36 @@ if(!localStorage.getItem('a_v7')){
   sv(K.emp,['Lidia','Edwin','Gustavo','Jeni']);
   sv(K.zonas,[
     {id:'z1',name:'CÁMARA CONGELACIÓN',target:-18,alert:-15,unit:'°C',icon:'❄'},
-    {id:'z2',name:'CÁMARA MAT PRIMA',target:4,alert:7,unit:'°C',icon:'🌡'},
-    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:4,alert:7,unit:'°C',icon:'🌡'},
-    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:4,alert:7,unit:'°C',icon:'🌡'}
+    {id:'z2',name:'CÁMARA MAT PRIMA',target:4,alert:8,unit:'°C',icon:'🌡'},
+    {id:'z3',name:'CÁMARA MATERIAS PRIMAS 2',target:4,alert:8,unit:'°C',icon:'🌡'},
+    {id:'z4',name:'CÁMARA MATERIAS PRIMAS 3',target:4,alert:8,unit:'°C',icon:'🌡'}
   ]);
   // Limpiar worker activo inválido (email o nombre antiguo)
   const w=localStorage.getItem(K.wActive)||'';
   if(w&&!['Lidia','Edwin','Gustavo','Jeni'].includes(w))localStorage.removeItem(K.wActive);
   localStorage.setItem('a_v7','1');
+}
+if(!localStorage.getItem('a_v8')){
+  // Congelación target -20°C + rebuild a_sched con IDs correctos y frecuencias
+  const _z=ld(K.zonas);const _zc=_z.find(x=>x.id==='z1');
+  if(_zc){_zc.target=-18;sv(K.zonas,_z);}
+  _z.filter(x=>x.id!=='z1').forEach(x=>{if(x.unit==='°C'&&x.target>0)x.alert=8;});sv(K.zonas,_z);
+  sv(K.sched,[
+    {id:1,mod:'temps',label:'Temperatura Mañana',freq:'diario',maxH:14,pts:5,icon:'🌡'},
+    {id:2,mod:'temps',label:'Temperatura Noche',freq:'diario',maxH:14,pts:5,icon:'🌡'},
+    {id:3,mod:'bpm',label:'BPM Inicio jornada',freq:'diario',maxH:14,pts:10,icon:'✅'},
+    {id:4,mod:'limp',label:'Limpieza diaria',freq:'diario',maxH:26,pts:5,icon:'🧹'},
+    {id:5,mod:'preop',label:'Inspección preoperativa',freq:'semanal',pts:5,icon:'🔍'},
+    {id:6,mod:'aceite',label:'Seguimiento aceites',freq:'semanal',pts:8,icon:'🍟'},
+    {id:7,mod:'agua',label:'Control del agua',freq:'mensual',pts:15,icon:'💧'},
+    {id:8,mod:'abat',label:'Registro abatidor',freq:'diario',maxH:26,pts:5,icon:'❄'},
+    {id:9,mod:'lava',label:'Temp. lavavajillas',freq:'diario',maxH:26,pts:5,icon:'🍽'},
+    {id:10,mod:'basura',label:'Peso basura orgánica',freq:'semanal',pts:3,icon:'♻'},
+    {id:11,mod:'recep',label:'Registro recepciones',freq:'semanal',pts:5,icon:'📦'},
+    {id:12,mod:'elab',label:'Elaboraciones diarias',freq:'diario',maxH:26,pts:8,icon:'🍳'},
+    {id:13,mod:'bpm',label:'BPM Fin jornada',freq:'diario',maxH:26,pts:10,icon:'✅'}
+  ]);
+  localStorage.setItem('a_v8','1');
 }
 
 // ============================================================
@@ -808,44 +923,99 @@ function closeModal(){document.getElementById('mo').classList.remove('open')}
 // ============================================================
 // TRABAJADOR ACTIVO — selección al arranque y auto-relleno
 // ============================================================
-function getActiveWorker(){return localStorage.getItem(K.wActive)||''}
-function setActiveWorker(name){
+function getActiveWorker(){return localStorage.getItem(K.wActive)||'';}
+function getActiveRole(){return localStorage.getItem(K.wRole)||'worker';}
+function isAdmin(){return getActiveRole()==='admin';}
+function getWorkers(){
+  const ws=ld(K.workers);
+  if(ws&&ws.length&&typeof ws[0]==='object') return ws;
+  const emps=ld(K.emp);
+  return emps.map((n,i)=>({name:n,role:i===0?'admin':'worker',pin:i===0?'1234':''}));
+}
+function setActiveWorker(name,role){
+  role=role||'worker';
   localStorage.setItem(K.wActive,name);
+  localStorage.setItem(K.wRole,role);
   updateWorkerHeader();
   document.getElementById('worker-picker').style.display='none';
+  const pinBox=document.getElementById('worker-pin-box');
+  if(pinBox)pinBox.style.display='none';
+  setTimeout(()=>{
+    document.querySelectorAll('select[id$="-emp"]').forEach(sel=>{
+      const opts=[...sel.options];
+      const match=opts.find(o=>o.value===name||o.text===name);
+      if(match) sel.value=match.value;
+    });
+  },400);
+}
+function showAdminPinEntry(){
+  const box=document.getElementById('worker-pin-box');
+  if(box){box.style.display='block';setTimeout(()=>{const i=document.getElementById('worker-pin-input');if(i)i.focus();},100);}
+}
+function checkAdminPin(){
+  const pin=document.getElementById('worker-pin-input').value.trim();
+  const workers=getWorkers();
+  const admin=workers.find(w=>w.role==='admin'&&w.pin===pin);
+  if(admin){
+    document.getElementById('worker-pin-err').style.display='none';
+    setActiveWorker(admin.name,'admin');
+  } else {
+    document.getElementById('worker-pin-err').style.display='block';
+    document.getElementById('worker-pin-input').value='';
+  }
 }
 function showWorkerPicker(){
   buildWorkerPickerBtns();
   document.getElementById('worker-picker').style.display='flex';
 }
 function buildWorkerPickerBtns(){
-  const emps=ld(K.emp);
+  const workers=getWorkers();
+  const nonAdmins=workers.filter(w=>w.role!=='admin');
   const btns=document.getElementById('worker-picker-btns');
   const empty=document.getElementById('worker-picker-empty');
   if(!btns)return;
-  if(emps.length===0){
+  if(nonAdmins.length===0){
     btns.innerHTML='';
     if(empty)empty.style.display='block';
   } else {
     if(empty)empty.style.display='none';
-    btns.innerHTML=emps.map(e=>`
-      <button onclick="setActiveWorker('${e.replace(/'/g,"\\'")}') " style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.25);color:#fff;padding:18px 20px;border-radius:14px;font-size:18px;font-weight:700;cursor:pointer;text-align:center;letter-spacing:.3px;transition:background .15s"
-        onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">${e}</button>`).join('');
+    btns.innerHTML=nonAdmins.map(w=>`
+      <button onclick="setActiveWorker('${w.name.replace(/'/g,"\'")}','worker')"
+        style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;padding:16px 20px;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;width:100%;text-align:left;display:flex;align-items:center;gap:10px">
+        <span style="font-size:22px">👤</span>
+        <div><div style="font-size:16px;font-weight:700">${w.name}</div>
+          <div style="font-size:11px;opacity:.6">Trabajador · Toca para entrar</div></div>
+      </button>`).join('');
   }
 }
 function updateWorkerHeader(){
   const w=getActiveWorker();
+  const role=getActiveRole();
   const sub=document.getElementById('header-worker-sub');
   const btn=document.getElementById('header-change-worker');
   if(sub)sub.textContent='Sistema APPCC · Catering';
-  if(btn){btn.style.display=w?'inline-block':'none';btn.textContent=w?'👤 '+w:'cambiar 👤';}
+  if(btn){
+    btn.style.display=w?'inline-block':'none';
+    const badge=role==='admin'?'🔑 ':'👤 ';
+    btn.textContent=w?(badge+w):'cambiar 👤';
+    btn.style.background=role==='admin'?'rgba(255,215,0,.25)':'rgba(255,255,255,.2)';
+  }
 }
 function initWorkerPicker(){
-  // Validar que el worker guardado sigue en la lista
+  // Init workers from emp list if not yet migrated
+  if(!ld(K.workers).length){
+    const emps=ld(K.emp);
+    if(emps.length){
+      const ws=emps.map((n,i)=>({name:n,role:i===0?'admin':'worker',pin:i===0?'1234':''}));
+      sv(K.workers,ws);
+    }
+  }
+  // Validate saved worker still exists
   const w=getActiveWorker();
-  const emps=ld(K.emp);
-  if(w&&emps.length>0&&!emps.includes(w)){
+  const workers=getWorkers();
+  if(w&&workers.length>0&&!workers.find(wk=>wk.name===w)){
     localStorage.removeItem(K.wActive);
+    localStorage.removeItem(K.wRole);
   }
   buildWorkerPickerBtns();
   if(getActiveWorker()){
@@ -918,7 +1088,7 @@ function renderTemps(){
           <span>${z.icon}</span>
           <span style="font-weight:700;font-size:14px;flex:1">${z.name}</span>
           <span class="status-dot ${cls}"></span>
-          <span style="font-size:11px;color:#888">Alerta: ${z.alert>0?'>'+z.alert:'<'+z.alert}°C</span>
+          <span style="font-size:11px;color:#888">${z.target<0?'Alerta si > '+z.alert+'°C':'Alerta si > '+z.alert+'°C'} · Rango: ${z.target<0?z.target+'→'+(z.alert-3):'0→'+z.target}°C</span>
         </div>
         <div class="spark-wrap">
           <div class="spark-val ${z.target<0?'cold':'ok'}">${last?last.val+'°C':'—'}</div>
@@ -1379,7 +1549,7 @@ function openRecepModal(prefill){
 }
 function renderRecep(){
   recepStep=0;recepProv=null;
-  const provs=ld(K.provs);const recs=ld(K.recep);
+  const provs=getUnifiedProvs();const recs=ld(K.recep);
   document.getElementById('recep-body').innerHTML=`
     <div class="card">
       <div class="card-body">
@@ -1389,8 +1559,8 @@ function renderRecep(){
             <div style="font-size:11px;font-weight:700">${p.name}</div>
           </button>`).join('')}
         </div>
-        <button class="btn btn-outline btn-sm" style="margin-top:12px;width:100%" onclick="openAlbaranUpload()">📄 Subir albarán del repartidor</button>
-        <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;background:#e8f0fa;border-color:#1a4fa8;color:#1a4fa8" onclick="openScanModal(handleScanForRecep)">📷 Escanear código de caja (GS1-128)</button>
+        <button style="width:100%;margin-bottom:12px;padding:16px;background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:0.3px" onclick="openScanModal(handleScanForRecep)">📷 Escanear código de caja<br><span style="font-size:11px;font-weight:400;opacity:.85">GS1-128 · EAN-13 · QR etiqueta</span></button>
+        <button class="btn btn-outline btn-sm" style="margin-top:4px;width:100%" onclick="openAlbaranUpload()">📄 Subir albarán del repartidor</button>
       </div>
     </div>
     <div class="card">
@@ -1424,7 +1594,7 @@ function renderRecep(){
     </div>`;
 }
 function filterProvs(q){
-  const provs=ld(K.provs).filter(p=>!q||p.name.toLowerCase().includes(q.toLowerCase()));
+  const provs=getUnifiedProvs().filter(p=>!q||p.name.toLowerCase().includes(q.toLowerCase()));
   document.getElementById('prov-grid').innerHTML=provs.map(p=>`<button class="dest-btn" onclick="selectProv('${p.id}','${p.name.replace(/'/g,"\\'")}')">
     <div style="font-size:11px;font-weight:700">${p.name}</div>
   </button>`).join('');
@@ -1678,6 +1848,10 @@ function renderElab(){
   }
 
   document.getElementById('elab-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <button class="btn btn-primary" style="padding:14px;font-size:15px;font-weight:700" onclick="openElabScan()">📷 Escanear producto</button>
+      <button class="btn btn-green" style="padding:14px;font-size:15px;font-weight:700" onclick="openElabModal()">+ Nueva elaboración</button>
+    </div>
     <div class="card">
       <div class="card-head"><h3>🍳 Producción de hoy (${todayRecs.length})</h3>
         <button class="btn btn-sm btn-green" onclick="openElabModal()">+ Nueva</button>
@@ -1700,28 +1874,37 @@ function getSelectedAlergenos(){
     return btn&&btn.classList.contains('sel');
   });
 }
-function scanIngrediente() {
-  openScanModal(raw => {
-    const parsed = parseScan(raw);
-    const known = parsed.gtin ? lookupGTIN(parsed.gtin) : null;
-    const nombre = parsed.isInternal ? parsed.producto : (known ? known.nombre : null);
-    if (nombre) {
-      const prodEl = document.getElementById('el-prod');
-      if (prodEl) prodEl.value = nombre;
-    } else if (parsed.gtin) {
-      const n = prompt('Producto nuevo. Introduce el nombre:');
-      if (n) {
-        registerGTIN(parsed.gtin, {nombre:n, proveedor:''});
-        const prodEl = document.getElementById('el-prod');
-        if (prodEl) prodEl.value = n;
-      }
-    }
+function addElabIngRow(nombre='',lote=''){
+  const list=document.getElementById('el-ing-list');if(!list)return;
+  const row=document.createElement('div');
+  row.style.cssText='display:grid;grid-template-columns:1fr 1fr auto;gap:6px;margin-bottom:6px;align-items:center';
+  row.innerHTML=`<input class="fc" placeholder="Ingrediente / MP" value="${nombre}" data-ing-nombre style="font-size:12px;padding:7px 10px"><input class="fc" placeholder="Lote (opcional)" value="${lote}" data-ing-lote style="font-size:12px;padding:7px 10px"><button type="button" onclick="this.parentElement.remove()" style="background:#fee2e2;border:none;color:#dc2626;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:14px">✕</button>`;
+  list.appendChild(row);
+}
+function getElabIngRows(){
+  const list=document.getElementById('el-ing-list');if(!list)return[];
+  const rows=[];
+  list.querySelectorAll('[data-ing-nombre]').forEach(el=>{
+    const nombre=el.value.trim();
+    const loteEl=el.parentElement.querySelector('[data-ing-lote]');
+    const lote=loteEl?loteEl.value.trim():'';
+    if(nombre)rows.push({nombre,lote});
+  });
+  return rows;
+}
+function scanIngrediente(){
+  openScanModal(parsed=>{
+    const known=parsed.gtin?lookupGTIN(parsed.gtin):null;
+    const nombre=parsed.isInternal?parsed.producto:(known?known.nombre:null);
+    const lote=parsed.lot||'';
+    if(nombre){addElabIngRow(nombre,lote);}
+    else if(parsed.gtin){const n=prompt('Producto nuevo. Nombre:');if(n){registerGTIN(parsed.gtin,{nombre:n,proveedor:''});addElabIngRow(n,lote);}}
+    else{addElabIngRow('',lote);}
   });
 }
 
 function scanToFields(fieldMap) {
-  openScanModal(raw => {
-    const parsed = parseScan(raw);
+  openScanModal(parsed => {
     const known = parsed.gtin ? lookupGTIN(parsed.gtin) : null;
     const nombre = parsed.isInternal ? parsed.producto : (known ? known.nombre : null);
     if (nombre) {
@@ -1729,10 +1912,40 @@ function scanToFields(fieldMap) {
       if (fieldMap.lote && parsed.lot) { const el=document.getElementById(fieldMap.lote); if(el) el.value=parsed.lot; }
       if (fieldMap.dlc && parsed.expiry) { const el=document.getElementById(fieldMap.dlc); if(el) el.value=parsed.expiry; }
     } else {
-      const nombre2 = parsed.isInternal ? parsed.producto : prompt('Producto no reconocido. Introduce el nombre:');
-      if (nombre2 && fieldMap.prod) {
-        const el=document.getElementById(fieldMap.prod); if(el) el.value=nombre2;
-        if (parsed.gtin) registerGTIN(parsed.gtin, {nombre:nombre2, proveedor:''});
+      if(parsed.isInternal){
+        const n2=parsed.producto;
+        if(n2&&fieldMap.prod){const el=document.getElementById(fieldMap.prod);if(el)el.value=n2;}
+        if(fieldMap.lote&&parsed.lot){const el=document.getElementById(fieldMap.lote);if(el)el.value=parsed.lot;}
+        if(fieldMap.dlc&&parsed.expiry){const el=document.getElementById(fieldMap.dlc);if(el)el.value=parsed.expiry;}
+      } else {
+        const _gtin=parsed.gtin;
+        const _lot=parsed.lot||'';
+        const _expiry=parsed.expiry||'';
+        openModal(`<div class='modal-title'>🆕 Producto nuevo — primera vez</div>
+          <div class='alert-box alert-ok' style='font-size:11px;margin-bottom:10px'>
+            ✓ Código leído. Introduce el nombre <strong>una vez</strong> y la app lo recordará siempre.
+          </div>
+          ${_gtin?`<div style='font-size:11px;color:#888;margin-bottom:8px'>GTIN: <code>${_gtin}</code></div>`:''}
+          ${_lot?`<div style='font-size:12px;margin-bottom:4px'>Lote detectado: <strong>${_lot}</strong></div>`:''}
+          ${_expiry?`<div style='font-size:12px;margin-bottom:8px'>Caducidad detectada: <strong>${fmtExpiryDisplay(_expiry)}</strong></div>`:''}
+          <div class='fc-group'><label class='fc-label'>Nombre del producto</label>
+            <input class='fc' id='_nw-prod' placeholder='ej: Nata 35%' autofocus></div>
+          <div class='fc-group'><label class='fc-label'>Proveedor (opcional)</label>
+            <input class='fc' id='_nw-prov' placeholder='Nombre del proveedor...'></div>
+          <div style='margin-top:12px;display:flex;gap:8px'>
+            <button class='btn-primary' style='flex:1' onclick='(function(){
+              const nm=document.getElementById("_nw-prod").value.trim();
+              const pv=document.getElementById("_nw-prov").value.trim();
+              if(!nm){alert("Escribe el nombre");return;}
+              if(${JSON.stringify(_gtin||null)})registerGTIN(${JSON.stringify(_gtin||null)},{nombre:nm,proveedor:pv});
+              const fp=${JSON.stringify(fieldMap)};
+              if(fp.prod){const el=document.getElementById(fp.prod);if(el)el.value=nm;}
+              if(fp.lote&&${JSON.stringify(_lot)}){const el=document.getElementById(fp.lote);if(el)el.value=${JSON.stringify(_lot)};}
+              if(fp.dlc&&${JSON.stringify(_expiry)}){const el=document.getElementById(fp.dlc);if(el)el.value=${JSON.stringify(_expiry)};}
+              closeModal();
+            })()'>✓ Guardar y continuar</button>
+            <button class='btn-sec' onclick='closeModal()'>Cancelar</button>
+          </div>`);
       }
     }
   });
@@ -1745,7 +1958,10 @@ function openElabModal(){
   const lot=genLot();
   openModal(`<div class="modal-title">🍳 Nueva Elaboración</div>
     <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
-      <button onclick="scanIngrediente()" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras del ingrediente</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button onclick="scanToFields({prod:'el-prod',lote:'el-lot'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📷 Escanear<br><span style='font-size:10px;opacity:.8'>producto principal</span></button>
+        <button onclick="scanIngrediente()" style="background:#2980b9;color:#fff;border:none;padding:9px 8px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📷 Escanear<br><span style='font-size:10px;opacity:.8'>ingrediente</span></button>
+      </div>
     </div>
     <div class="fc-group"><label class="fc-label">Producto / Elaboración</label>
       <input class="fc" id="el-prod" list="el-prods-list" placeholder="Nombre del producto elaborado">
@@ -1786,7 +2002,15 @@ function openElabModal(){
       </div>
     </div>
     <div class="fc-group" style="margin-top:10px"><label class="fc-label">Observaciones</label>
-      <input class="fc" id="el-obs" placeholder="Notas, lote materia prima..."></div>
+      <input class="fc" id="el-obs" placeholder="Notas adicionales..."></div>
+    <div class="fc-group" style="margin-top:12px">
+      <label class="fc-label">Ingredientes / Materias primas <span style="font-size:10px;color:#888">(trazabilidad de lotes)</span></label>
+      <div id="el-ing-list" style="margin-bottom:6px"></div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+        <button type="button" onclick="addElabIngRow()" style="padding:8px 12px;border:1.5px dashed #1a4fa8;background:#f0f4ff;color:#1a4fa8;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">+ Añadir ingrediente</button>
+        <button type="button" onclick="scanIngrediente()" style="padding:8px 14px;background:#1a4fa8;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:700" title="Escanear">📷</button>
+      </div>
+    </div>
     <div class="modal-row">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-green" style="flex:1" onclick="saveElab()">✓ Registrar elaboración</button>
@@ -1810,7 +2034,8 @@ function saveElab(){
   const recs=ld(K.elab);
   const temp_el=parseFloat(document.getElementById('el-temp').value)||null;
   const alergenos=getSelectedAlergenos();
-  const rec={id:genId(),lote,producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,temp:temp_el,alergenos,estado:'en_stock',date:today(),ts:new Date().toISOString()};
+  const ingredientes=getElabIngRows();
+  const rec={id:genId(),lote,producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,temp:temp_el,alergenos,ingredientes,estado:'en_stock',date:today(),ts:new Date().toISOString()};
   recs.push(rec);sv(K.elab,recs);
   closeModal();renderElab();updateScoreChip();
   // Auto-offer label print
@@ -1829,6 +2054,7 @@ function printElabLabel(rid){
   .lb-row{font-size:11px;color:#333;margin-top:2mm}
   .lb-dlc{font-size:13px;font-weight:700;color:#c0392b;margin-top:3mm}
   .lb-dest{font-size:11px;font-weight:700;text-transform:uppercase;color:#2980b9}
+  .lb-alg{font-size:10px;color:#7d3c98;margin-top:2mm;border-top:0.5px solid #ddd;padding-top:2mm}
   </style>  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">${'<'+'/script>'}
 </head><body>
   <div class="label">
@@ -1839,6 +2065,7 @@ function printElabLabel(rid){
     <div class="lb-row">Cantidad: ${r.cantidad} ${r.unidad}</div>
     <div class="lb-dlc">Consumir antes de: ${r.dlc}</div>
     <div class="lb-dest">${r.destino==='congelador'?'❄ CONGELADOR':'🌡 NEVERA'}</div>
+    <div class="lb-alg">⚠ Alérgenos: ${(r.alergenos&&r.alergenos.length)?r.alergenos.join(', '):'No declarados'}</div>
     <div id="alb-qr-elab" style="margin-top:4px;text-align:center"></div>
   </div>
   <script>window.addEventListener('load',function(){window.print();setTimeout(()=>window.close(),800);if(window.QRCode){new QRCode(document.getElementById('alb-qr-elab'),{text:'ALB|'+encodeURIComponent(r.producto)+'|'+encodeURIComponent(r.lote)+'|'+encodeURIComponent(r.dlc)+'|'+encodeURIComponent(r.emp)+'|'+new Date().toISOString(),width:72,height:72,correctLevel:QRCode.CorrectLevel.M})}})${'<'+'/script>'}
@@ -1912,9 +2139,8 @@ function previewTrazFoto(evt){
   reader.readAsDataURL(file);
 }
 function scanToTraz(){
-  openScanModal(raw=>{
-    const parsed=parseScan(raw);
-    const q=parsed.lot||parsed.producto||raw;
+  openScanModal(parsed=>{
+    const q=parsed.lot||parsed.producto||parsed.raw||'';
     const el=document.getElementById('traz-search');
     if(el){el.value=q;renderTraz();}
   });
@@ -2071,7 +2297,7 @@ function renderTraz(){
       <div class="card-body">
         <div style="display:flex;gap:8px;margin-bottom:8px">
           <input class="fc" id="traz-search" placeholder="🔍 Buscar por lote o producto..." oninput="renderTraz()" style="flex:1">
-          <button onclick="scanToTraz()" style="background:#1c3a28;color:#fff;border:none;border-radius:12px;padding:0 14px;font-size:18px;cursor:pointer;flex-shrink:0" title="Escanear código de barras">📷</button>
+          <button onclick="scanToTraz()" style="background:#1a4fa8;color:#fff;border:none;border-radius:10px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap">📷 Escanear</button>
         </div>
       </div>
     </div>
@@ -2155,6 +2381,7 @@ function renderCongel(){
   document.getElementById('congel-body').innerHTML=`
     <div class="card">
       <div class="card-head"><h3>Registros de congelación</h3>
+        <button class="btn btn-sm btn-outline" onclick="openCongelModal()">+ Nuevo</button>
         <button class="btn btn-sm btn-green" onclick="openCongelModal()">+ Registro</button>
       </div>
       <div>${recs.slice(0,30).map(r=>`<div class="list-row">
@@ -2176,7 +2403,7 @@ function openCongelModal(){
   const emps=ld(K.emp);const elabs=ld(K.elab).filter(r=>r.destino==='congelador'&&r.estado!=='servido');
   openModal(`<div class="modal-title">🧊 Registro de Congelación</div>
     <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
-      <button onclick="scanToFields({prod:'cg-prod', lote:'cg-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+      <button onclick="scanToFields({prod:'cg-prod', lote:'cg-lote', dlc:'cg-dlc'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
     </div>
     <div class="fc-group"><label class="fc-label">Producto</label>
       <input class="fc" id="cg-prod" placeholder="Nombre del producto" list="cg-prod-list">
@@ -2197,8 +2424,12 @@ function openCongelModal(){
     <div class="fc-group" style="margin-top:10px"><label class="fc-label">Empleado</label>
       <select class="fc" id="cg-emp"><option value="">— Seleccionar —</option>${emps.map(e=>`<option>${e}</option>`).join('')}</select>
     </div>
-    <div class="fc-group" style="margin-top:8px"><label class="fc-label">Nº Lote (opcional)</label>
-      <input class="fc" id="cg-lote" placeholder="Lote de la elaboración"></div>
+    <div class="fc-row" style="margin-top:8px">
+      <div class="fc-group"><label class="fc-label">Nº Lote (opcional)</label>
+        <input class="fc" id="cg-lote" placeholder="Lote de la elaboración"></div>
+      <div class="fc-group"><label class="fc-label">Fecha caducidad</label>
+        <input class="fc" type="date" id="cg-dlc"></div>
+    </div>
     <div class="modal-row">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-green" style="flex:1" onclick="saveCongel()">✓ Guardar</button>
@@ -2214,6 +2445,7 @@ function saveCongel(){
     temp_entrada:parseFloat(document.getElementById('cg-tent').value)||null,
     temp_final:parseFloat(document.getElementById('cg-tfin').value)||null,
     emp,lote:document.getElementById('cg-lote').value,
+    caducidad:document.getElementById('cg-dlc')?document.getElementById('cg-dlc').value:'',
     date:today(),ts:new Date().toISOString()});
   sv(K.congel,recs);closeModal();renderCongel();
   const last=recs[recs.length-1];
@@ -2231,6 +2463,12 @@ function renderDescongel(){
   const recs=ld(K.descongel).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   const elabsCongelados=ld(K.elab).filter(r=>r.destino==='congelador'&&r.estado==='en_stock');
   document.getElementById('descongel-body').innerHTML=`
+    <div style="background:linear-gradient(135deg,#1a4fa8,#0d2d6e);border-radius:12px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:28px">📷</span>
+      <div style="flex:1"><div style="color:#fff;font-weight:800;font-size:14px">Escanear producto congelado</div>
+      <div style="color:rgba(255,255,255,.7);font-size:11px">Escanea el QR de la etiqueta para iniciar descongelación</div></div>
+      <button onclick="openScanModal(handleScanForDescongel)" style="background:#fff;color:#1a4fa8;border:none;padding:9px 14px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">📷 Escanear</button>
+    </div>
     ${elabsCongelados.length?`<div class="card">
       <div class="card-head"><h3>En congelador — disponibles (${elabsCongelados.length})</h3></div>
       <div>${elabsCongelados.map(r=>`<div class="list-row">
@@ -2348,6 +2586,12 @@ function renderRegen(){
   const recs=ld(K.regen).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   const available=ld(K.elab).filter(r=>r.estado==='en_stock'||r.estado==='en_descongel');
   document.getElementById('regen-body').innerHTML=`
+    <div style="background:linear-gradient(135deg,#c0392b,#7b241c);border-radius:12px;padding:14px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
+      <span style="font-size:28px">📷</span>
+      <div style="flex:1"><div style="color:#fff;font-weight:800;font-size:14px">Escanear producto a regenerar</div>
+      <div style="color:rgba(255,255,255,.7);font-size:11px">Escanea el QR de la etiqueta para iniciar regeneración</div></div>
+      <button onclick="openScanModal(handleScanForRegen)" style="background:#fff;color:#c0392b;border:none;padding:9px 14px;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">📷 Escanear</button>
+    </div>
     <div class="alert-box alert-warn" style="margin-bottom:0">⚠ La regeneración requiere alcanzar mínimo <strong>70°C en el centro del producto</strong></div>
     ${available.length?`<div class="card">
       <div class="card-head"><h3>Disponibles para regenerar (${available.length})</h3></div>
@@ -2636,6 +2880,10 @@ function renderBpm(){
   const recs=ld(K.bpm).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   const total=bpmTotalItems();
   document.getElementById('bpm-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <button class="btn" style="background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:16px 8px;border-radius:14px;font-size:14px;font-weight:800;border:none;cursor:pointer" onclick="openBpmModal('inicio')">☀️ BPM<br><span style="font-size:11px;font-weight:400">Inicio jornada</span></button>
+      <button class="btn" style="background:linear-gradient(135deg,#8e44ad,#6c3483);color:#fff;padding:16px 8px;border-radius:14px;font-size:14px;font-weight:800;border:none;cursor:pointer" onclick="openBpmModal('fin')">🌙 BPM<br><span style="font-size:11px;font-weight:400">Fin jornada</span></button>
+    </div>
     <div class="alert-box alert-ok" style="font-size:12px">📋 Auditoría BPM — ${BPM_CATS.length} categorías · ${total} puntos de control · Ref. F1 PA01</div>
     <div class="card" style="margin-top:10px">
       <div class="card-head"><h3>Auditorías BPM</h3>
@@ -2989,7 +3237,7 @@ const PREOP_CHECKS=[
 function renderPreop(){
   const recs=ld(K.preop).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   document.getElementById('preop-body').innerHTML=`
-    <div class="alert-box alert-ok" style="font-size:12px">📋 Inspección <strong>DIARIA</strong> antes del servicio. Ítems NOK requieren corrección documentada.</div>
+    <div class="alert-box alert-ok" style="font-size:12px">📋 Inspección <strong>SEMANAL</strong> antes del servicio. Ítems NOK requieren corrección documentada.</div>
     <div class="card" style="margin-top:10px">
       <div class="card-head"><h3>Últimas inspecciones</h3>
         <button class="btn btn-sm btn-green" onclick="openPreopModal()">+ Inspección</button>
@@ -3923,47 +4171,131 @@ function stopScanner() {
   _scannerActive = false;
 }
 
+// ── SCAN HANDLERS: Etiquetas, Descongel, Regen ─────────────────
+function handleScanForEtiqueta(parsed){
+  const lote=parsed.lot||'';
+  const known=parsed.gtin?lookupGTIN(parsed.gtin):null;
+  const nombre=parsed.isInternal?parsed.producto:(known?known.nombre:null);
+  let elab=null;
+  if(lote) elab=ld(K.elab).find(e=>e.lote===lote);
+  if(!elab&&nombre) elab=ld(K.elab).find(e=>e.producto&&e.producto.toLowerCase().includes(nombre.toLowerCase()));
+  if(elab){closeModal();printElabLabel(elab.id);}
+  else{
+    const recents=ld(K.elab).slice(0,20);
+    openModal(`<div class="modal-title">🏷 Seleccionar elaboración</div>
+      ${lote?`<div style="background:#f0fdf4;border-radius:8px;padding:10px;margin-bottom:10px;font-size:13px">Lote escaneado: <strong>${lote}</strong></div>`:''}
+      <div style="font-size:12px;color:#888;margin-bottom:8px">Selecciona la elaboración:</div>
+      ${recents.map(e=>`<div class="list-row" onclick="closeModal();printElabLabel('${e.id}')">
+        <div class="list-icon">🏷</div>
+        <div class="list-main"><div class="list-title">${e.producto}</div>
+        <div class="list-sub"><span class="lot-code">${e.lote}</span> · ${fmtDate(e.ts)}</div></div>
+      </div>`).join('')}
+      <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="closeModal()">Cancelar</button>`);
+  }
+}
+function handleScanForDescongel(parsed){
+  const lote=parsed.lot||'';
+  const known=parsed.gtin?lookupGTIN(parsed.gtin):null;
+  const nombre=parsed.isInternal?parsed.producto:(known?known.nombre:null);
+  const frozen=ld(K.elab).filter(r=>r.destino==='congelador'&&r.estado==='en_stock');
+  let match=null;
+  if(lote) match=frozen.find(e=>e.lote===lote);
+  if(!match&&nombre) match=frozen.find(e=>e.producto&&e.producto.toLowerCase().includes(nombre.toLowerCase()));
+  if(match){closeModal();openDescongelFor(match.id);}
+  else{
+    closeModal();openDescongelModal();
+    setTimeout(()=>{
+      if(nombre){const el=document.getElementById('dc2-prod');if(el)el.value=nombre;}
+      if(lote){const el=document.getElementById('dc2-lote');if(el)el.value=lote;}
+    },150);
+  }
+}
+function handleScanForRegen(parsed){
+  const lote=parsed.lot||'';
+  const known=parsed.gtin?lookupGTIN(parsed.gtin):null;
+  const nombre=parsed.isInternal?parsed.producto:(known?known.nombre:null);
+  const avail=ld(K.elab).filter(r=>r.estado==='en_stock'||r.estado==='en_descongel');
+  let match=null;
+  if(lote) match=avail.find(e=>e.lote===lote);
+  if(!match&&nombre) match=avail.find(e=>e.producto&&e.producto.toLowerCase().includes(nombre.toLowerCase()));
+  if(match){closeModal();openRegenFor(match.id);}
+  else{
+    closeModal();openRegenModal();
+    setTimeout(()=>{
+      if(nombre){const el=document.getElementById('rg2-prod');if(el)el.value=nombre;}
+      if(lote){const el=document.getElementById('rg2-lote');if(el)el.value=lote;}
+    },150);
+  }
+}
+
 function openScanModal(onResult) {
   stopScanner();
+  window._scanCallback = onResult;
   openModal(`
-    <div class="modal-title">📷 Escanear código de barras</div>
-    <div style="font-size:12px;color:#888;margin-bottom:10px">
-      Apunta la cámara al <strong>código largo</strong> (GS1-128) de la etiqueta de la caja
+    <div class="modal-title">📷 Lector de código</div>
+
+    <!-- ENTRADA MANUAL — siempre visible y prioritaria -->
+    <div style="background:#f0f4ff;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#1a4fa8;margin-bottom:8px">✏️ Introducir código manualmente</div>
+      <div style="display:flex;gap:8px">
+        <input class="fc" id="scan-manual-input" placeholder="Pega o escribe el código de barras..." 
+          style="flex:1;font-size:14px;font-family:monospace"
+          onkeydown="if(event.key==='Enter'){document.getElementById('scan-manual-ok').click()}">
+        <button id="scan-manual-ok" class="btn btn-primary" style="padding:0 18px;font-size:16px;font-weight:700"
+          onclick="(function(){
+            const v=document.getElementById('scan-manual-input').value.trim();
+            if(!v)return;
+            const p=parseScan(v);
+            stopScanner();closeModal();
+            if(window._scanCallback){window._scanCallback(p);window._scanCallback=null;}
+          })()">✓</button>
+      </div>
+      <div style="font-size:10px;color:#888;margin-top:5px">También puedes pulsar Enter tras escribir el código</div>
     </div>
-    <div id="scan-reader" style="width:100%;max-width:340px;margin:0 auto;border-radius:10px;overflow:hidden"></div>
-    <div id="scan-result" style="margin-top:12px;min-height:40px;text-align:center;color:#888;font-size:13px">
-      Buscando código...
+
+    <!-- CÁMARA — opcional, solo si hay acceso -->
+    <div style="font-size:12px;color:#888;margin-bottom:6px;text-align:center">— o escanea con la cámara —</div>
+    <div id="scan-reader" style="width:100%;max-width:340px;margin:0 auto;border-radius:10px;overflow:hidden;min-height:40px"></div>
+    <div id="scan-result" style="margin-top:8px;min-height:28px;text-align:center;color:#888;font-size:12px">
+      Iniciando cámara...
     </div>
-    <div style="margin-top:4px;font-size:11px;color:#bbb;text-align:center">
-      También funciona con QR y EAN-13
-    </div>
-    <button class="btn btn-outline btn-block" style="margin-top:12px" onclick="stopScanner();closeModal()">Cancelar</button>
+
+    <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="stopScanner();closeModal()">✕ Cancelar</button>
   `);
+
+  // Focus en el input manual para que sea inmediato
+  setTimeout(() => {
+    const inp = document.getElementById('scan-manual-input');
+    if (inp) inp.focus();
+  }, 100);
 
   setTimeout(() => {
     if (!window.Html5Qrcode) {
-      document.getElementById('scan-result').innerHTML =
-        '<span style="color:#e74c3c">⚠ Librería de escaneo no disponible. Comprueba la conexión a internet.</span>';
+      const el = document.getElementById('scan-result');
+      if (el) el.innerHTML = '<span style="color:#aaa;font-size:11px">Cámara no disponible (abre desde HTTPS para usar la cámara)</span>';
       return;
     }
     _scanner = new Html5Qrcode('scan-reader');
     _scannerActive = true;
     _scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 280, height: 120 } },
+      { fps: 10, qrbox: { width: 260, height: 100 } },
       (decodedText) => {
         if (!_scannerActive) return;
         _scannerActive = false;
         stopScanner();
         const parsed = parseScan(decodedText);
-        document.getElementById('scan-result').innerHTML =
-          '<span style="color:#27ae60;font-weight:700">✓ Código leído</span>';
-        setTimeout(() => { closeModal(); onResult(parsed); }, 400);
+        const el = document.getElementById('scan-result');
+        if (el) el.innerHTML = '<span style="color:#27ae60;font-weight:700">✓ ¡Código leído!</span>';
+        setTimeout(() => {
+          closeModal();
+          if (window._scanCallback) { window._scanCallback(parsed); window._scanCallback = null; }
+        }, 400);
       },
-      () => {} // ignore per-frame errors
-    ).catch(err => {
-      document.getElementById('scan-result').innerHTML =
-        `<span style="color:#e74c3c">⚠ No se puede acceder a la cámara.<br>Comprueba los permisos del navegador.</span>`;
+      () => {}
+    ).catch(() => {
+      const el = document.getElementById('scan-result');
+      if (el) el.innerHTML = '<span style="color:#aaa;font-size:11px">Cámara no accesible — usa la entrada manual de arriba</span>';
     });
   }, 300);
 }
@@ -3977,20 +4309,20 @@ function handleScanForRecep(parsed) {
   const known = parsed.gtin ? lookupGTIN(parsed.gtin) : null;
 
   if (known) {
-    // Product already known — apply directly
     applyScanToRecep(parsed, known.nombre, known.proveedor);
   } else {
-    // Ask for product name + proveedor
-    const provs = ld(K.provs).map(p=>p.name);
+    // Guardar parsed en global temporal — evita pasar JSON en onclick (rompe el HTML)
+    window._tmpRecepParsed = parsed;
+    const provs = getUnifiedProvs().map(p=>p.name);
     openModal(`
       <div class="modal-title">🆕 Producto nuevo — primera vez</div>
       <div class="alert-box alert-ok" style="font-size:11px;margin-bottom:12px">
         ✓ Código leído. La app no conoce este producto aún.
         Escribe el nombre <strong>una vez</strong> y lo recordará para siempre.
       </div>
-      ${parsed.gtin?`<div style="font-size:11px;color:#888;margin-bottom:10px">GTIN: <code>${parsed.gtin}</code></div>`:''}
-      ${parsed.lot?`<div style="font-size:12px;margin-bottom:6px">Lote detectado: <strong>${parsed.lot}</strong></div>`:''}
-      ${parsed.expiry?`<div style="font-size:12px;margin-bottom:6px">Caducidad detectada: <strong>${fmtExpiryDisplay(parsed.expiry)}</strong></div>`:''}
+      ${parsed.gtin?`<div style="font-size:11px;color:#888;margin-bottom:8px">GTIN: <code>${parsed.gtin}</code></div>`:''}
+      ${parsed.lot?`<div style="font-size:12px;margin-bottom:4px">🏷 Lote detectado: <strong>${parsed.lot}</strong></div>`:''}
+      ${parsed.expiry?`<div style="font-size:12px;margin-bottom:8px">📅 Caducidad detectada: <strong>${fmtExpiryDisplay(parsed.expiry)}</strong></div>`:''}
       <div class="fc-group"><label class="fc-label">Nombre del producto</label>
         <input class="fc" id="ns-prod" placeholder="ej: Pechuga de pollo 5kg" autofocus>
       </div>
@@ -4000,20 +4332,19 @@ function handleScanForRecep(parsed) {
       </div>
       <div class="modal-row">
         <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-green" style="flex:1" onclick="saveNewProductAndApply('${(parsed.gtin||'').replace(/'/g,'')}', ${JSON.stringify(JSON.stringify(parsed))})">
-          ✓ Guardar y continuar
-        </button>
+        <button class="btn btn-green" style="flex:1" onclick="saveNewProductAndApply()">✓ Guardar y continuar</button>
       </div>
     `);
   }
 }
 
-function saveNewProductAndApply(gtin, parsedJson) {
+function saveNewProductAndApply() {
   const nombre = document.getElementById('ns-prod').value.trim();
   if (!nombre) { alert('Escribe el nombre del producto'); return; }
   const proveedor = document.getElementById('ns-prov').value.trim();
-  if (gtin) registerGTIN(gtin, { nombre, proveedor });
-  const parsed = JSON.parse(parsedJson);
+  const parsed = window._tmpRecepParsed || {};
+  if (parsed.gtin) registerGTIN(parsed.gtin, { nombre, proveedor });
+  window._tmpRecepParsed = null;
   closeModal();
   setTimeout(() => applyScanToRecep(parsed, nombre, proveedor), 100);
 }
@@ -4034,10 +4365,78 @@ function applyScanToRecep(parsed, nombre, proveedor) {
 // ============================================================
 // ABATIDOR — Control abatimiento 60°C → ≤10°C en <2 horas
 // ============================================================
+// ── SCAN GENÉRICO CON MEMORIA DE PRODUCTO ────────────────────────────────────
+function openScanAndApplyTo(callback){
+  openScanModal(parsed=>{
+    const known=parsed.gtin?lookupGTIN(parsed.gtin):null;
+    if(known||parsed.isInternal){
+      const nombre=parsed.isInternal?parsed.producto:known.nombre;
+      callback(parsed,nombre,known?known.proveedor:'');
+    } else {
+      window._tmpScanParsed=parsed;
+      window._tmpScanCallback=callback;
+      const provs=getUnifiedProvs().map(p=>p.name);
+      openModal(`<div class="modal-title">🆕 Producto nuevo — primera vez</div>
+        <div class="alert-box alert-ok" style="font-size:11px;margin-bottom:10px">
+          ✓ Código leído. Escribe el nombre <strong>una vez</strong> y la app lo recordará siempre.
+        </div>
+        ${parsed.gtin?`<div style="font-size:11px;color:#888;margin-bottom:6px">GTIN: <code>${parsed.gtin}</code></div>`:''}
+        ${parsed.lot?`<div style="font-size:12px;margin-bottom:4px">🏷 Lote: <strong>${parsed.lot}</strong></div>`:''}
+        ${parsed.expiry?`<div style="font-size:12px;margin-bottom:8px">📅 Caducidad: <strong>${fmtExpiryDisplay(parsed.expiry)}</strong></div>`:''}
+        <div class="fc-group"><label class="fc-label">Nombre del producto</label>
+          <input class="fc" id="ns-gen-prod" placeholder="ej: Pechuga de pollo 5kg" autofocus></div>
+        <div class="fc-group"><label class="fc-label">Proveedor (opcional)</label>
+          <input class="fc" id="ns-gen-prov" list="ns-gen-prov-list" placeholder="Proveedor...">
+          <datalist id="ns-gen-prov-list">${provs.map(p=>`<option>${p}</option>`).join('')}</datalist></div>
+        <div class="modal-row">
+          <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+          <button class="btn btn-green" style="flex:1" onclick="saveNewProductGeneric()">✓ Guardar y continuar</button>
+        </div>`);
+    }
+  });
+}
+function saveNewProductGeneric(){
+  const nombre=document.getElementById('ns-gen-prod').value.trim();
+  if(!nombre){alert('Escribe el nombre del producto');return;}
+  const proveedor=document.getElementById('ns-gen-prov').value.trim();
+  const parsed=window._tmpScanParsed||{};
+  if(parsed.gtin)registerGTIN(parsed.gtin,{nombre,proveedor});
+  window._tmpScanParsed=null;
+  const cb=window._tmpScanCallback;window._tmpScanCallback=null;
+  closeModal();
+  setTimeout(()=>{if(cb)cb(parsed,nombre,proveedor);},150);
+}
+function openElabScan(){
+  openScanAndApplyTo((parsed,nombre)=>{
+    openElabModal();
+    setTimeout(()=>{
+      const ep=document.getElementById('el-prod');if(ep)ep.value=nombre;
+      if(parsed.lot){
+        const ll=document.getElementById('el-lot');const ld2=document.getElementById('el-lot-disp');
+        if(ll)ll.value=parsed.lot;if(ld2)ld2.textContent=parsed.lot;
+      }
+    },350);
+  });
+}
+function openAbatScan(){
+  openScanAndApplyTo((parsed,nombre)=>{
+    openAbatModal();
+    setTimeout(()=>{
+      const ep=document.getElementById('ab-prod');if(ep)ep.value=nombre;
+      const el=document.getElementById('ab-lote');if(el&&parsed.lot)el.value=parsed.lot;
+    },350);
+  });
+}
+
+
 function renderAbat(){
   const recs=ld(K.abat).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   const ok=recs.filter(r=>r.conforme),nok=recs.filter(r=>!r.conforme);
   document.getElementById('abat-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <button class="btn btn-primary" style="padding:14px;font-size:15px;font-weight:700" onclick="openAbatScan()">📷 Escanear producto</button>
+      <button class="btn btn-green" style="padding:14px;font-size:15px;font-weight:700" onclick="openAbatModal()">+ Nuevo registro</button>
+    </div>
     <div class="alert-box alert-ok" style="font-size:12px">❄ El abatidor debe bajar de <strong>≥60°C a ≤10°C en menos de 2 horas</strong> (norma APPCC). Registra T° inicial, T° final y tiempos.</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
       <div class="card"><div class="card-body" style="text-align:center">
@@ -4074,7 +4473,7 @@ function openAbatModal(){
   const elabs=ld(K.elab).filter(x=>x.estado==='elaborado'||x.estado==='en_nevera').slice(0,30);
   openModal(`<div class="modal-title">❄ Registro Abatidor</div>
     <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
-      <button onclick="scanToFields({prod:'ab-prod', lote:'ab-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+
     </div>
     <div class="fc-group"><label class="fc-label">Producto / Elaboración</label>
       <input class="fc" id="ab-prod" list="ab-prod-list" placeholder="Nombre del producto...">
@@ -4205,9 +4604,9 @@ function renderLava(){
 function openLavaModal(){
   const emps=ld(K.emp);
   openModal(`<div class="modal-title">🍽 Temperatura Lavavajillas</div>
-    <div class="alert-box alert-ok" style="font-size:11px;margin-bottom:12px">Mínimos: T° lavado ≥60°C · T° aclarado ≥82°C</div>
+    <div class="alert-box alert-ok" style="font-size:11px;margin-bottom:12px">Mínimos: T° lavado ≥65°C · T° aclarado ≥82°C</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="fc-group"><label class="fc-label">T° lavado (°C) ≥60</label>
+      <div class="fc-group"><label class="fc-label">T° lavado (°C) ≥65</label>
         <input class="fc" id="lv-tl" type="number" step="0.5" placeholder="ej: 65">
       </div>
       <div class="fc-group"><label class="fc-label">T° aclarado (°C) ≥82</label>
@@ -4234,8 +4633,8 @@ function saveLava(){
   const emp=document.getElementById('lv-emp').value;
   if(isNaN(tl)||isNaN(ta)){alert('Introduce las temperaturas');return}
   if(!emp){alert('Selecciona empleado');return}
-  const ok=tl>=60&&ta>=82;
-  if(!ok&&!confirm('⚠ Temperaturas fuera de rango (mín 60°C lavado / 82°C aclarado). ¿Guardar?'))return;
+  const ok=tl>=65&&ta>=82;
+  if(!ok&&!confirm('⚠ Temperaturas fuera de rango (mín 65°C lavado / 82°C aclarado). ¿Guardar?'))return;
   const rec={id:genId(),t_lavado:tl,t_aclarado:ta,
     programa:document.getElementById('lv-prog').value,
     emp,obs:document.getElementById('lv-obs').value,conforme:ok,
@@ -4724,6 +5123,13 @@ const LBL_PLANTILLAS=[
 function renderEtiquetas(){
   const elabs=ld(K.elab).slice(0,10);
   document.getElementById('etiquetas-body').innerHTML=`
+    <div style="background:linear-gradient(135deg,#1a4fa8,#2980b9);border-radius:14px;padding:16px;margin-bottom:12px;color:#fff">
+      <div style="font-size:17px;font-weight:800;margin-bottom:10px">🏷 Etiquetas de Producto</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button style="background:rgba(255,255,255,0.2);color:#fff;border:none;padding:12px 8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer" onclick="openScanModal(handleScanForEtiqueta)">📷 Escanear<br><span style='font-size:10px;opacity:.85'>código de producto</span></button>
+        <button style="background:rgba(255,255,255,0.2);color:#fff;border:none;padding:12px 8px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer" onclick="openElabModal()">✏️ Crear<br><span style='font-size:10px;opacity:.85'>nueva elaboración</span></button>
+      </div>
+    </div>
     <div class="card">
       <div class="card-head"><h3>🏷 Plantillas de etiqueta</h3></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px">
@@ -4735,6 +5141,7 @@ function renderEtiquetas(){
     <div class="card" style="margin-top:10px">
       <div class="card-head"><h3>Imprimir etiqueta de lote</h3></div>
       <div style="padding:10px;display:flex;flex-direction:column;gap:8px">
+        <div style="text-align:center;font-size:11px;color:#aaa;margin-bottom:4px">Selecciona la elaboración para imprimir</div>
         <select class="fc" id="lbl-elab-sel">
           <option value="">— Seleccionar elaboración —</option>
           ${elabs.map(e=>`<option value="${e.id}">${e.producto} · L:${e.lote} · ${fmtDate(e.ts)}</option>`).join('')}
@@ -4878,14 +5285,21 @@ function checkMonthlyCierre(){
 
 // ==========
 document.addEventListener('DOMContentLoaded',function(){
-  renderTileGrid();
-  updateScoreChip();
-  renderHomeAlerts();
-  initWorkerPicker();
-  setTimeout(checkMonthlyCierre,3000);
+  const _ld=document.createElement('div');
+  _ld.id='fb-loading';
+  _ld.style.cssText='position:fixed;inset:0;background:#1a4fa8;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;font-family:sans-serif';
+  _ld.innerHTML='<div style="font-size:40px;margin-bottom:14px">🔄</div><div style="font-size:17px;font-weight:700">Conectando...</div><div style="font-size:12px;opacity:.7;margin-top:6px">Sincronizando datos con servidor</div>';
+  document.body.appendChild(_ld);
+  initFirebaseSync(function(){
+    const el=document.getElementById('fb-loading');if(el)el.remove();
+    renderTileGrid();
+    updateScoreChip();
+    renderHomeAlerts();
+    initWorkerPicker();
+    setTimeout(checkMonthlyCierre,3000);
+  });
 });
 
 </script>
 </body>
 </html>
-       
