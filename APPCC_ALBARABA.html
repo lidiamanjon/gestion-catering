@@ -852,6 +852,7 @@ function showWorkerPicker(){
   buildWorkerPickerBtns();
   document.getElementById('worker-picker').style.display='flex';
 }
+
 function buildWorkerPickerBtns(){
   const emps=ld(K.emp);
   const btns=document.getElementById('worker-picker-btns');
@@ -1435,62 +1436,130 @@ function openRecepModal(prefill){
 }
 function renderRecep(){
   recepStep=0;recepProv=null;
-  const provs=getUnifiedProvs();const recs=ld(K.recep);
-  document.getElementById('recep-body').innerHTML=`
-    <!-- SCAN: ACCIÓN PRINCIPAL -->
-    <div class="card" style="border:2px solid #1c3a28">
-      <div class="card-body" style="padding:16px">
-        <div style="font-size:12px;font-weight:700;color:#1c3a28;margin-bottom:8px;letter-spacing:.5px">ESCANEAR CÓDIGO DE BARRAS</div>
-        <button onclick="scanForRecep()" style="width:100%;background:#1c3a28;color:#fff;border:none;border-radius:14px;padding:16px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
-          ${SVG_ICONS.share.replace(/width="\d+"/,'width="22"').replace(/height="\d+"/,'height="22"').replace(/stroke="#1c3a28"/,'stroke="#fff"')}
-          Escanear caja / producto
-        </button>
-        <div style="font-size:11px;color:#aaa;text-align:center;margin-top:6px">GS1-128 · EAN-13 · QR · lote · caducidad</div>
+  const provs=getUnifiedProvs();
+  const recs=ld(K.recep)||[];
+  const el=document.getElementById('recep-body');
+  if(!el)return;
+  el.innerHTML=`
+    <!-- SCAN PRINCIPAL -->
+    <div style="padding:12px 12px 0">
+      <button onclick="scanForRecep()" style="width:100%;background:linear-gradient(135deg,#1c3a28,#2d5a3d);color:#fff;border:none;border-radius:16px;padding:18px;font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:12px;letter-spacing:.3px;box-shadow:0 4px 12px rgba(28,58,40,.3)">
+        <span style="font-size:24px">📷</span> Escanear caja / etiqueta
+        <span style="font-size:11px;opacity:.8;font-weight:400;margin-left:4px">GS1-128 · EAN · QR</span>
+      </button>
+      <button onclick="abrirFotoLoteBolsa('recep')" style="width:100%;background:#f39c12;color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+        📸 Fotografiar número de lote
+      </button>
+    </div>
+
+    <!-- ENTRADA MANUAL -->
+    <div class="card" style="margin:12px 12px 0">
+      <div class="card-head"><h3>✏️ Entrada manual</h3>
+        <button onclick="showRecepEntry('manual')" class="btn btn-green btn-sm">+ Registrar</button>
       </div>
     </div>
-    <!-- SELECTOR MANUAL -->
-    <div class="card">
-      <div class="card-body">
-        <div style="font-size:11px;font-weight:700;color:#888;margin-bottom:8px;letter-spacing:.5px">O SELECCIONAR PROVEEDOR MANUALMENTE</div>
+
+    <!-- SELECTOR PROVEEDOR -->
+    <div class="card" style="margin:8px 12px 0">
+      <div class="card-body" style="padding:12px 14px">
+        <div style="font-size:11px;font-weight:700;color:#888;margin-bottom:8px;letter-spacing:.5px;text-transform:uppercase">Seleccionar proveedor</div>
         <input class="fc" id="prov-srch" placeholder="🔍 Buscar proveedor..." oninput="filterProvs(this.value)" style="margin-bottom:10px">
         <div id="prov-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
-          ${provs.map(p=>`<button class="dest-btn" onclick="selectProv('${p.id}','${p.name.replace(/'/g,"\\'")}')">
-            <div style="font-size:11px;font-weight:700">${p.name}</div>
+          ${(provs||[]).map(p=>`<button class="dest-btn" onclick="selectProv('${(p.id||'').replace(/'/g,"\\'")}','${(p.name||'').replace(/'/g,"\\'")}')">
+            <div style="font-size:11px;font-weight:700">${p.name||'—'}</div>
           </button>`).join('')}
         </div>
-        <button class="btn btn-outline btn-sm" style="margin-top:10px;width:100%" onclick="openAlbaranUpload()">📄 Subir albarán</button>
       </div>
     </div>
-    <div class="card">
-      <div class="card-head"><h3>📚 Productos aprendidos por escaneo</h3>
-        <button class="btn btn-sm btn-outline" onclick="toggleGtinDB(this)">Ver</button>
+
+    <!-- HISTORIAL RECIENTE -->
+    <div class="card" style="margin:8px 12px 12px">
+      <div class="card-head"><h3>📚 Últimas recepciones</h3></div>
+      <div>${recs.slice(-15).reverse().map(r=>`
+        <div class="list-row" style="border-bottom:1px solid #f5f5f5">
+          <div class="list-icon">📦</div>
+          <div class="list-main">
+            <div class="list-title">${r.producto||'—'}</div>
+            <div class="list-sub">${r.proveedor||'—'} · ${r.cantidad||''}${r.unidad||''} · ${fmtDate(r.ts||r.date)}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            ${r.lote?`<div style="font-family:monospace;font-size:10px;background:#e8f5e9;padding:2px 6px;border-radius:4px;color:#2d6a4f">${r.lote}</div>`:''}
+            ${r.temp!==undefined&&r.temp!==''?`<div style="font-size:11px;color:${parseFloat(r.temp)>7?'#e74c3c':'#27ae60'};font-weight:700;margin-top:2px">${r.temp}°C</div>`:''}
+          </div>
+        </div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center;font-size:13px">Sin recepciones hoy</div>'}
       </div>
-      <div id="gtin-db-panel" style="display:none;padding:10px">
-        ${(()=>{const db=getGtinDB();const keys=Object.keys(db);
-          if(!keys.length)return'<div style="color:#aaa;font-size:12px;padding:8px">Aún no has escaneado ningún producto nuevo.</div>';
-          return keys.map(k=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #f0f0f0">
-            <div><div style="font-size:13px;font-weight:600">${db[k].nombre}</div>
-            <div style="font-size:10px;color:#aaa">GTIN: ${k} · ${db[k].proveedor||'—'}</div></div>
-            <button onclick="deleteGTIN('${k}')" style="background:none;border:none;color:#e74c3c;cursor:pointer;font-size:16px">✕</button>
-          </div>`).join('');
-        })()}
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-head"><h3>Últimas recepciones</h3></div>
-      <div>${recs.slice(-10).reverse().map(r=>`<div class="list-row">
-        <div class="list-icon">📦</div>
-        <div class="list-main">
-          <div class="list-title">${r.producto}</div>
-          <div class="list-sub">${r.proveedor} · ${fmtDate(r.ts)}</div>
-        </div>
-        <div class="list-right">
-          ${r.lote?`<div class="lot-code">${r.lote}</div>`:''}
-          <div style="font-size:11px;color:#aaa;margin-top:3px">${r.temp!==undefined?r.temp+'°C':''}</div>
-        </div>
-      </div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin registros</div>'}</div>
     </div>`;
 }
+
+function showRecepEntry(cat){
+  const emps=ld(K.emp)||[];
+  const provs=getUnifiedProvs()||[];
+  const gestorProds=(()=>{try{const g=localStorage.getItem('g_productos');return g?JSON.parse(g):[];}catch(e){return[];}})();
+  const prodList=[...new Set([...(ld(K.recep)||[]).map(r=>r.producto).filter(Boolean),...gestorProds.map(p=>p.nombre).filter(Boolean)])].sort();
+  openModal(`<div class="modal-title">📦 Recepción de Mercancías</div>
+    <div class="form-row"><label class="form-label">Proveedor</label>
+      <select class="fc" id="rc-prov">
+        <option value="">— Seleccionar —</option>
+        ${provs.map(p=>`<option value="${(p.name||'').replace(/"/g,'&quot;')}">${p.name}</option>`).join('')}
+      </select></div>
+    <div class="form-row"><label class="form-label">Producto *</label>
+      <input class="fc" id="rc-prod" placeholder="Nombre del producto" list="rc-prod-dl">
+      <datalist id="rc-prod-dl">${prodList.map(p=>`<option value="${p}">`).join('')}</datalist></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-row"><label class="form-label">Cantidad</label>
+        <div style="display:flex;gap:4px">
+          <input class="fc" id="rc-cant" type="number" step="0.1" placeholder="Nº" style="flex:1">
+          <select class="fc" id="rc-unit" style="width:68px">
+            <option>kg</option><option>g</option><option>u</option><option>l</option><option>cj</option>
+          </select>
+        </div></div>
+      <div class="form-row"><label class="form-label">Temperatura (°C)</label>
+        <input class="fc" id="rc-temp" type="number" step="0.1" placeholder="°C">
+        <div style="font-size:10px;color:#888;margin-top:2px">Límite: &lt;7°C refrigerado</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-row"><label class="form-label">Nº de lote</label>
+        <div style="display:flex;gap:4px">
+          <input class="fc" id="rc-lote" placeholder="Lote" style="flex:1;font-family:monospace">
+          <button onclick="abrirFotoLoteBolsa('recep')" style="background:#f39c12;color:#fff;border:none;border-radius:8px;padding:0 10px;font-size:16px;cursor:pointer">📸</button>
+        </div></div>
+      <div class="form-row"><label class="form-label">Caducidad</label>
+        <input class="fc" id="rc-cad" type="date"></div>
+    </div>
+    <div class="form-row"><label class="form-label">Trabajador *</label>
+      <select class="fc" id="rc-emp">
+        <option value="">— Seleccionar —</option>
+        ${emps.map(e=>`<option>${e}</option>`).join('')}
+      </select></div>
+    <div class="form-row"><label class="form-label">Observaciones / incidencias</label>
+      <textarea class="fc" id="rc-obs" rows="2" placeholder="Estado del producto, temperatura en origen..."></textarea></div>
+    <div id="rc-temp-warn" style="display:none;background:#fff3e0;border-radius:8px;padding:8px 12px;font-size:12px;color:#e67e22;margin-bottom:8px">
+      ⚠ Temperatura fuera de rango — se registrará no conformidad
+    </div>
+    <div class="modal-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveRecep('manual')">✓ Guardar</button>
+    </div>`);
+  // Auto-check temp on input
+  setTimeout(()=>{
+    const t=document.getElementById('rc-temp');
+    if(t)t.addEventListener('input',()=>{
+      const v=parseFloat(t.value);
+      const w=document.getElementById('rc-temp-warn');
+      if(w)w.style.display=(!isNaN(v)&&v>7)?'block':'none';
+    });
+    // Restore scan data if any
+    if(recepAlbaranData){
+      ['rc-prod','rc-lote','rc-cad','rc-prov','rc-cant'].forEach(id=>{
+        const el=document.getElementById(id);
+        const key=id.replace('rc-','');
+        if(el&&recepAlbaranData[key])el.value=recepAlbaranData[key];
+      });
+    }
+  },100);
+}
+
 function filterProvs(q){
   const provs=getUnifiedProvs().filter(p=>!q||p.name.toLowerCase().includes(q.toLowerCase()));
   document.getElementById('prov-grid').innerHTML=provs.map(p=>`<button class="dest-btn" onclick="selectProv('${p.id}','${p.name.replace(/'/g,"\\'")}')">
@@ -1602,33 +1671,38 @@ function recepTabSwitch(el,tabId){
   });
 }
 function saveRecep(cat){
-  const prod=document.getElementById('re-prod').value;if(!prod){alert('Introduce el nombre del producto');return}
-  const disp=document.getElementById('re-np-disp');
-  const tempStr=disp._val||disp.textContent;
-  const temp=parseFloat(tempStr);
-  const emp=document.getElementById('re-emp').value;
-  const turno=document.getElementById('re-turno').value;
-  const lote=document.getElementById('re-lote').value;
-  const cad=document.getElementById('re-cad').value;
-  const obs=document.getElementById('re-obs')?document.getElementById('re-obs').value:'';
-  const conforme=document.getElementById('re-conforme')?document.getElementById('re-conforme').checked:true;
-  const recs=ld(K.recep);
-  const rec={id:genId(),proveedor:recepProv.name,proveedor_id:recepProv.id,producto:prod,categoria:cat,
-    temp:isNaN(temp)?null:temp,emp,turno,lote,caducidad:cad,obs,conforme,date:today(),ts:new Date().toISOString()};
+  const prod=(document.getElementById('rc-prod')||{}).value||'';
+  if(!prod){alert('Introduce el nombre del producto');return;}
+  const emp=(document.getElementById('rc-emp')||{}).value||'';
+  if(!emp){alert('Selecciona el trabajador');return;}
+  const temp=document.getElementById('rc-temp')?.value||'';
+  const lote=document.getElementById('rc-lote')?.value||'';
+  const cad=document.getElementById('rc-cad')?.value||'';
+  const obs=document.getElementById('rc-obs')?.value||'';
+  const prov=(document.getElementById('rc-prov')||{}).value||recepProv?.name||'';
+  const cant=document.getElementById('rc-cant')?.value||'';
+  const unit=document.getElementById('rc-unit')?.value||'kg';
+  const tempVal=parseFloat(temp);
+  const recs=ld(K.recep)||[];
+  const rec={id:genId(),ts:new Date().toISOString(),date:today(),
+    proveedor:prov,producto:prod,cantidad:cant,unidad:unit,
+    temp:temp!==''?tempVal:undefined,lote,caducidad:cad,emp,obs,
+    conforme:isNaN(tempVal)||tempVal<=7
+  };
   recs.push(rec);sv(K.recep,recs);
+  // No conformidad si temp > 7°C
+  if(!isNaN(tempVal)&&tempVal>7){
+    const ncs=ld(K.noconf)||[];
+    ncs.push({id:genId(),ts:rec.ts,tipo:'Recepción',descripcion:'Temperatura '+tempVal+'°C en recepción de '+prod+' (lote '+(lote||'—')+') — Límite 7°C',estado:'Abierta',emp});
+    sv(K.noconf,ncs);
+    alert('⚠ Temperatura fuera de rango registrada como no conformidad');
+  }
   recepAlbaranData=null;
-  updateScoreChip();renderRecep();
-  // Auto etiqueta recepción
-  autoLabel({tipo:'RECEPCIÓN MERCANCÍA',producto:rec.producto,lote:rec.lote,
-    emp:rec.emp,fecha:fmtDate(rec.ts),
-    linea2:'Proveedor: '+rec.proveedor+(rec.temp!=null?' · T°: '+rec.temp+'°C':''),
-    linea3:'Categoría: '+cat+(rec.caducidad?' · Cad: '+rec.caducidad:''),
-    dlc:rec.caducidad,color:'#2980b9'});
+  updateScoreChip();
+  closeModal();
+  renderRecep();
 }
 
-// ============================================================
-// ALBARÁN UPLOAD + PDF TEXT EXTRACTION
-// ============================================================
 function openAlbaranUpload(){
   openModal(`<div class="modal-title">📄 Subir Albarán del Repartidor</div>
     <p style="font-size:13px;color:#888;margin-bottom:14px">Sube el PDF o foto del albarán. Extraeremos automáticamente el número de lote.</p>
