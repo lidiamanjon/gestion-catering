@@ -210,20 +210,6 @@ input,select,textarea{font-family:inherit;font-size:15px}
 </head>
 <body>
 
-<!-- WORKER PICKER OVERLAY -->
-<div id="worker-picker" style="position:fixed;inset:0;background:linear-gradient(160deg,#1a4fa8 0%,#0d2d6e 100%);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:0">
-  <div style="font-size:30px;font-weight:800;color:#fff;margin-bottom:8px">👋 ¿Quién eres?</div>
-  <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:32px;text-align:center">ALBARABA SL · APPCC<br>Selecciona tu nombre para continuar</div>
-  <div id="worker-picker-btns" style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px"></div>
-  <div id="worker-picker-empty" style="display:none;margin-top:8px;background:rgba(255,255,255,.1);border-radius:12px;padding:16px;text-align:center;max-width:340px;width:100%">
-    <div style="font-size:13px;color:rgba(255,255,255,.8);margin-bottom:12px">No hay trabajadores configurados aún.<br>Entra como administrador para añadirlos.</div>
-    <button onclick="setActiveWorker('Admin')" style="background:#fff;border:none;color:#1a4fa8;padding:14px 28px;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;width:100%">🔑 Entrar como Admin</button>
-  </div>
-  <div style="margin-top:24px;width:100%;max-width:340px">
-    <button onclick="setActiveWorker('Admin')" style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.3);color:#fff;padding:14px 20px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;width:100%;letter-spacing:.3px">➜ Entrar directamente</button>
-  </div>
-  <div style="margin-top:12px;font-size:11px;color:rgba(255,255,255,.4);text-align:center">Añade trabajadores en ⚙ Configuración → Empleados</div>
-</div>
 
 <div id="home" class="screen home-screen">
   <div class="app-header">
@@ -232,7 +218,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
       <span id="header-worker-sub" class="header-sub">Sistema APPCC · Catering</span>
     </div>
     <div class="header-right">
-      <button id="header-change-worker" onclick="showWorkerPicker()" style="display:none;background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">cambiar 👤</button>
+      <button id="header-change-worker" onclick="showWorkerPicker()" style="display:inline-block;background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">cambiar 👤</button>
       <div id="scoreChip" class="score-chip" onclick="showMod('inf')">—</div>
       <button class="icon-btn" onclick="showMod('cfg')">⚙️</button>
     </div>
@@ -613,6 +599,60 @@ if(!localStorage.getItem('a_v7')){
 // ============================================================
 // NAVIGATION
 // ============================================================
+
+// ── PIN ADMINISTRADOR ────────────────────────────────────────────────────
+const ADMIN_PIN='2343';
+const ADMIN_MODS=['traz','inf','docs','cfg','noconf','formacion','contras','plagas'];
+let _pendingMod=null;
+let _pinAdminUnlocked=false; // se mantiene desbloqueado mientras la sesión está abierta
+
+function _checkAdminPin(mod){
+  if(_pinAdminUnlocked){_openModDirect(mod);return;}
+  _pendingMod=mod;
+  let _pin='';
+  openModal(`<div class="modal-title">🔒 Acceso administrador</div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:16px" id="pin-dots">
+        ${[0,1,2,3].map(i=>`<div id="pd${i}" style="width:20px;height:20px;border-radius:50%;border:2px solid #1a4fa8;background:#fff;transition:background .15s"></div>`).join('')}
+      </div>
+      <div id="pin-err" style="color:#e74c3c;font-size:12px;min-height:16px"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto 16px">
+      ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(n=>`<button onclick="_pk('${n}')" style="padding:16px;font-size:20px;font-weight:700;background:${n===''?'transparent':'#f5f7fa'};border:${n===''?'none':'2px solid #e0e0e0'};border-radius:10px;cursor:pointer;color:#1a4fa8">${n}</button>`).join('')}
+    </div>
+    <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button></div>`);
+  window._curPin='';
+}
+function _pk(k){
+  let pin=window._curPin||'';
+  if(k==='⌫') pin=pin.slice(0,-1);
+  else if(k!==''&&pin.length<4) pin+=String(k);
+  window._curPin=pin;
+  for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.style.background=i<pin.length?'#1a4fa8':'#fff';}
+  if(pin.length===4){
+    if(pin===ADMIN_PIN){
+      _pinAdminUnlocked=true;
+      closeModal();
+      const m=_pendingMod;_pendingMod=null;
+      _openModDirect(m);
+    } else {
+      window._curPin='';
+      for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.style.background='#fff';}
+      const e=document.getElementById('pin-err');if(e){e.textContent='PIN incorrecto';setTimeout(()=>{e.textContent='';},1500);}
+    }
+  }
+}
+function _openModDirect(id){
+  const el=document.getElementById('mod-'+id);if(!el)return;
+  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.transform='';});
+  document.getElementById('home').style.transform='translateX(-30px)';
+  el.style.transform='translateX(0)';
+  currentMod=id;
+  history.pushState({appcc:'mod',mod:id},'');
+  renderMod(id);
+}
+// ── FIN PIN ───────────────────────────────────────────────────────────────
+
 let currentMod=null;
 function showHome(){
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.transform=''});
@@ -644,14 +684,8 @@ function renderHomeAlerts(){
     </div>`).join('')}</div>`;
 }
 function showMod(id){
-  const el=document.getElementById('mod-'+id);
-  if(!el)return;
-  document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.transform=''});
-  document.getElementById('home').style.transform='translateX(-30px)';
-  el.style.transform='translateX(0)';
-  currentMod=id;
-  history.pushState({appcc:'mod',mod:id},'');
-  renderMod(id);
+  if(ADMIN_MODS.includes(id)&&!_pinAdminUnlocked){_checkAdminPin(id);return;}
+  _openModDirect(id);
 }
 function renderMod(id){
   const fn={
@@ -790,8 +824,10 @@ function renderTileGrid(){
       const cnt=getPendingCount(t.mod);
       const iconEl=t.svg?`<div class="tile-icon">${t.svg}</div>`:`<div class="tile-icon">${t.icon}</div>`;
       const subEl=t.sublabel?`<div class="tile-sublabel">${t.sublabel}</div>`:'';
-      html+=`<div class="tile" onclick="showMod('${t.mod}')">
+      const _adm=ADMIN_MODS.includes(t.mod)&&!_pinAdminUnlocked;
+      html+=`<div class="tile" onclick="showMod('${t.mod}')" style="${_adm?'opacity:.85':''}">
       ${cnt?`<div class="tile-badge">${cnt}</div>`:''}
+      ${_adm?'<div style="position:absolute;top:5px;right:5px;font-size:13px">🔒</div>':''}
       ${iconEl}
       <div class="tile-label">${t.label}</div>
       ${subEl}
@@ -846,11 +882,20 @@ function getActiveWorker(){return localStorage.getItem(K.wActive)||''}
 function setActiveWorker(name){
   localStorage.setItem(K.wActive,name);
   updateWorkerHeader();
-  document.getElementById('worker-picker').style.display='none';
 }
 function showWorkerPicker(){
-  buildWorkerPickerBtns();
-  document.getElementById('worker-picker').style.display='flex';
+  const emps=ld(K.emp)||[];
+  const current=getActiveWorker();
+  openModal(`<div class="modal-title">👤 Seleccionar usuario</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      ${emps.map(e=>`<button onclick="setActiveWorker('${e.replace(/'/g,"\'")}');closeModal()" 
+        style="background:${e===current?'#1a4fa8':'#f5f7fa'};color:${e===current?'#fff':'#222'};border:2px solid ${e===current?'#1a4fa8':'#e0e0e0'};border-radius:12px;padding:16px 20px;font-size:16px;font-weight:700;cursor:pointer;text-align:left">
+        ${e===current?'✓ ':''} ${e}
+      </button>`).join('')}
+      ${emps.length===0?'<div style="color:#aaa;text-align:center;padding:16px">Sin usuarios configurados.<br><small>Añádelos en ⚙ Configuración → Empleados</small></div>':''}
+    </div>
+    <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button></div>
+  `);
 }
 
 function buildWorkerPickerBtns(){
@@ -873,7 +918,7 @@ function updateWorkerHeader(){
   const sub=document.getElementById('header-worker-sub');
   const btn=document.getElementById('header-change-worker');
   if(sub)sub.textContent='Sistema APPCC · Catering';
-  if(btn){btn.style.display=w?'inline-block':'none';btn.textContent=w?'👤 '+w:'cambiar 👤';}
+  if(btn){btn.style.display='inline-block';btn.textContent=w?'👤 '+w:'👤 Usuario';}
 }
 function initWorkerPicker(){
   // Validar que el worker guardado sigue en la lista
