@@ -2900,7 +2900,8 @@ function renderSelectedList(){
 function calcularPedido(){
   const keys=Object.keys(pedidoSeleccionadas);
   if(!keys.length){alert('Selecciona al menos una elaboración');return}
-  // Calculate totals by product
+
+  // ── 1. Calcular necesidades totales por producto ────────────────────────
   const totales={};
   keys.forEach(id=>{
     const e=DB.elaboraciones.find(x=>x.id===id);if(!e||!e.ingredientes)return;
@@ -2908,40 +2909,94 @@ function calcularPedido(){
     e.ingredientes.forEach(ing=>{
       if(!ing.producto_id)return;
       const prod=DB.productos.find(x=>x.id===ing.producto_id);
-      // If product has rendimiento, convert: units_needed = (raciones_needed / rendimiento_per_unit)
       let cantidadNecesaria=ing.cantidad*factor;
       if(prod&&prod.rendimiento>0){cantidadNecesaria=Math.ceil((ing.cantidad*factor)/prod.rendimiento);}
-      if(!totales[ing.producto_id])totales[ing.producto_id]={cantidad:0,unidad:ing.unidad,elaboraciones:[]};
-      totales[ing.producto_id].cantidad+=cantidadNecesaria;
+      if(!totales[ing.producto_id])totales[ing.producto_id]={necesario:0,unidad:ing.unidad,elaboraciones:[]};
+      totales[ing.producto_id].necesario+=cantidadNecesaria;
       totales[ing.producto_id].elaboraciones.push(e.nombre);
     });
   });
-  // Group by supplier
+
+  // ── 2. Descontar stock actual ────────────────────────────────────────────
+  const cubiertos=[];   // productos que el stock cubre del todo
+  const parciales=[];   // productos que el stock cubre parcialmente
+  Object.entries(totales).forEach(([prodId,data])=>{
+    const prod=DB.productos.find(x=>x.id===prodId);
+    const stockActual=parseFloat(prod?.stock_actual)||0;
+    const necesario=Math.ceil(data.necesario*100)/100;
+    const apedir=Math.max(0, Math.ceil((data.necesario-stockActual)*100)/100);
+    data.stock=stockActual;
+    data.necesario=necesario;
+    data.apedir=apedir;
+    if(apedir===0) cubiertos.push({...data,producto:prod?.nombre||'—',prodId});
+    else if(stockActual>0) parciales.push({...data,producto:prod?.nombre||'—',prodId});
+  });
+
+  // ── 3. Agrupar lo que hay que pedir por proveedor ───────────────────────
   const byProv={};
   Object.entries(totales).forEach(([prodId,data])=>{
+    if(data.apedir<=0)return;
     const prod=DB.productos.find(x=>x.id===prodId);if(!prod)return;
     const provId=prod.proveedor_id||'__none__';
     if(!byProv[provId])byProv[provId]=[];
     byProv[provId].push({...data,producto:prod.nombre,prodId});
   });
-  // Render
+
+  // ── 4. Renderizar ────────────────────────────────────────────────────────
   let html='';
-  if(Object.keys(byProv).length===0){
-    html='<div class="notice warn">⚠️ Las elaboraciones seleccionadas no tienen ingredientes asignados. Ve a <strong>Elaboraciones</strong> y añade los ingredientes primero.</div>';
+
+  // Aviso stock cubre todo
+  if(cubiertos.length){
+    html+=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:6px">✅ Cubierto con stock — no hace falta pedir</div>
+      ${cubiertos.map(it=>`<div style="font-size:12px;color:#166534;padding:2px 0">
+        · ${esc(it.producto)}: tienes <strong>${it.stock} ${it.unidad||''}</strong>, necesitas ${it.necesario} ${it.unidad||''}
+      </div>`).join('')}
+    </div>`;
+  }
+
+  if(Object.keys(byProv).length===0 && cubiertos.length){
+    html+=`<div style="background:#e8f4fd;border-radius:10px;padding:14px;text-align:center;font-size:14px;font-weight:700;color:#1a4fa8">
+      🎉 El stock actual cubre todas las elaboraciones seleccionadas. ¡No necesitas pedir nada!
+    </div>`;
+  } else if(Object.keys(byProv).length===0){
+    html+='<div class="notice warn">⚠️ Las elaboraciones seleccionadas no tienen ingredientes asignados. Ve a <strong>Elaboraciones</strong> y añade los ingredientes primero.</div>';
   } else {
+    html+=`<div style="font-size:13px;font-weight:700;color:#1a4fa8;margin-bottom:10px">📦 Productos a pedir</div>`;
     Object.entries(byProv).forEach(([provId,items])=>{
       const prov=DB.proveedores.find(x=>x.id===provId);
-      html+=`<div style="margin-bottom:16px"><div style="font-weight:600;font-size:13px;margin-bottom:8px;color:var(--primary)">🏭 ${prov?esc(prov.nombre):'Sin proveedor asignado'}</div>`;
-      html+=`<table style="width:100%"><thead><tr><th>Producto</th><th>Cantidad</th><th>Unidad</th></tr></thead><tbody>`;
+      html+=`<div style="margin-bottom:16px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:var(--primary)">
+          🏭 ${prov?esc(prov.nombre):'Sin proveedor asignado'}
+        </div>
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="font-size:11px;color:#888">
+            <th style="text-align:left;padding:4px 6px">Producto</th>
+            <th style="text-align:right;padding:4px 6px">Necesario</th>
+            <th style="text-align:right;padding:4px 6px;color:#27ae60">En stock</th>
+            <th style="text-align:right;padding:4px 6px;color:#e74c3c">A pedir</th>
+            <th style="text-align:left;padding:4px 6px">Ud.</th>
+          </tr></thead><tbody>`;
       items.forEach(it=>{
-        const qty=Math.ceil(it.cantidad*100)/100;
-        html+=`<tr><td>${esc(it.producto)}</td><td><strong>${qty}</strong></td><td>${esc(it.unidad||'')}</td></tr>`;
+        const parcial=it.stock>0;
+        html+=`<tr style="border-top:1px solid #f0f0f0;${parcial?'background:#fffbf0':''}">
+          <td style="padding:6px;font-size:13px">${esc(it.producto)}${parcial?` <span style="font-size:10px;color:#f39c12">▲ stock parcial</span>`:''}
+            <div style="font-size:10px;color:#aaa">${[...new Set(it.elaboraciones)].join(', ')}</div>
+          </td>
+          <td style="text-align:right;padding:6px;font-size:12px;color:#888">${it.necesario}</td>
+          <td style="text-align:right;padding:6px;font-size:12px;color:#27ae60;font-weight:700">${it.stock>0?it.stock:'—'}</td>
+          <td style="text-align:right;padding:6px;font-size:14px;font-weight:700;color:#e74c3c">${it.apedir}</td>
+          <td style="padding:6px;font-size:12px;color:#888">${esc(it.unidad||'')}</td>
+        </tr>`;
       });
       html+=`</tbody></table></div>`;
     });
   }
-  // Save to history
-  const pedidoObj={id:uid(),fecha:new Date().toISOString(),elaboraciones:Object.entries(pedidoSeleccionadas).map(([id,v])=>({id,raciones:v.raciones,nombre:DB.elaboraciones.find(x=>x.id===id)?.nombre||''})),byProv,totales};
+
+  // Save
+  const pedidoObj={id:uid(),fecha:new Date().toISOString(),
+    elaboraciones:Object.entries(pedidoSeleccionadas).map(([id,v])=>({id,raciones:v.raciones,nombre:DB.elaboraciones.find(x=>x.id===id)?.nombre||''})),
+    byProv,totales};
   DB.pedidos.push(pedidoObj);saveDB();
   document.getElementById('pedido-result-content').innerHTML=html;
   document.getElementById('pedido-result').style.display='';

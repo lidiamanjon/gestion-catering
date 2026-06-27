@@ -876,7 +876,7 @@ function renderTileGrid(){
   if(!g)return;
   // Section structure: each entry is either a header string or a tile mod id
   const SECTIONS=[
-    {header:'INICIO DEL DÍA', mods:['bpm','limp','temps','agua']},
+    {header:'INICIO DEL DÍA', mods:['bpm','temps','limp','agua']},
     {header:'PRODUCCIÓN', mods:['recep','elab','abat','congel','descongel','regen','tserv']},
     {header:'CONTROL DE CALIDAD', mods:['aceite','preop','lava','basura','etiquetas']},
     {header:'GESTIÓN Y REGISTROS', mods:['noconf','formacion','contras','plagas']},
@@ -3039,6 +3039,610 @@ function handleScanForDescongel(parsed){
       if(lote){const el=document.getElementById('dc2-lote');if(el)el.value=lote;}
     },150);
   }
+}
+// ============================================================
+// REGENERACIÓN — solo nevera + descongelando
+// ============================================================
+function renderRegen(){
+  const body = document.getElementById('regen-body'); if(!body) return;
+
+  // Items en nevera: elaboraciones con destino nevera no servidas
+  const enNevera = ld(K.elab).filter(r=>
+    (r.destino==='nevera'||r.destino==='refrigerado'||r.destino==='fridge') &&
+    r.estado!=='servido' && r.estado!=='regenerado'
+  );
+
+  // Items descongelándose activos
+  const enDescongel = ld(K.descongel).filter(r=>
+    r.estado==='en_progreso' || r.estado==='activo' || !r.estado || r.estado===''
+  );
+
+  const totalDisp = enNevera.length + enDescongel.length;
+
+  let html = `<div style="padding:12px 16px 8px;display:flex;gap:8px">
+    <button onclick="openRegenModal()" class="btn btn-green" style="flex:1;padding:14px;font-size:14px;font-weight:700">
+      🔥 + Nueva Regeneración
+    </button>
+    <button onclick="openScanAndApplyTo(handleScanForRegen)" 
+      style="background:#1a4fa8;color:#fff;border:none;border-radius:12px;padding:0 16px;font-size:14px;font-weight:700;cursor:pointer">
+      📷
+    </button>
+  </div>`;
+
+  if(!totalDisp){
+    html += `<div class="card" style="margin:12px 16px">
+      <div style="padding:24px;text-align:center;color:#aaa">
+        <div style="font-size:36px;margin-bottom:8px">🍽</div>
+        <div style="font-size:14px;font-weight:600;color:#666">Sin productos disponibles para regenerar</div>
+        <div style="font-size:12px;margin-top:6px">Los productos aparecen aquí cuando están en nevera o descongelándose</div>
+      </div></div>`;
+  } else {
+    if(enNevera.length){
+      html += `<div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#888;text-transform:uppercase;padding:8px 16px 4px">❄️ En nevera</div>`;
+      enNevera.forEach(r=>{
+        const dias = r.dlc ? Math.round((new Date(r.dlc)-new Date())/(1000*60*60*24)) : null;
+        const urgente = dias!==null && dias<=1;
+        html += `<div class="card" style="margin:6px 12px;${urgente?'border:2px solid #e74c3c':''}">
+          <div style="padding:12px 14px;display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:14px">${esc(r.producto)}</div>
+              <div style="font-size:11px;color:#888;margin-top:3px">
+                Lote: ${r.lote||'—'} · DLC: ${r.dlc||'—'}
+                ${urgente?`<span style="color:#e74c3c;font-weight:700"> ⚠ CADUCA PRONTO</span>`:''}
+              </div>
+            </div>
+            <button onclick="openRegenFor('${r.id}')" 
+              style="background:#e67e22;color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
+              🔥 Regenerar
+            </button>
+          </div></div>`;
+      });
+    }
+    if(enDescongel.length){
+      html += `<div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#888;text-transform:uppercase;padding:8px 16px 4px">🔄 Descongelando</div>`;
+      enDescongel.forEach(r=>{
+        html += `<div class="card" style="margin:6px 12px;">
+          <div style="padding:12px 14px;display:flex;align-items:center;gap:10px">
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:14px">${esc(r.producto||'—')}</div>
+              <div style="font-size:11px;color:#888;margin-top:3px">
+                Lote: ${r.lote_ref||'—'} · Inicio: ${fmtDate(r.ts)}
+              </div>
+            </div>
+            <button onclick="openRegenForDescongel('${r.id}')"
+              style="background:#e67e22;color:#fff;border:none;border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">
+              🔥 Regenerar
+            </button>
+          </div></div>`;
+      });
+    }
+  }
+
+  // Historial reciente
+  const hist = ld(K.regen).slice(-10).reverse();
+  if(hist.length){
+    html += `<div style="font-size:11px;font-weight:700;letter-spacing:1.5px;color:#888;text-transform:uppercase;padding:12px 16px 4px">📋 Historial reciente</div>`;
+    hist.forEach(r=>{
+      const ok = parseFloat(r.temp_centro)>=70;
+      html += `<div class="list-row" style="margin:0 12px 4px;background:#fff;border-radius:10px;border:1px solid ${ok?'#e0e0e0':'#e74c3c'}">
+        <div class="list-icon">🔥</div>
+        <div class="list-main">
+          <div class="list-title">${esc(r.producto||'—')}</div>
+          <div class="list-sub">T° centro: <strong style="color:${ok?'#27ae60':'#e74c3c'}">${r.temp_centro||'—'}°C ${ok?'✓':'⚠ NO 70°C'}</strong> · ${fmtDT(r.ts)}</div>
+        </div>
+        <div style="font-size:11px;color:#aaa">${r.emp||''}</div>
+      </div>`;
+    });
+  }
+
+  body.innerHTML = html;
+}
+
+function openRegenFor(elabId){
+  const r = ld(K.elab).find(x=>x.id===elabId);
+  if(!r) return openRegenModal();
+  window._regenRef = {producto:r.producto, lote:r.lote, elabId:r.id, origen:'nevera'};
+  _showRegenForm(r.producto, r.lote);
+}
+
+function openRegenForDescongel(descongelId){
+  const r = ld(K.descongel).find(x=>x.id===descongelId);
+  if(!r) return openRegenModal();
+  window._regenRef = {producto:r.producto||'', lote:r.lote_ref||'', descongelId:r.id, origen:'descongel'};
+  _showRegenForm(r.producto||'', r.lote_ref||'');
+}
+
+function openRegenModal(){
+  window._regenRef = {origen:'manual'};
+  _showRegenForm('','');
+}
+
+function _showRegenForm(producto, lote){
+  const wks = (ld(K.workers)||[]).map(w=>`<option value="${esc(w.nombre)}">${esc(w.nombre)}</option>`).join('');
+  openModal(`
+    <div class="modal-title">🔥 Registro de Regeneración</div>
+    ${producto?`<div style="background:#fff3e0;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px">
+      📦 <strong>${esc(producto)}</strong> · Lote: ${esc(lote)}
+    </div>`:''}
+    <div class="form-row">
+      <label class="form-label">Producto *</label>
+      <input class="fc" id="rg2-prod" value="${esc(producto)}" placeholder="Nombre del producto" required>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Lote de referencia</label>
+      <input class="fc" id="rg2-lote" value="${esc(lote)}" placeholder="Lote" style="font-family:monospace">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-row">
+        <label class="form-label">T° centro alcanzada *</label>
+        <div style="display:flex;align-items:center;gap:6px">
+          <input class="fc" id="rg2-temp" type="number" step="0.1" placeholder="°C" oninput="checkRegenTemp(this)">
+          <span id="rg2-temp-ok" style="font-size:18px"></span>
+        </div>
+        <div style="font-size:10px;color:#888;margin-top:2px">Mínimo requerido: 70°C</div>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Porciones / unidades</label>
+        <input class="fc" id="rg2-porc" type="number" placeholder="Nº porciones">
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Trabajador *</label>
+      <select class="fc" id="rg2-emp"><option value="">— Selecciona —</option>${wks}</select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Observaciones</label>
+      <textarea class="fc" id="rg2-obs" rows="2" placeholder="Incidencias, equipo usado…"></textarea>
+    </div>
+    <div class="modal-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:1" onclick="saveRegen2()">✓ Guardar</button>
+    </div>
+  `);
+  setTimeout(()=>{
+    const t=document.getElementById('rg2-temp');
+    if(t)t.focus();
+  },150);
+}
+
+function checkRegenTemp(inp){
+  const el = document.getElementById('rg2-temp-ok'); if(!el) return;
+  const v = parseFloat(inp.value);
+  el.textContent = isNaN(v)?'':v>=70?'✅':'⚠️';
+}
+
+function saveRegen2(){
+  const prod  = document.getElementById('rg2-prod')?.value.trim();
+  const lote  = document.getElementById('rg2-lote')?.value.trim();
+  const temp  = parseFloat(document.getElementById('rg2-temp')?.value);
+  const porc  = document.getElementById('rg2-porc')?.value;
+  const emp   = document.getElementById('rg2-emp')?.value;
+  const obs   = document.getElementById('rg2-obs')?.value.trim();
+
+  if(!prod){alert('Indica el producto');return;}
+  if(isNaN(temp)){alert('Indica la temperatura de centro');return;}
+  if(!emp){alert('Selecciona el trabajador');return;}
+
+  const ref = window._regenRef||{};
+  const rec = {
+    id: uid(), ts: new Date().toISOString(),
+    producto: prod, lote_ref: lote,
+    temp_centro: temp, porciones: porc,
+    emp, obs,
+    elabId: ref.elabId||null,
+    descongelId: ref.descongelId||null,
+    origen: ref.origen||'manual'
+  };
+
+  // If temperature not reached, create NC automatically
+  if(temp < 70){
+    const ncs = ld(K.noconf)||[];
+    ncs.push({id:uid(), ts:rec.ts, tipo:'Regeneración', descripcion:`T° centro ${temp}°C — no alcanzó 70°C en ${prod} (lote ${lote||'—'})`, estado:'Abierta', emp});
+    sv(K.noconf, ncs);
+  }
+
+  // Mark elab as served if came from nevera
+  if(ref.elabId){
+    const elabs = ld(K.elab)||[];
+    const idx = elabs.findIndex(x=>x.id===ref.elabId);
+    if(idx!==-1){elabs[idx].estado='servido'; sv(K.elab, elabs);}
+  }
+  // Mark descongel as served
+  if(ref.descongelId){
+    const descs = ld(K.descongel)||[];
+    const idx = descs.findIndex(x=>x.id===ref.descongelId);
+    if(idx!==-1){descs[idx].estado='servido'; sv(K.descongel, descs);}
+  }
+
+  const regens = ld(K.regen)||[];
+  regens.push(rec);
+  sv(K.regen, regens);
+  closeModal();
+
+  const labelFn = temp<70 ? null : (qty)=>`printSimpleLabel('Regeneración',${JSON.stringify(prod)},${qty})`;
+  showMultiScanConfirm(prod,
+    ()=>{ openRegenModal(); },
+    ()=>{ renderRegen(); },
+    labelFn
+  );
+}
+
+
+
+function renderCongel(){
+  const recs=ld(K.congel).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  document.getElementById('congel-body').innerHTML=`
+    <div class="card">
+      <div class="card-head"><h3>Registros de congelación</h3>
+        <button class="btn btn-sm btn-green" onclick="openCongelModal()">+ Registro</button>
+      </div>
+      <div>${recs.slice(0,30).map(r=>`<div class="list-row">
+        <div class="list-icon">🧊</div>
+        <div class="list-main">
+          <div class="list-title">${r.producto}</div>
+          <div class="list-sub">${r.emp} · ${fmtDate(r.ts)} · ${r.cantidad||'—'}${r.unidad||''}</div>
+          ${r.lote?`<div class="list-sub"><span class="lot-code">${r.lote}</span></div>`:''}
+        </div>
+        <div class="list-right">
+          <div style="font-size:13px;font-weight:700;color:#2980b9">${r.temp_entrada||'—'}°C</div>
+          <div style="font-size:11px;color:#aaa">entrada</div>
+          ${r.temp_final?`<div style="font-size:12px;color:#2980b9">${r.temp_final}°C final</div>`:''}
+        </div>
+      </div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin registros</div>'}</div>
+    </div>`;
+}
+
+function renderDescongel(){
+  const recs=ld(K.descongel).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const elabsCongelados=ld(K.elab).filter(r=>r.destino==='congelador'&&r.estado==='en_stock');
+  document.getElementById('descongel-body').innerHTML=`
+    ${elabsCongelados.length?`<div class="card">
+      <div class="card-head"><h3>En congelador — disponibles (${elabsCongelados.length})</h3></div>
+      <div>${elabsCongelados.map(r=>`<div class="list-row">
+        <div class="list-icon">🧊</div>
+        <div class="list-main">
+          <div class="list-title">${r.producto}</div>
+          <div class="list-sub"><span class="lot-code">${r.lote}</span> · ${r.cantidad}${r.unidad}</div>
+        </div>
+        <button class="btn btn-sm btn-gold" onclick="openDescongelFor('${r.id}')">🔄 Descongelar</button>
+      </div>`).join('')}</div>
+    </div>`:''}
+    <div class="card">
+      <div class="card-head"><h3>Historial de descongelaciones</h3>
+        <button class="btn btn-sm btn-green" onclick="openDescongelModal()">+ Manual</button>
+      </div>
+      <div>${recs.slice(0,20).map(r=>`<div class="list-row">
+        <div class="list-icon">🔄</div>
+        <div class="list-main">
+          <div class="list-title">${r.producto}</div>
+          <div class="list-sub"><span class="lot-code">${r.lote_ref||'—'}</span> · ${r.emp} · ${fmtDate(r.ts)}</div>
+        </div>
+        <div class="list-right">
+          <div style="font-size:12px">${r.temp_inicio||'—'}°C</div>
+          <div class="list-sub">DLC fin: ${r.dlc_fin||'—'}</div>
+        </div>
+      </div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin registros</div>'}</div>
+    </div>`;
+}
+
+function renderTserv(){
+  const recs=ld(K.tserv).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  document.getElementById('tserv-body').innerHTML=`
+    <div class="alert-box alert-ok" style="margin-bottom:0">
+      🌡 Caliente ≥65°C · Frío ≤8°C · Congelado ≤−15°C
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Temperaturas en línea de servicio</h3>
+        <button class="btn btn-sm btn-green" onclick="openTservModal()">+ Medición</button>
+      </div>
+      <div>${recs.slice(0,30).map(r=>{
+        const ok=(r.tipo==='caliente'&&r.temp>=65)||(r.tipo==='frio'&&r.temp<=8)||(r.tipo==='congelado'&&r.temp<=-15)||(r.tipo==='otro');
+        return`<div class="list-row">
+          <div class="list-icon">🌡</div>
+          <div class="list-main">
+            <div class="list-title">${r.producto}</div>
+            <div class="list-sub">${r.emp} · ${fmtDT(r.ts)}${r.temp_entrada!=null?' · T°: '+r.temp_entrada+'°C':''}</div>
+            ${r.lote?`<div class="list-sub"><span class="lot-code">${r.lote}</span></div>`:''}
+          </div>
+          <div class="list-right">
+            <span class="list-badge ${ok?'badge-green':'badge-red'}">${r.temp}°C</span>
+            <div style="font-size:11px;color:#aaa">${r.tipo}</div>
+          </div>
+        </div>`;
+      }).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin registros</div>'}</div>
+    </div>`;
+}
+
+function renderBpm(){
+  const recs=ld(K.bpm).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const total=bpmTotalItems();
+  document.getElementById('bpm-body').innerHTML=`
+    <div class="alert-box alert-ok" style="font-size:12px">📋 Auditoría BPM — ${BPM_CATS.length} categorías · ${total} puntos de control · Ref. F1 PA01</div>
+    <div class="card" style="margin-top:10px">
+      <div class="card-head"><h3>Auditorías BPM</h3>
+        <button class="btn btn-sm btn-green" onclick="openBpmModal()">+ Nueva auditoría</button>
+      </div>
+      <div>${recs.slice(0,15).map(r=>{
+        const tot=r.total||total;
+        const pct=Math.round((r.conformes||0)/tot*100);
+        const ncs=(r.results||[]).filter(x=>!x.ok).length;
+        return`<div class="list-row" onclick="viewBpm('${r.id}')">
+          <div class="list-icon">${pct>=80?'✅':pct>=60?'⚠️':'❌'}</div>
+          <div class="list-main">
+            <div class="list-title">Auditoría BPM · Turno ${r.turno||'—'}</div>
+            <div class="list-sub">${r.emp} · ${fmtDT(r.ts)}</div>
+          </div>
+          <div class="list-right">
+            <span class="list-badge ${pct>=80?'badge-green':pct>=60?'badge-orange':'badge-red'}">${pct}%</span>
+            ${ncs>0?`<div style="font-size:11px;color:#e74c3c;font-weight:600">${ncs} NC</div>`:'<div style="font-size:11px;color:#2ecc71">✓ Todo OK</div>'}
+          </div>
+        </div>`;
+      }).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin auditorías registradas</div>'}</div>
+    </div>`;
+}
+
+function renderAgua(){
+  const recs=ld(K.agua).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const last=recs[0];
+  const phOk=last&&last.ph>=6.5&&last.ph<=8.5;
+  const clOk=last&&last.cloro>=0.2&&last.cloro<=1.0;
+  document.getElementById('agua-body').innerHTML=`
+    ${last?`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="card"><div class="card-body" style="text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:600">pH</div>
+        <div style="font-size:26px;font-weight:700;color:${phOk?'#2980b9':'#e74c3c'}">${last.ph}</div>
+        <div style="font-size:10px;color:#aaa">6.5–8.5</div>
+      </div></div>
+      <div class="card"><div class="card-body" style="text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:600">Cl libre</div>
+        <div style="font-size:26px;font-weight:700;color:${clOk?'#2980b9':'#e74c3c'}">${last.cloro}</div>
+        <div style="font-size:10px;color:#aaa">mg/L (0.2–1.0)</div>
+      </div></div>
+      <div class="card"><div class="card-body" style="text-align:center">
+        <div style="font-size:11px;color:#888;font-weight:600">Turbiedad</div>
+        <div style="font-size:26px;font-weight:700;color:${last.turb<1?'#2980b9':'#e74c3c'}">${last.turb||'—'}</div>
+        <div style="font-size:10px;color:#aaa">NTU (&lt;1)</div>
+      </div></div>
+    </div>`:'<div class="alert-box alert-warn">Sin datos de agua. Realiza un análisis.</div>'}
+    <div class="card">
+      <div class="card-head"><h3>Historial análisis agua</h3>
+        <button class="btn btn-sm btn-green" onclick="openAguaModal()">+ Análisis</button>
+      </div>
+      <div>${recs.slice(0,10).map(r=>{
+        const ok=r.ph>=6.5&&r.ph<=8.5&&r.cloro>=0.2&&r.cloro<=1.0;
+        return`<div class="list-row">
+          <div class="list-icon">💧</div>
+          <div class="list-main">
+            <div class="list-title">Análisis del agua</div>
+            <div class="list-sub">${r.emp} · ${fmtDate(r.ts)}</div>
+          </div>
+          <div class="list-right">
+            <span class="list-badge ${ok?'badge-green':'badge-red'}">${ok?'Conforme':'No conforme'}</span>
+            <div style="font-size:11px;color:#aaa">pH:${r.ph} Cl:${r.cloro}</div>
+          </div>
+        </div>`;
+      }).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin registros</div>'}</div>
+    </div>`;
+}
+
+function renderInf(){
+  const{score}=calcScore();
+  document.getElementById('inf-body').innerHTML=`
+    <div class="card">
+      <div class="card-body" style="text-align:center;padding:20px">
+        <div style="font-size:48px;font-weight:900;color:${score>=80?'#1a4fa8':score>=60?'#d4a017':'#e74c3c'}">${score}</div>
+        <div style="font-size:13px;color:#888">Puntuación de cumplimiento APPCC</div>
+      </div>
+    </div>
+    <!-- CIERRE MENSUAL -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-body" style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn-green btn-block" onclick="cierreMensualAPPCC()" style="font-size:15px;padding:15px;letter-spacing:.3px">
+          📁 CIERRE MENSUAL APPCC — Generar todos los informes
+        </button>
+        <div style="font-size:11px;color:#888;text-align:center">Genera los 14 informes oficiales del mes anterior · Guárdalos como PDF en la carpeta APPCC del mes</div>
+      </div>
+    </div>
+    <!-- INFORMES INDIVIDUALES -->
+    <div style="font-size:11px;font-weight:700;color:#888;padding:4px 2px">INFORMES INDIVIDUALES (período seleccionado)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      ${[
+        {svg:SVG_ICONS.thermo,label:'F3-MA05 Temperaturas',fn:'printInfTemps'},
+        {svg:SVG_ICONS.sparkle,label:'F1-PA02 Limpieza',fn:'printInfLimp'},
+        {svg:SVG_ICONS.truck,label:'F2-MA05 Recepción MP',fn:'printInfRecep'},
+        {svg:SVG_ICONS.chef,label:'Elaboraciones · Lotes',fn:'printInfElab'},
+        {svg:SVG_ICONS.share,label:'PA08 Trazabilidad',fn:'printInfTraz'},
+        {svg:SVG_ICONS.refresh,label:'Descongelación',fn:'printInfDescongel'},
+        {svg:SVG_ICONS.flame,label:'Regeneración',fn:'printInfRegen'},
+        {svg:SVG_ICONS.snowflake,label:'F-ABAT Abatidor',fn:'printInfAbat'},
+        {svg:SVG_ICONS.thermo_marks,label:'Temp. Servicio',fn:'printInfTserv'},
+        {svg:SVG_ICONS.clipboard,label:'F1-PA01 BPM',fn:'printInfBpm'},
+        {svg:SVG_ICONS.preop,label:'Preoperativa Diaria',fn:'printInfPreop'},
+        {svg:SVG_ICONS.droplet,label:'PA07 Control Agua',fn:'printInfAgua'},
+        {svg:SVG_ICONS.barchart,label:'Aceites Polaridad',fn:'printInfAceite'},
+        {svg:SVG_ICONS.waves,label:'F-LAVA Lavavajillas',fn:'printInfLava'},
+        {svg:SVG_ICONS.trash,label:'F-BASU Residuos',fn:'printInfBasura'},
+        {svg:SVG_ICONS.warning,label:'No Conformidades',fn:'printInfNoConf'},
+        {svg:SVG_ICONS.tool,label:'Mantenimiento',fn:'printInfMant'},
+        {svg:SVG_ICONS.book,label:'Formación Personal',fn:'printInfFormacion'},
+        {svg:SVG_ICONS.shield,label:'Plagas DDD',fn:'printInfPlagas'},
+        {svg:SVG_ICONS.filetext,label:'MA04 Análisis Peligros',fn:'printMA04'}
+      ].map(r=>`<button class="tile" onclick="${r.fn}()" style="min-height:80px">
+        <div class="tile-icon">${r.svg||''}</div>
+        <div class="tile-label" style="font-size:11px">${r.label}</div>
+      </button>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">📅 Rango de fechas para informes individuales</div>
+        <div class="fc-row">
+          <div class="fc-group"><label class="fc-label">Desde</label>
+            <input class="fc" type="date" id="inf-desde" value="${addDays(today(),-30)}"></div>
+          <div class="fc-group"><label class="fc-label">Hasta</label>
+            <input class="fc" type="date" id="inf-hasta" value="${today()}"></div>
+        </div>
+      </div>
+    </div>
+    <!-- STOCK ACTUAL -->
+    ${(()=>{
+      const elabs=ld(K.elab);
+      const enStock=elabs.filter(e=>e.estado==='en_stock'||e.estado==='elaborado');
+      const congelados=elabs.filter(e=>e.destino==='congelador'&&e.estado==='en_stock');
+      const proxCaducar=elabs.filter(e=>{const d=daysLeft(e.dlc);return d!==null&&d<=3&&d>=0&&e.estado!=='servido';});
+      const caducados=elabs.filter(e=>{const d=daysLeft(e.dlc);return d!==null&&d<0&&e.estado!=='servido';});
+      return`<div class="card">
+        <div class="card-head"><h3>📦 Stock actual de elaboraciones</h3></div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:10px 14px">
+          <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#1a4fa8">${enStock.length}</div><div style="font-size:10px;color:#888">En stock</div></div>
+          <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:#2980b9">${congelados.length}</div><div style="font-size:10px;color:#888">Congelados</div></div>
+          <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:${proxCaducar.length?'#d4a017':'#aaa'}">${proxCaducar.length}</div><div style="font-size:10px;color:#888">Próx. caducar</div></div>
+          <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:${caducados.length?'#e74c3c':'#aaa'}">${caducados.length}</div><div style="font-size:10px;color:#888">Caducados</div></div>
+        </div>
+        ${caducados.length?`<div style="background:#fff0f0;padding:8px 14px;font-size:11px;color:#e74c3c;font-weight:700">⚠ CADUCADOS: ${caducados.map(e=>e.producto+' ('+e.dlc+')').join(' · ')}</div>`:''}
+        ${proxCaducar.length?`<div style="background:#fff8e0;padding:8px 14px;font-size:11px;color:#d4a017">🟡 Próx. a caducar: ${proxCaducar.map(e=>e.producto+' ('+e.dlc+')').join(' · ')}</div>`:''}
+      </div>`;
+    })()}`;
+}
+
+function renderDocs(){
+  const recs=ld(K.docs).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  // Group by category
+  const bycat={};
+  DOC_CATS.forEach(c=>{bycat[c]=[];});
+  recs.forEach(r=>{const c=r.cat||'Otros';if(!bycat[c])bycat[c]=[];bycat[c].push(r);});
+  const catBlocks=DOC_CATS.map(cat=>{
+    const items=bycat[cat]||[];
+    if(items.length===0)return`<div style="margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8faff;border-radius:10px;border:1px solid #e0e8f5;cursor:pointer" onclick="openDocModal('${cat.replace(/'/g,'\\x27')}')">
+        <div style="font-size:13px;font-weight:600;color:#888">📁 ${cat}</div>
+        <div style="font-size:12px;color:#bbb">+ Añadir</div>
+      </div>
+    </div>`;
+    return`<div style="margin-bottom:8px">
+      <div style="background:#1a4fa8;color:#fff;padding:9px 14px;border-radius:10px 10px 0 0;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center">
+        <span>📁 ${cat}</span>
+        <button onclick="openDocModal('${cat.replace(/'/g,'\\x27')}')" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer">+ Añadir</button>
+      </div>
+      <div style="border:1.5px solid #d0ddf5;border-top:none;border-radius:0 0 10px 10px">
+        ${items.map(d=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid #f0f0f0">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${d.titulo}</div>
+            ${d.notas?`<div style="font-size:12px;color:#666;margin-top:2px">${d.notas}</div>`:''}
+            ${d.url?`<a href="${d.url}" target="_blank" style="font-size:12px;color:#1a4fa8;text-decoration:none">🔗 Ver documento</a>`:''}
+            <div style="font-size:11px;color:#aaa;margin-top:3px">${fmtDate(d.ts)}</div>
+          </div>
+          <button onclick="delDoc('${d.id}')" style="background:none;border:none;color:#ccc;font-size:16px;cursor:pointer;flex-shrink:0;padding:2px 4px">🗑</button>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('docs-body').innerHTML=`
+    <div class="alert-box alert-ok" style="font-size:12px">📁 Gestión documental APPCC — ${recs.length} documento${recs.length!==1?'s':''} registrado${recs.length!==1?'s':''}</div>
+    <div style="margin-top:12px">${catBlocks}</div>`;
+}
+
+function renderPreop(){
+  const recs=ld(K.preop).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  document.getElementById('preop-body').innerHTML=`
+    <div class="alert-box alert-ok" style="font-size:12px">📋 Inspección <strong>DIARIA</strong> antes del servicio. Ítems NOK requieren corrección documentada.</div>
+    <div class="card" style="margin-top:10px">
+      <div class="card-head"><h3>Últimas inspecciones</h3>
+        <button class="btn btn-sm btn-green" onclick="openPreopModal()">+ Inspección</button>
+      </div>
+      <div>${recs.slice(0,15).map(r=>{
+        const pct=Math.round((r.conformes||0)/(PREOP_CHECKS.length)*100);
+        const noks=(r.results||[]).filter(x=>!x.ok);
+        return`<div class="list-row" onclick="viewPreop('${r.id}')">
+          <div class="list-icon">🔍</div>
+          <div class="list-main">
+            <div class="list-title">Inspección preoperativa</div>
+            <div class="list-sub">${r.emp} · ${fmtDT(r.ts)}</div>
+            ${noks.length?`<div style="font-size:11px;color:#e74c3c">⚠ ${noks.length} NOK — ${noks.map(x=>x.correccion?'✓':'⚠').join(' ')}</div>`:''}
+          </div>
+          <div class="list-right">
+            <span class="list-badge ${pct===100?'badge-green':pct>=80?'badge-orange':'badge-red'}">${pct}%</span>
+            <div style="font-size:11px;color:#aaa">${fmtDate(r.ts)}</div>
+          </div>
+        </div>`;
+      }).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin registros hoy</div>'}</div>
+    </div>`;
+}
+
+function renderCfg(){
+  const emps=ld(K.emp);const zonas=ld(K.zonas);const provs=ld(K.provs);
+  document.getElementById('cfg-body').innerHTML=`
+    <div class="card">
+      <div class="card-head"><h3>👥 Empleados</h3>
+        <button class="btn btn-sm btn-green" onclick="openAddEmpModal()">+ Añadir</button>
+      </div>
+      <div id="emp-list">${emps.map((e,i)=>`<div class="list-row">
+        <div class="list-icon">👤</div>
+        <div class="list-main"><div class="list-title">${e}</div></div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-icon" onclick="openEditEmpModal(${i},'${e.replace(/'/g,"\\'")}')">✏️</button>
+          <button class="btn-icon" onclick="delEmp(${i})" style="color:#e74c3c">🗑</button>
+        </div>
+      </div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin empleados. Añade el primero.</div>'}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>❄ Cámaras y Zonas</h3>
+        <button class="btn btn-sm btn-green" onclick="addZona()">+ Añadir</button>
+      </div>
+      <div>${zonas.map((z,i)=>`<div class="list-row">
+        <div class="list-icon">${z.icon}</div>
+        <div class="list-main">
+          <div class="list-title">${z.name}</div>
+          <div class="list-sub">Obj: ${z.target}°C · Alerta: ${z.alert}°C</div>
+        </div>
+        <button class="btn-icon" onclick="delZona('${z.id}')">🗑</button>
+      </div>`).join('')}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>🏭 Proveedores (${provs.length})</h3>
+        <button class="btn btn-sm btn-green" onclick="addProv()">+ Añadir</button>
+      </div>
+      <div>${provs.slice(0,10).map((p,i)=>`<div class="list-row">
+        <div class="list-icon">🏭</div>
+        <div class="list-main"><div class="list-title">${p.name}</div></div>
+        <button class="btn-icon" onclick="delProv('${p.id}')">🗑</button>
+      </div>`).join('')}
+      ${provs.length>10?`<div style="padding:10px 14px;color:#888;font-size:13px">+ ${provs.length-10} más...</div>`:''}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>🖨 Brother QL-820NWBC · 62mm</h3></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <div class="fc-group"><label class="fc-label">IP de la impresora en red WiFi</label>
+          <div style="display:flex;gap:8px">
+            <input class="fc" id="cfg-ql-ip" placeholder="ej: 192.168.1.50" value="${localStorage.getItem('a_ql_ip')||''}" style="flex:1">
+            <button class="btn btn-green" onclick="saveQLIp()">Guardar</button>
+          </div>
+        </div>
+        <div class="alert-box alert-ok" style="font-size:12px;font-weight:400">
+          <strong>Configuración Brother QL-820NWBC:</strong>
+          <div style="margin-top:6px">1. Conecta la impresora a tu red WiFi (ajustes del panel Brother)</div>
+          <div>2. Anota la IP que aparece en su pantalla o en el informe de red</div>
+          <div>3. Pon esa IP arriba y pulsa Guardar</div>
+          <div style="margin-top:6px">Las etiquetas se generan en <strong>formato 62mm</strong> y al imprimir se abrirá el diálogo del sistema — selecciona la impresora Brother</div>
+        </div>
+        <div class="fc-group"><label class="fc-label">Etiquetas automáticas al registrar</label>
+          <div class="moment-row">
+            <button class="moment-pill ${localStorage.getItem('a_label_auto')==='off'?'':'sel'}" id="lbl-on" onclick="setLabelAuto(true)">✓ Activadas</button>
+            <button class="moment-pill ${localStorage.getItem('a_label_auto')==='off'?'sel':''}" id="lbl-off" onclick="setLabelAuto(false)">✗ Desactivadas</button>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-block" onclick="testPrint()">🖨 Imprimir etiqueta de prueba (62mm)</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>💾 Datos</h3></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-outline btn-block" onclick="exportData()">📤 Exportar backup (JSON)</button>
+        <button class="btn btn-outline btn-block" onclick="document.getElementById('imp-file').click()">📥 Importar backup</button>
+        <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importData(event)">
+        <button class="btn btn-red btn-block" onclick="if(confirm('¿Borrar TODOS los datos?')){clearAll()}">🗑 Borrar todos los datos</button>
+      </div>
+    </div>`;
 }
 function handleScanForRegen(parsed){
   const lote=parsed.lot||'';
