@@ -722,6 +722,7 @@ function showHome(){
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.transform=''});
   document.getElementById('home').style.transform='translateX(0)';
   currentMod=null;
+  history.replaceState({appcc:'home'},'');
   renderTileGrid();
   updateScoreChip();
   renderHomeAlerts();
@@ -753,6 +754,7 @@ function showMod(id){
   document.getElementById('home').style.transform='translateX(-30px)';
   el.style.transform='translateX(0)';
   currentMod=id;
+  history.pushState({appcc:'mod',mod:id},'');
   renderMod(id);
 }
 function renderMod(id){
@@ -920,6 +922,48 @@ function openModal(html){
   }
 }
 function closeModal(){document.getElementById('mo').classList.remove('open')}
+
+// ── BOTÓN ATRÁS ANDROID ─────────────────────────────────────────────────────
+let _backPressTime = 0;
+window.addEventListener('popstate', function(e){
+  // If modal is open → close it and push state back so we stay in app
+  const mo = document.getElementById('mo');
+  if(mo && mo.classList.contains('open')){
+    closeModal();
+    history.pushState(e.state || {appcc:'mod',mod:currentMod},'');
+    return;
+  }
+  // If in a module → go back to home
+  if(currentMod){
+    showHome();
+    return;
+  }
+  // Already at home → show toast, exit on second press within 2s
+  const now = Date.now();
+  if(now - _backPressTime < 2000){
+    // Second press — really exit
+    history.back();
+    return;
+  }
+  _backPressTime = now;
+  history.pushState({appcc:'home'},'');
+  // Show toast
+  let toast = document.getElementById('_back-toast');
+  if(!toast){
+    toast = document.createElement('div');
+    toast.id = '_back-toast';
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:12px 24px;border-radius:24px;font-size:14px;z-index:9999;transition:opacity .4s';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = 'Pulsa atrás otra vez para salir';
+  toast.style.opacity = '1';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>{ toast.style.opacity='0'; }, 1800);
+});
+// Init history state on load
+window.addEventListener('load', function(){
+  history.replaceState({appcc:'home'},'');
+});
 
 // ============================================================
 // TRABAJADOR ACTIVO — selección al arranque y auto-relleno
