@@ -1922,8 +1922,7 @@ function scanElabBarcode(){
       // Not in catalog — show warning but pre-fill search so user can find something close
       const srch=document.getElementById('el-prod-search');
       if(srch){srch.value=nombre;filterElabSelect(nombre);}
-      alert('Producto escaneado: "'+nombre+'"
-No encontrado en el catálogo. Selecciona la elaboración más parecida o añádelo en Gestión → Elaboraciones.');
+      alert('Producto escaneado: "'+nombre+'"\nNo encontrado en el catálogo. Selecciona la elaboración más parecida o añádelo en Gestión.');
     }
   });
 }
@@ -5177,7 +5176,7 @@ function getVal(id,def=''){const el=document.getElementById(id);return el?el.val
 function imprimirDiseño(pid){
   const size=LBL_SIZES[getVal('lbl-size','QL-62x100mm')]||LBL_SIZES['QL-62x100mm'];
   const empresa=getVal('lbl-empresa','ALBARABA SL');
-  const producto=getVal('lbl-producto');
+  const producto=getVal('lbl-producto')||getVal('lbl-pro','');
   const lote=getVal('lbl-lote');
   const fecha=getVal('lbl-fecha');
   const dlc=getVal('lbl-dlc');
@@ -5189,31 +5188,41 @@ function imprimirDiseño(pid){
     const btn=document.getElementById('lbla-'+a.replace(/ /g,'_'));
     return btn&&btn.classList.contains('sel');
   });
-  const w=window.open('','_blank',`width=${size.wpx+40},height=${size.hpx+80}`);
   const alrgHtml=alrgs.length?`<div style="font-size:7px;font-weight:900;color:#c0392b;margin-top:2px">⚠ ALÉRGENOS: ${alrgs.map(a=>`<strong>${a}</strong>`).join(', ')}</div>`:'';
+  const w=window.open('','_blank',`width=${size.wpx+40},height=${size.hpx+80}`);
+  if(!w){alert('Permite las ventanas emergentes para imprimir etiquetas');return;}
+  const contenido=pid==='libre'
+    ?`${t1?`<div style="font-size:14px;font-weight:900">${t1}</div>`:''}${t2?`<div style="font-size:8px;color:#333">${t2}</div>`:''}${t3?`<div style="font-size:7px;color:#888">${t3}</div>`:''}`
+    :`${producto?`<div style="font-size:${pid==='alergeno'?'11px':'14px'};font-weight:900;color:#000;line-height:1.1;margin:2px 0">${producto}</div>`:''}${proveedor?`<div style="font-size:8px;color:#333">Prov: ${proveedor}</div>`:''}${lote?`<div style="margin:2px 0"><span style="font-family:monospace;font-size:9px;font-weight:700;background:#e8f2ec;padding:2px 5px;border-radius:3px">LOTE: ${lote}</span></div>`:''}${fecha?`<div style="font-size:8px;color:#333">Fecha: ${fecha}</div>`:''}${dlc?`<div style="font-size:10px;font-weight:900;color:#c0392b;margin-top:2px">⏱ Consumir antes: ${dlc}</div>`:''}${alrgHtml}${txt1?`<div style="font-size:8px;font-weight:600;text-transform:uppercase">${txt1}</div>`:''}${emp?`<div style="font-size:7px;color:#888;margin-top:3px">Resp: ${emp}</div>`:''}`;
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
     *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#fff}
     @page{size:${size.w} ${size.h};margin:0}@media print{body{width:${size.w};height:${size.h}}}
     .lb{width:${size.w};height:${size.h};padding:3mm;display:flex;flex-direction:column;border:1px solid #000;overflow:hidden;position:relative}
     .lb-co{font-size:7px;font-weight:900;color:#1c3a28;text-transform:uppercase;letter-spacing:.5px}
-    .lb-prod{font-size:${pid==='alergeno'?'11px':'14px'};font-weight:900;color:#000;line-height:1.1;margin:2px 0}
-    .lb-row{font-size:8px;color:#333;line-height:1.5}.lb-lot{font-family:monospace;font-size:9px;font-weight:700;background:#e8f2ec;padding:2px 5px;border-radius:3px}
-    .lb-dlc{font-size:10px;font-weight:900;color:#c0392b;margin-top:2px}.lb-free{font-size:8px;font-weight:600;color:#333;text-transform:uppercase}
     .lb-qr{position:absolute;bottom:3mm;right:3mm}
     .lb-content{flex:1;padding-right:18mm}
     .btn-p{margin:8px;padding:6px 16px;background:#1c3a28;color:#fff;border:none;border-radius:4px;cursor:pointer;display:block}
     @media print{.btn-p{display:none}}
-  </style>  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">${'<'+'/script>'}
-</head><body>
-  <div class="lb">
-    <div class="lb-content">
-    ${empresa?`<div class="lb-co">${empresa}</div>`:''}
-    ${pid==='libre'?`${t1?`<div style="font-size:14px;font-weight:900">${t1}</div>`:''}${t2?`<div class="lb-row">${t2}</div>`:''}${t3?`<div style="font-size:7px;color:#888">${t3}</div>`:''}`:
-    `${producto?`<div class="lb-prod">${producto}</div>`:''}${proveedor?`<div class="lb-row">Prov: ${proveedor}</div>`:''}${lote?`<div style="margin:2px 0"><span class="lb-lot">LOTE: ${lote}</span></div>`:''}${fecha?`<div class="lb-row">Fecha: ${fecha}</div>`:''}${dlc?`<div class="lb-dlc">⏱ Consumir antes: ${dlc}</div>`:''}${alrgHtml}${txt1?`<div class="lb-free">${txt1}</div>`:''}${emp?`<div style="font-size:7px;color:#888;margin-top:3px">Resp: ${emp}</div>`:''}` }
+  </style><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">${'<'+'/script>'}
+  </head><body>
+    <div class="lb">
+      <div class="lb-content">
+        ${empresa?`<div class="lb-co">${empresa}</div>`:''}
+        ${contenido}
+      </div>
+      ${pid!=='libre'&&producto?`<div id="alb-qr-dis" class="lb-qr"></div>`:''}
     </div>
-    ${pid!=='libre'&&producto?`<div id="alb-qr-dis" class="lb-qr"></div>`:''}
-  </div>
-  <button class="btn-p" onclick="window.print()">🖨 Imprimir</button>
-  <script>window.addEventListener('load',function(){
-    var qrEl=document.getElementById('alb-qr-dis');
-    var qrText='ALB|${(producto||''
+    <button class="btn-p" onclick="window.print()">🖨 Imprimir</button>
+    <script>window.addEventListener('load',function(){
+      var qrEl=document.getElementById('alb-qr-dis');
+      var qrCode='ALB|'+(producto||'')+'|'+(lote||'')+'|'+(dlc||'')+'|'+(emp||'');
+      if(qrEl&&qrCode.replace(/[|]/g,'').length>2){
+        new QRCode(qrEl,{text:qrCode,width:40,height:40,correctLevel:QRCode.CorrectLevel.M});
+      }
+    })${'<'+'/script>'}
+  </body></html>`);
+  w.document.close();
+}
+</script>
+</body>
+</html>
