@@ -15,7 +15,7 @@ button{cursor:pointer;font-family:inherit}
 input,select,textarea{font-family:inherit;font-size:15px}
 
 /* SCREENS */
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden;transition:transform .25s ease;transform:translateX(100%);background:#f2f4f0}.home-screen{transform:translateX(0)!important}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden;transition:transform .25s ease;transform:translateX(100%);background:#f2f4f0}
 .screen.active{transform:translateX(0)}
 .screen.home-screen{transform:translateX(0)}
 
@@ -36,7 +36,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 
 /* TILE GRID */
 .tile-grid{flex:1;overflow-y:auto;padding:14px 14px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-content:start}
-.tile-section-header{grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#8a9e8a;padding:2px 2px 6px;margin:8px 0 0}
+.tile-section-header{grid-column:1/-1;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#8aaac8;padding:2px 2px 6px;margin:8px 0 0}
 @media(max-width:600px){.tile-grid{grid-template-columns:repeat(2,1fr)}}
 .tile{background:#fff;border-radius:18px;padding:18px 8px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.07),0 4px 12px rgba(0,0,0,.04);min-height:100px;transition:transform .12s,box-shadow .12s;user-select:none;border:1px solid rgba(0,0,0,.04)}
 .tile:hover{box-shadow:0 2px 8px rgba(0,0,0,.1),0 6px 20px rgba(0,0,0,.06);transform:translateY(-2px)}
@@ -50,7 +50,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 
 /* HOME FOOTER */
 .home-footer{background:#fff;border-top:1px solid #ebebeb;padding:10px 14px;display:flex;gap:8px;flex-shrink:0;box-shadow:0 -1px 8px rgba(0,0,0,.05)}
-.home-footer-btn{flex:1;background:#f5f7f5;border:none;border-radius:12px;padding:9px 6px;font-size:12px;font-weight:700;color:#1a4fa8;display:flex;align-items:center;justify-content:center;gap:5px}
+.home-footer-btn{flex:1;background:#f5f7ff;border:none;border-radius:12px;padding:9px 6px;font-size:12px;font-weight:700;color:#1a4fa8;display:flex;align-items:center;justify-content:center;gap:5px}
 
 /* SCROLL BODY */
 .mod-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
@@ -82,20 +82,20 @@ input,select,textarea{font-family:inherit;font-size:15px}
 /* MOMENT PILLS */
 .moment-row{display:flex;gap:10px;margin-bottom:10px}
 .moment-pill{flex:1;padding:10px;border:2px solid #ddd;border-radius:50px;background:#fff;font-size:13px;font-weight:600;text-align:center;cursor:pointer;transition:all .15s}
-.moment-pill.sel{border-color:#1a4fa8;background:#e8f2ec;color:#1a4fa8}
+.moment-pill.sel{border-color:#1a4fa8;background:#e3efff;color:#1a4fa8}
 
 /* DESTINATION BUTTONS */
 .dest-row{display:flex;gap:8px;flex-wrap:wrap}
 .dest-btn{flex:1;padding:12px 8px;border:2px solid #ddd;border-radius:14px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;min-width:80px}
-.dest-btn.sel{border-color:#1a4fa8;background:#e8f2ec;color:#1a4fa8}
+.dest-btn.sel{border-color:#1a4fa8;background:#e3efff;color:#1a4fa8}
 
 /* NUMPAD */
 .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:280px;margin:0 auto}
 .numpad-display{border:2px solid #1a4fa8;border-radius:14px;padding:12px;font-size:26px;font-weight:700;text-align:center;margin-bottom:10px;min-height:56px;background:#f9f9f9}
 .npk{background:#fff;border:1.5px solid #e8e8e8;border-radius:12px;padding:14px;font-size:20px;font-weight:600;cursor:pointer;text-align:center;transition:background .1s;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.npk:active{background:#e8f2ec;transform:scale(.95)}
+.npk:active{background:#e3efff;transform:scale(.95)}
 .npk.red{background:#fff0f0;border-color:#e74c3c;color:#e74c3c}
-.npk.green{background:#e8f2ec;border-color:#1a4fa8;color:#1a4fa8}
+.npk.green{background:#e3efff;border-color:#1a4fa8;color:#1a4fa8}
 .np-sign{background:#fff3e0;border-color:#d4a017;color:#d4a017}
 
 /* LIST ROWS */
@@ -107,7 +107,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .list-sub{font-size:11.5px;color:#999;margin-top:2px}
 .list-right{flex-shrink:0;text-align:right}
 .list-badge{display:inline-block;padding:4px 9px;border-radius:20px;font-size:11px;font-weight:700}
-.badge-green{background:#e8f2ec;color:#1a4fa8}
+.badge-green{background:#e3efff;color:#1a4fa8}
 .badge-red{background:#fde8e8;color:#c0392b}
 .badge-blue{background:#e3f0ff;color:#2c6fad}
 .badge-orange{background:#fff3e0;color:#c07c00}
@@ -135,7 +135,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 /* ALERT BOX */
 .alert-box{padding:12px 14px;border-radius:12px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600}
 .alert-warn{background:#fff8e8;color:#a06000;border:1px solid #ffd980}
-.alert-ok{background:#e8f2ec;color:#1a4fa8;border:1px solid #b8d8c4}
+.alert-ok{background:#e3efff;color:#1a4fa8;border:1px solid #b8d0e8}
 .alert-err{background:#fde8e8;color:#c0392b;border:1px solid #f5b7b7}
 
 /* TRAZABILIDAD CHAIN */
@@ -166,7 +166,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .modal-sheet::before{content:'';display:block;width:40px;height:4px;background:#d0d0d0;border-radius:2px;margin:0 auto 18px;flex-shrink:0}
 
 /* LOT CODE */
-.lot-code{font-family:monospace;background:#e8f2ec;border-radius:8px;padding:6px 10px;font-size:13px;color:#1a4fa8;font-weight:700;display:inline-block}
+.lot-code{font-family:monospace;background:#e3efff;border-radius:8px;padding:6px 10px;font-size:13px;color:#1a4fa8;font-weight:700;display:inline-block}
 
 /* REPORT */
 @media print{
@@ -188,25 +188,25 @@ input,select,textarea{font-family:inherit;font-size:15px}
 
 /* DARK MODE */
 @media(prefers-color-scheme:dark){
-  body{background:#0f1f1a;color:#e8f0ee}
-  .card{background:#1a2e28;box-shadow:none}
-  .tile{background:#1a2e28;border-color:#2e4e42}
+  body{background:#0a1525;color:#dceeff}
+  .card{background:#0d1f3c;box-shadow:none}
+  .tile{background:#0d1f3c;border-color:#1a3060}
   .tile-label{color:#ccc}
-  .tile-sublabel{color:#8a9e98}
+  .tile-sublabel{color:#8aaac8}
   .tile-section-header{color:#4d9aff;border-left-color:#4d9aff}
-  .fc{background:#243b33;border-color:#2e4e42;color:#e8f0ee}
-  .home-footer{background:#1a2e28;border-color:#2e4e42}
-  .home-footer-btn{background:#243b33}
-  .modal-sheet{background:#1a2e28}
-  .list-row{border-color:#2e4e42}
-  .numpad-display{background:#243b33}
-  .npk{background:#243b33;border-color:#2e4e42;color:#ccc}
+  .fc{background:#152847;border-color:#1a3060;color:#dceeff}
+  .home-footer{background:#0d1f3c;border-color:#1a3060}
+  .home-footer-btn{background:#152847}
+  .modal-sheet{background:#0d1f3c}
+  .list-row{border-color:#1a3060}
+  .numpad-display{background:#152847}
+  .npk{background:#152847;border-color:#1a3060;color:#ccc}
 }
 </style>
 
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" async></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" async></script>
 </head>
 <body>
 
@@ -218,7 +218,6 @@ input,select,textarea{font-family:inherit;font-size:15px}
       <span id="header-worker-sub" class="header-sub">Sistema APPCC · Catering</span>
     </div>
     <div class="header-right">
-      <button id="header-change-worker" onclick="showWorkerPicker()" style="display:inline-block;background:rgba(255,255,255,.2);border:none;color:#fff;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap">cambiar 👤</button>
       <div id="scoreChip" class="score-chip" onclick="showMod('inf')">—</div>
       <button class="icon-btn" onclick="showMod('cfg')">⚙️</button>
     </div>
@@ -600,48 +599,6 @@ if(!localStorage.getItem('a_v7')){
 // NAVIGATION
 // ============================================================
 
-// ── PIN ADMINISTRADOR ────────────────────────────────────────────────────
-const ADMIN_PIN='2343';
-const ADMIN_MODS=['traz','inf','docs','cfg','noconf','formacion','contras','plagas'];
-let _pendingMod=null;
-let _pinAdminUnlocked=false; // se mantiene desbloqueado mientras la sesión está abierta
-
-function _checkAdminPin(mod){
-  if(_pinAdminUnlocked){_openModDirect(mod);return;}
-  _pendingMod=mod;
-  let _pin='';
-  openModal(`<div class="modal-title">🔒 Acceso administrador</div>
-    <div style="text-align:center;margin-bottom:16px">
-      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:16px" id="pin-dots">
-        ${[0,1,2,3].map(i=>`<div id="pd${i}" style="width:20px;height:20px;border-radius:50%;border:2px solid #1a4fa8;background:#fff;transition:background .15s"></div>`).join('')}
-      </div>
-      <div id="pin-err" style="color:#e74c3c;font-size:12px;min-height:16px"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:240px;margin:0 auto 16px">
-      ${[1,2,3,4,5,6,7,8,9,'',0,'⌫'].map(n=>`<button onclick="_pk('${n}')" style="padding:16px;font-size:20px;font-weight:700;background:${n===''?'transparent':'#f5f7fa'};border:${n===''?'none':'2px solid #e0e0e0'};border-radius:10px;cursor:pointer;color:#1a4fa8">${n}</button>`).join('')}
-    </div>
-    <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button></div>`);
-  window._curPin='';
-}
-function _pk(k){
-  let pin=window._curPin||'';
-  if(k==='⌫') pin=pin.slice(0,-1);
-  else if(k!==''&&pin.length<4) pin+=String(k);
-  window._curPin=pin;
-  for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.style.background=i<pin.length?'#1a4fa8':'#fff';}
-  if(pin.length===4){
-    if(pin===ADMIN_PIN){
-      _pinAdminUnlocked=true;
-      closeModal();
-      const m=_pendingMod;_pendingMod=null;
-      _openModDirect(m);
-    } else {
-      window._curPin='';
-      for(let i=0;i<4;i++){const d=document.getElementById('pd'+i);if(d)d.style.background='#fff';}
-      const e=document.getElementById('pin-err');if(e){e.textContent='PIN incorrecto';setTimeout(()=>{e.textContent='';},1500);}
-    }
-  }
-}
 function _openModDirect(id){
   const el=document.getElementById('mod-'+id);if(!el)return;
   document.querySelectorAll('.screen').forEach(s=>{s.classList.remove('active');s.style.transform='';});
@@ -677,6 +634,12 @@ function renderHomeAlerts(){
   if(ncs.length)alerts.push({type:'warn',msg:`${ncs.length} no conformidad(es) pendiente(s) de cierre`,mod:'noconf'});
   // Próximo mantenimiento
   ld(K.mant).forEach(m=>{if(m.proxima){const d=daysLeft(m.proxima);if(d!==null&&d<=3&&d>=0)alerts.push({type:'warn',msg:`Mantenimiento: <strong>${m.equipo}</strong> en ${d} día(s)`,mod:'mant'})}});
+  // Recepción hoy sin lote o sin caducidad
+  const recepHoy=(ld(K.recep)||[]).filter(r=>r.date===today());
+  const sinLote=recepHoy.filter(r=>!r.lote).length;
+  const sinCad=recepHoy.filter(r=>!r.caducidad).length;
+  if(sinLote>0)alerts.push({type:'warn',msg:`<strong>${sinLote} producto(s)</strong> recibidos hoy sin nº de lote`,mod:'recep'});
+  if(sinCad>0)alerts.push({type:'warn',msg:`<strong>${sinCad} producto(s)</strong> recibidos hoy sin caducidad`,mod:'recep'});
   if(!alerts.length){box.innerHTML='';return}
   box.innerHTML=`<div style="margin:8px 16px 0">${alerts.slice(0,4).map(a=>`
     <div onclick="showMod('${a.mod}')" style="background:${a.type==='error'?'#fff0f0':'#fff8e0'};border-left:3px solid ${a.type==='error'?'#e74c3c':'#f39c12'};padding:8px 12px;border-radius:8px;margin-bottom:6px;font-size:12px;cursor:pointer">
@@ -684,7 +647,6 @@ function renderHomeAlerts(){
     </div>`).join('')}</div>`;
 }
 function showMod(id){
-  if(ADMIN_MODS.includes(id)&&!_pinAdminUnlocked){_checkAdminPin(id);return;}
   _openModDirect(id);
 }
 function renderMod(id){
@@ -764,6 +726,7 @@ const SVG_ICONS={
   barchart:_SI(`<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>`),
 };
 const TILES=[
+  {id:'plan',svg:SVG_ICONS.clipboard,label:'Planificación',mod:'plan'},
   {id:'preop',svg:SVG_ICONS.preop,label:'Insp. Preoperativa',mod:'preop'},
   {id:'temps',svg:SVG_ICONS.thermo,label:'Temp. Cámaras',mod:'temps',sublabel:'Neveras: 0°C–6°C · Congelador: ≤−18°C'},
   {id:'agua',svg:SVG_ICONS.droplet,label:'Control del Agua',mod:'agua'},
@@ -806,10 +769,10 @@ function renderTileGrid(){
   if(!g)return;
   // Section structure: each entry is either a header string or a tile mod id
   const SECTIONS=[
-    {header:'INICIO DEL DÍA', mods:['bpm','temps','limp','agua']},
-    {header:'PRODUCCIÓN', mods:['recep','elab','abat','congel','descongel','regen','tserv']},
-    {header:'CONTROL DE CALIDAD', mods:['aceite','preop','lava','basura','etiquetas']},
-    {header:'GESTIÓN Y REGISTROS', mods:['noconf','formacion','contras','plagas']},
+    {header:'INICIO DEL DÍA', mods:['plan','bpm','preop','temps','limp','agua']},
+    {header:'PRODUCCIÓN', mods:['recep','elab','abat','congel','descongel','regen','tserv','aceite']},
+    {header:'CONTROL DE CALIDAD', mods:['lava','basura','etiquetas']},
+    {header:'GESTIÓN Y REGISTROS', mods:['noconf','formacion','mant','contras','plagas']},
     {header:'TRAZABILIDAD', mods:['traz']},
     {header:'CIERRE Y DOCUMENTACIÓN', mods:['inf','docs','cfg']}
   ];
@@ -871,62 +834,14 @@ window.addEventListener('popstate',function(e){
   toast.textContent='Pulsa atrás otra vez para salir';toast.style.opacity='1';
   clearTimeout(toast._t);toast._t=setTimeout(()=>{toast.style.opacity='0';},1800);
 });
-window.addEventListener('load',function(){history.replaceState({appcc:'home'},'');});
+// DOM ya disponible — el script está al final del body
+try{ history.replaceState({appcc:'home'},''); }catch(e){}
+try{ showHome(); }catch(e){ console.warn('showHome:',e); }
 
 // ============================================================
-// TRABAJADOR ACTIVO — selección al arranque y auto-relleno
+// TRABAJADOR ACTIVO — stub simplificado (sin selector de usuario)
 // ============================================================
-function getActiveWorker(){return localStorage.getItem(K.wActive)||''}
-function setActiveWorker(name){
-  localStorage.setItem(K.wActive,name);
-  updateWorkerHeader();
-}
-function showWorkerPicker(){
-  const emps=ld(K.emp)||[];
-  const current=getActiveWorker();
-  openModal(`<div class="modal-title">👤 Seleccionar usuario</div>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
-      ${emps.map(e=>`<button onclick="setActiveWorker('${e.replace(/'/g,"\'")}');closeModal()" 
-        style="background:${e===current?'#1a4fa8':'#f5f7fa'};color:${e===current?'#fff':'#222'};border:2px solid ${e===current?'#1a4fa8':'#e0e0e0'};border-radius:12px;padding:16px 20px;font-size:16px;font-weight:700;cursor:pointer;text-align:left">
-        ${e===current?'✓ ':''} ${e}
-      </button>`).join('')}
-      ${emps.length===0?'<div style="color:#aaa;text-align:center;padding:16px">Sin usuarios configurados.<br><small>Añádelos en ⚙ Configuración → Empleados</small></div>':''}
-    </div>
-    <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button></div>
-  `);
-}
-
-function buildWorkerPickerBtns(){
-  const emps=ld(K.emp);
-  const btns=document.getElementById('worker-picker-btns');
-  const empty=document.getElementById('worker-picker-empty');
-  if(!btns)return;
-  if(emps.length===0){
-    btns.innerHTML='';
-    if(empty)empty.style.display='block';
-  } else {
-    if(empty)empty.style.display='none';
-    btns.innerHTML=emps.map(e=>`
-      <button onclick="setActiveWorker('${e.replace(/'/g,"\\'")}') " style="background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.25);color:#fff;padding:18px 20px;border-radius:14px;font-size:18px;font-weight:700;cursor:pointer;text-align:center;letter-spacing:.3px;transition:background .15s"
-        onmouseover="this.style.background='rgba(255,255,255,.28)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">${e}</button>`).join('');
-  }
-}
-function updateWorkerHeader(){
-  const w=getActiveWorker();
-  const sub=document.getElementById('header-worker-sub');
-  const btn=document.getElementById('header-change-worker');
-  if(sub)sub.textContent='Sistema APPCC · Catering';
-  if(btn){btn.style.display='inline-block';btn.textContent=w?'👤 '+w:'👤 Usuario';}
-}
-function initWorkerPicker(){
-  const w=getActiveWorker();
-  const emps=ld(K.emp);
-  if(w&&emps.length>0&&!emps.includes(w)){
-    localStorage.removeItem(K.wActive);
-  }
-  buildWorkerPickerBtns();
-  updateWorkerHeader();
-}
+function getActiveWorker(){return''}
 
 // ============================================================
 // PLANNING MODULE
@@ -1171,7 +1086,7 @@ function saveTempSingle(zid){
   const disp=document.getElementById('np-disp');
   const valStr=disp?._val||disp?.textContent;
   const val=parseFloat(valStr);if(isNaN(val)){alert('Introduce una temperatura');return}
-  const emp=document.getElementById('ts-emp').value;if(!emp){alert('Selecciona empleado');return}
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const turno=document.getElementById('ts-turno').value;
   const obs=document.getElementById('ts-obs').value;
   const alertFlag=z.target<0?val>z.alert:val>z.alert;
@@ -1277,7 +1192,7 @@ function renderLimp(){
     <div>${todayRecs.reverse().map(r=>`<div class="list-row">
       <div class="list-icon">🧹</div>
       <div class="list-main"><div class="list-title">${r.tarea}</div><div class="list-sub">${r.emp} · ${fmtTime(r.ts)} · Turno ${r.turno}</div></div>
-      <div class="list-right"><span class="list-badge badge-green">✓</span></div>
+      <div class="list-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><span class="list-badge badge-green">✓</span><button class="btn-icon" onclick="editRecepCad('${r.id}')" style="color:#e67e22;font-size:13px" title="Editar caducidad">📅</button></div>
     </div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin registros hoy</div>'}</div>
   </div>`;
   document.getElementById('limp-body').innerHTML=html;
@@ -1437,6 +1352,278 @@ function openRecepMenu(){
   // Standard flow: select proveedor first
   renderRecep();
 }
+// ── OCR ALBARÁN RECEPCIÓN ────────────────────────────────────────────────
+let _recepAlbOCRLines = [];
+
+function openRecepAlbaranOCR(){
+  openModal(`<div class="modal-title">🧾 Leer albarán del proveedor</div>
+    <div style="padding:4px 0 10px">
+      <div style="font-size:13px;color:#555;margin-bottom:12px">
+        Fotografía el albarán y el sistema detectará los productos automáticamente.
+        Podrás revisar y confirmar cada uno.
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <label style="flex:1;min-width:130px;cursor:pointer">
+          <input type="file" id="albrecep-img" accept="image/*" capture="environment"
+            onchange="prevAlbRecepImg(this)" style="display:none">
+          <div style="background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;border-radius:10px;
+            padding:14px;text-align:center;font-size:13px;font-weight:700">
+            📷 Fotografiar albarán
+          </div>
+        </label>
+        <label style="flex:1;min-width:130px;cursor:pointer">
+          <input type="file" id="albrecep-img2" accept="image/*"
+            onchange="prevAlbRecepImg(this)" style="display:none">
+          <div style="background:#f5f7fa;color:#1a4fa8;border-radius:10px;border:2px dashed #1a4fa8;
+            padding:14px;text-align:center;font-size:13px;font-weight:700">
+            📁 Subir imagen
+          </div>
+        </label>
+      </div>
+      <div id="albrecep-prev" style="margin-bottom:8px"></div>
+      <div id="albrecep-ocr-area" style="display:none">
+        <button id="albrecep-ocr-btn" onclick="runRecepOCR()"
+          style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:#fff;border:none;
+          border-radius:10px;padding:14px;font-size:14px;font-weight:700;cursor:pointer">
+          🔍 Leer albarán con OCR
+        </button>
+        <div id="albrecep-status" style="display:none;margin-top:8px;padding:10px;background:#f0f4ff;
+          border-radius:8px;font-size:13px;color:#1a4fa8;text-align:center"></div>
+      </div>
+      <div id="albrecep-confirm-area" style="display:none"></div>
+    </div>
+    <div class="modal-row" style="margin-top:4px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+    </div>`);
+  _recepAlbOCRLines = [];
+}
+
+function prevAlbRecepImg(inp){
+  const file = inp.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('albrecep-prev');
+    if(prev && file.type.startsWith('image/')){
+      prev.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid #ddd">`;
+    }
+    const area = document.getElementById('albrecep-ocr-area');
+    if(area) area.style.display = 'block';
+    window._albRecepImgData = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function runRecepOCR(){
+  const btn = document.getElementById('albrecep-ocr-btn');
+  const statusEl = document.getElementById('albrecep-status');
+  if(!window._albRecepImgData){ alert('Primero selecciona una imagen'); return; }
+  if(btn) btn.disabled = true;
+  if(statusEl){ statusEl.style.display='block'; statusEl.innerHTML='⏳ Cargando motor OCR…'; }
+
+  try {
+    if(typeof Tesseract === 'undefined'){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+    if(statusEl) statusEl.innerHTML='🔍 Analizando imagen… (20-40s)';
+    const result = await Tesseract.recognize(window._albRecepImgData, 'spa+eng', {
+      logger: m => {
+        if(m.status==='recognizing text'&&statusEl)
+          statusEl.innerHTML=`🔍 Leyendo… ${Math.round((m.progress||0)*100)}%`;
+      }
+    });
+    if(statusEl) statusEl.innerHTML='🧠 Interpretando productos…';
+    const lines = _parseRecepOCRText(result.data.text);
+    if(!lines.length){
+      if(statusEl) statusEl.innerHTML='⚠️ No se detectaron productos. Prueba con mejor iluminación o introduce manualmente.';
+      if(btn){btn.disabled=false;}
+      return;
+    }
+    _recepAlbOCRLines = lines;
+    if(statusEl) statusEl.style.display='none';
+    _showRecepOCRConfirm();
+  } catch(err){
+    console.error(err);
+    if(statusEl) statusEl.innerHTML='❌ Error al leer la imagen. Introduce manualmente.';
+    if(btn) btn.disabled=false;
+  }
+}
+
+function _parseRecepOCRText(rawText){
+  // Reuse same logic as ALBARABA_GESTION parser
+  const gestorProds=(()=>{try{const g=localStorage.getItem('g_productos');return g?JSON.parse(g):[];}catch(e){return[];}})();
+  const lines = rawText.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
+  const skipWords=['total','subtotal','iva','base imponible','albarán','albaran',
+    'factura','proveedor','cliente','cif','nif','fecha','codigo','referencia',
+    'descripcion','precio','importe','cantidad','unidades','num','nº','page',
+    'pagina','www','http','tel','fax','email','dirección','direccion'];
+  const results=[];
+  for(const line of lines){
+    const lo=line.toLowerCase();
+    if(skipWords.some(w=>lo===w||lo.startsWith(w+' ')||lo.startsWith(w+':'))) continue;
+    if(lo.match(/^(total|subtotal|iva|base)/)) continue;
+    if(line.length<4) continue;
+    const numMatches=[...line.matchAll(/\b(\d{1,6}[.,]\d{1,4}|\d{1,6})\b/g)]
+      .map(m=>parseFloat(m[0].replace(',','.'))).filter(n=>!isNaN(n)&&n>=0);
+    if(!numMatches.length) continue;
+    let nombre=line
+      .replace(/\b\d{1,6}[.,]\d{1,4}\b/g,'').replace(/\b\d{1,6}\b/g,'')
+      .replace(/[€$%*#|\\_\/]/g,'').replace(/\s{2,}/g,' ').trim();
+    if(nombre.length<3) continue;
+    const decimals=numMatches.filter(n=>!Number.isInteger(n)||n>100);
+    const integers=numMatches.filter(n=>Number.isInteger(n)&&n>0&&n<=9999);
+    let precio=decimals.length?decimals[0]:0;
+    let cajas=integers.length?integers.filter(n=>n>=1&&n<=9999).sort((a,b)=>a-b)[0]:1;
+    if(/^[\W\d]+$/.test(nombre)) continue;
+    if(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(nombre.trim())) continue;
+    // Match against gestor productos
+    const normS=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,'').trim();
+    const n=normS(nombre);
+    let bestMatch=null, bestScore=0;
+    gestorProds.forEach(p=>{
+      const pn=normS(p.nombre||'');
+      if(pn===n){bestMatch=p;bestScore=100;return;}
+      const score=_simScore(n,pn);
+      if(score>bestScore&&score>=45){bestScore=score;bestMatch=p;}
+    });
+    results.push({
+      nombreAlb:_capAlb(nombre),
+      precio,cajas:cajas||1,
+      _match:bestMatch,_score:bestScore,
+      _nombreInterno:bestMatch?bestMatch.nombre:nombre,
+      _confirmed:bestScore>=70, // auto-confirm high-confidence matches
+    });
+  }
+  // Deduplicate
+  const deduped=[];
+  for(const r of results){
+    const norm=s=>s.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+    const already=deduped.some(d=>_simScore(norm(d.nombreAlb),norm(r.nombreAlb))>85);
+    if(!already) deduped.push(r);
+  }
+  return deduped;
+}
+
+function _simScore(a,b){
+  if(a===b) return 100;
+  const wa=a.split(' ').filter(Boolean), wb=b.split(' ').filter(Boolean);
+  let m=0;
+  wa.forEach(w=>{if(wb.some(ww=>ww.includes(w)||w.includes(ww)))m++;});
+  const base=m/Math.max(wa.length,wb.length)*100;
+  if(wa[0]&&wb[0]&&(wa[0]===wb[0]||wa[0].startsWith(wb[0])||wb[0].startsWith(wa[0]))) return Math.min(100,base+20);
+  return base;
+}
+
+function _capAlb(s){
+  return s.toLowerCase().replace(/(^|\s)[a-záéíóúüñ]/g,c=>c.toUpperCase()).trim();
+}
+
+function _showRecepOCRConfirm(){
+  const area = document.getElementById('albrecep-confirm-area');
+  if(!area) return;
+  const ocrArea = document.getElementById('albrecep-ocr-area');
+  if(ocrArea) ocrArea.style.display='none';
+
+  const rowsHtml = _recepAlbOCRLines.map((l,i)=>{
+    const scoreColor = l._score>=70?'#065f46':l._score>=45?'#92400e':'#991b1b';
+    const scoreBg = l._score>=70?'#d1fae5':l._score>=45?'#fef3c7':'#fee2e2';
+    const scoreLabel = l._score>=70?'✓ Alta':'~Media';
+    return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-bottom:8px;
+      background:${l._confirmed?'#f0fdf4':'#fff'}" id="ocrl-${i}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <input type="checkbox" id="ocrl-chk-${i}" ${l._confirmed?'checked':''} onchange="_recepAlbOCRLines[${i}]._confirmed=this.checked;document.getElementById('ocrl-${i}').style.background=this.checked?'#f0fdf4':'#fff'">
+        <div style="flex:1;font-size:13px;font-weight:700">${l.nombreAlb}</div>
+        <span style="font-size:10px;background:${scoreBg};color:${scoreColor};border-radius:4px;padding:2px 6px">${scoreLabel}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
+        <div>
+          <div style="color:#888;margin-bottom:2px">Nombre en tu catálogo</div>
+          <input class="fc" style="font-size:12px" id="ocrl-int-${i}" 
+            value="${l._nombreInterno||l.nombreAlb}" 
+            onchange="_recepAlbOCRLines[${i}]._nombreInterno=this.value">
+        </div>
+        <div>
+          <div style="color:#888;margin-bottom:2px">Cajas / Bolsas</div>
+          <input class="fc" style="font-size:12px" type="number" min="1" id="ocrl-cajas-${i}"
+            value="${l.cajas||1}"
+            onchange="_recepAlbOCRLines[${i}].cajas=parseInt(this.value)||1">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  area.style.display='block';
+  area.innerHTML=`
+    <div style="font-size:13px;font-weight:700;color:#1a4fa8;margin-bottom:8px">
+      📋 ${_recepAlbOCRLines.length} productos detectados — revisa y confirma
+    </div>
+    <div style="max-height:300px;overflow-y:auto;padding-right:4px">${rowsHtml}</div>
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="confirmarRecepOCR()">
+        ✓ Registrar productos confirmados
+      </button>
+    </div>`;
+}
+
+function confirmarRecepOCR(){
+  // Sync checkbox + fields from DOM
+  _recepAlbOCRLines.forEach((l,i)=>{
+    const chk=document.getElementById('ocrl-chk-'+i);
+    const int=document.getElementById('ocrl-int-'+i);
+    const caj=document.getElementById('ocrl-cajas-'+i);
+    if(chk) l._confirmed=chk.checked;
+    if(int) l._nombreInterno=int.value.trim()||l._nombreInterno;
+    if(caj) l.cajas=parseInt(caj.value)||1;
+  });
+
+  const confirmed=_recepAlbOCRLines.filter(l=>l._confirmed);
+  if(!confirmed.length){alert('Marca al menos un producto');return;}
+
+  const emp=localStorage.getItem('a_worker_active')||ld(K.emp)?.[0]||'';
+  const recs=ld(K.recep)||[];
+  const fecha=today();
+  let added=0;
+
+  confirmed.forEach(l=>{
+    const rec={
+      id:genId(), ts:new Date().toISOString(), date:fecha,
+      proveedor:'', producto:l._nombreInterno||l.nombreAlb,
+      cantidad:l.cajas, unidad:'cj',
+      cajas:l.cajas,
+      lote:'', caducidad:'', emp,
+      obs:`Del albarán: "${l.nombreAlb}"`,
+      conforme:true
+    };
+    recs.push(rec);
+    addToLabelQueue({
+      tipo:'📦 RECEPCIÓN',
+      producto:rec.producto, lote:rec.lote,
+      proveedor:rec.proveedor, emp,
+      ts:rec.ts, destino:'nevera',
+      proceso:['📦 Recibido (albarán OCR) · '+new Date().toLocaleDateString('es-ES')]
+    });
+    added++;
+  });
+
+  sv(K.recep,recs);
+  updateScoreChip();
+  closeModal();
+  renderRecep();
+  setTimeout(()=>{
+    const t=document.createElement('div');
+    t.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#27ae60;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999';
+    t.textContent=`✓ ${added} producto${added!==1?'s':''} registrado${added!==1?'s':''} desde albarán`;
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(),2500);
+  },200);
+}
+
+
 function openRecepModal(prefill){
   // Called by scanner — skip proveedor grid, go straight to category + entry
   const cats=PROD_CATS;
@@ -1486,6 +1673,9 @@ function renderRecep(){
       </button>
       <button onclick="abrirFotoLoteBolsa('recep')" style="width:100%;background:#f39c12;color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px">
         📸 Fotografiar número de lote
+      </button>
+      <button onclick="openRecepAlbaranOCR()" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+        🧾 Leer albarán completo (varios productos a la vez)
       </button>
     </div>
 
@@ -1542,7 +1732,7 @@ function showRecepEntry(cat){
     <div class="form-row"><label class="form-label">Producto *</label>
       <input class="fc" id="rc-prod" placeholder="Nombre del producto" list="rc-prod-dl">
       <datalist id="rc-prod-dl">${prodList.map(p=>`<option value="${p}">`).join('')}</datalist></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
       <div class="form-row"><label class="form-label">Cantidad</label>
         <div style="display:flex;gap:4px">
           <input class="fc" id="rc-cant" type="number" step="0.1" placeholder="Nº" style="flex:1">
@@ -1550,6 +1740,10 @@ function showRecepEntry(cat){
             <option>kg</option><option>g</option><option>u</option><option>l</option><option>cj</option>
           </select>
         </div></div>
+      <div class="form-row"><label class="form-label">Cajas / Bolsas</label>
+        <input class="fc" id="rc-cajas" type="number" min="0" step="1" placeholder="Nº cajas">
+        <div style="font-size:10px;color:#888;margin-top:2px">Para control de stock</div>
+      </div>
       <div class="form-row"><label class="form-label">Temperatura (°C)</label>
         <input class="fc" id="rc-temp" type="number" step="0.1" placeholder="°C">
         <div style="font-size:10px;color:#888;margin-top:2px">Límite: &lt;7°C refrigerado</div>
@@ -1588,7 +1782,7 @@ function showRecepEntry(cat){
     });
     // Restore scan data if any
     if(recepAlbaranData){
-      ['rc-prod','rc-lote','rc-cad','rc-prov','rc-cant'].forEach(id=>{
+      ['rc-prod','rc-lote','rc-cad','rc-prov','rc-cant','rc-cajas','rc-temp','rc-unit','rc-obs','rc-emp'].forEach(id=>{
         const el=document.getElementById(id);
         const key=id.replace('rc-','');
         if(el&&recepAlbaranData[key])el.value=recepAlbaranData[key];
@@ -1708,21 +1902,31 @@ function recepTabSwitch(el,tabId){
   });
 }
 function saveRecep(cat){
-  const prod=(document.getElementById('rc-prod')||{}).value||'';
+  // Lee de formulario modal (rc-*) o inline tabbed (re-*)
+  const _rf=(n)=>{
+    const el=document.getElementById('rc-'+n)||document.getElementById('re-'+n);
+    if(!el)return'';
+    if(el.id==='re-np-disp')return String(el._val||'').trim()||el.textContent.replace('—','').trim();
+    return(el.value||'').trim();
+  };
+  const prod=_rf('prod')||(document.getElementById('re-prod')||{}).value||'';
   if(!prod){alert('Introduce el nombre del producto');return;}
-  const emp=(document.getElementById('rc-emp')||{}).value||'';
+  const emp=_rf('emp');
   if(!emp){alert('Selecciona el trabajador');return;}
-  const temp=document.getElementById('rc-temp')?.value||'';
-  const lote=document.getElementById('rc-lote')?.value||'';
-  const cad=document.getElementById('rc-cad')?.value||'';
-  const obs=document.getElementById('rc-obs')?.value||'';
-  const prov=(document.getElementById('rc-prov')||{}).value||recepProv?.name||'';
-  const cant=document.getElementById('rc-cant')?.value||'';
-  const unit=document.getElementById('rc-unit')?.value||'kg';
+  const tempDisp=document.getElementById('re-np-disp');
+  const temp=_rf('temp')||(tempDisp?String(tempDisp._val||''):'');
+  const lote=_rf('lote');
+  const cad=_rf('cad');
+  const obs=_rf('obs');
+  const prov=_rf('prov')||recepProv?.name||'';
+  const cant=_rf('cant');
+  const unit=_rf('unit')||'kg';
+  const cajas=_rf('cajas');
   const tempVal=parseFloat(temp);
   const recs=ld(K.recep)||[];
   const rec={id:genId(),ts:new Date().toISOString(),date:today(),
     proveedor:prov,producto:prod,cantidad:cant,unidad:unit,
+    cajas:cajas?parseInt(cajas):undefined,
     temp:temp!==''?tempVal:undefined,lote,caducidad:cad,emp,obs,
     conforme:isNaN(tempVal)||tempVal<=7
   };
@@ -1735,9 +1939,17 @@ function saveRecep(cat){
     alert('⚠ Temperatura fuera de rango registrada como no conformidad');
   }
   recepAlbaranData=null;
+  // Guardar para enlazar con elaboración siguiente
+  window._lastRecepData={id:rec.id,producto:prod,lote,caducidad:cad,proveedor:prov,emp,date:today(),ts:rec.ts};
   updateScoreChip();
-  closeModal();
-  renderRecep();
+  closeModal();renderRecep();
+  setTimeout(()=>addToLabelQueue({
+    tipo:'📦 RECEPCIÓN',
+    producto:prod,lote,dlc:cad,proveedor:prov,emp,
+    ts:new Date().toISOString(),
+    destino:'nevera',
+    proceso:['📦 Recibido de '+(prov||'proveedor')+' · '+new Date().toLocaleDateString('es-ES')]
+  }),300);
 }
 
 function openAlbaranUpload(){
@@ -1840,6 +2052,65 @@ function applyAlbaran(){
 // ============================================================
 const ELAB_DLC_NEVERA=3;const ELAB_DLC_CONGELADOR=365;const ELAB_DLC_ABATIDO=7;
 
+// ── EDITAR CADUCIDAD ─────────────────────────────────────────────────────
+function editElabDlc(id){
+  const recs=ld(K.elab)||[];
+  const r=recs.find(x=>x.id===id);if(!r)return;
+  openModal(`
+    <div class="modal-title">📅 Editar caducidad</div>
+    <div style="background:#f0f4ff;border-radius:10px;padding:10px 12px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700">${r.producto}</div>
+      <div style="font-size:12px;color:#888">Lote: ${r.lote||'—'}</div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Nueva fecha de caducidad (DLC)</label>
+      <input class="fc" type="date" id="edit-dlc-val" value="${r.dlc||''}">
+    </div>
+    <div style="font-size:11px;color:#888;margin-top:6px;margin-bottom:14px">
+      Caducidad actual: <strong>${r.dlc?fmtDate(r.dlc):'sin definir'}</strong>
+    </div>
+    <div class="modal-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="
+        const v=document.getElementById('edit-dlc-val').value;
+        const rs=ld(K.elab)||[];
+        const idx=rs.findIndex(x=>x.id==='${id}');
+        if(idx>=0){rs[idx].dlc=v;sv(K.elab,rs);}
+        closeModal();renderElab();renderHomeAlerts();
+      ">✓ Guardar</button>
+    </div>
+  `);
+}
+
+function editRecepCad(id){
+  const recs=ld(K.recep)||[];
+  const r=recs.find(x=>x.id===id);if(!r)return;
+  openModal(`
+    <div class="modal-title">📅 Editar caducidad</div>
+    <div style="background:#f0f4ff;border-radius:10px;padding:10px 12px;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700">${r.producto}</div>
+      <div style="font-size:12px;color:#888">Lote: ${r.lote||'—'} · ${r.proveedor||''}</div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Nueva fecha de caducidad</label>
+      <input class="fc" type="date" id="edit-cad-val" value="${r.caducidad||''}">
+    </div>
+    <div style="font-size:11px;color:#888;margin-top:6px;margin-bottom:14px">
+      Caducidad actual: <strong>${r.caducidad?fmtDate(r.caducidad):'sin definir'}</strong>
+    </div>
+    <div class="modal-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="
+        const v=document.getElementById('edit-cad-val').value;
+        const rs=ld(K.recep)||[];
+        const idx=rs.findIndex(x=>x.id==='${id}');
+        if(idx>=0){rs[idx].caducidad=v;sv(K.recep,rs);}
+        closeModal();renderRecep();renderHomeAlerts();
+      ">✓ Guardar</button>
+    </div>
+  `);
+}
+
 function renderElab(){
   const recs=ld(K.elab).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   const today_str=today();
@@ -1862,7 +2133,8 @@ function renderElab(){
       <div class="list-right">
         <span class="list-badge ${stCls}">${stLbl}</span>
         <div style="display:flex;gap:4px;margin-top:6px">
-          <button class="btn-icon" onclick="printElabLabel('${r.id}')" title="Imprimir etiqueta">🏷</button>
+          <button class="btn-icon" onclick="addToLabelQueue({producto:r.producto,lote:r.lote,dlc:r.dlc,ts:r.ts,destino:r.destino||'nevera',proceso:r.proceso||[]})" title="Etiqueta">🏷</button>
+          <button class="btn-icon" onclick="editElabDlc('${r.id}')" title="Editar caducidad" style="color:#e67e22">📅</button>
           <button class="btn-icon" onclick="viewLotChain('${r.lote}')" title="Ver trazabilidad">🔗</button>
         </div>
       </div>
@@ -1956,32 +2228,25 @@ function filterElabSelect(q){
   if(filtered.length===1)sel.value=filtered[0].nombre;
 }
 function openElabModal(){
-  const emps=ld(K.emp);
   const gestorElabs=getGestorElabs().sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
   window._elabCatalog=gestorElabs;
   const prodOpts=gestorElabs.map(e=>`<option value="${e.nombre.replace(/"/g,'&quot;')}">${e.nombre}</option>`).join('');
   const lot=genLot();
+  window._elabIngredientes=[];
   openModal(`<div class="modal-title">🍳 Nueva Elaboración</div>
-    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
-      <button onclick="scanElabBarcode()" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras del ingrediente</button>
-    </div>
-    <div class="fc-group"><label class="fc-label">Elaboración <span style="color:#c00;font-weight:700">*</span> <span style="font-size:10px;color:#888">(solo del catálogo registrado)</span></label>
-      <input class="fc" id="el-prod-search" placeholder="🔍 Buscar en catálogo..." oninput="filterElabSelect(this.value)" style="margin-bottom:6px">
-      <select class="fc" id="el-prod" size="6" style="height:140px">${prodOpts}</select>
-      <div style="font-size:10px;color:#888;margin-top:4px">Si no aparece, añádelo primero en <strong>Gestión → Elaboraciones</strong></div>
+    <div class="fc-group"><label class="fc-label">Elaboración <span style="color:#c00">*</span></label>
+      <input class="fc" id="el-prod-search" placeholder="🔍 Buscar..." oninput="filterElabSelect(this.value)" style="margin-bottom:6px">
+      <select class="fc" id="el-prod" size="5" style="height:120px">${prodOpts}</select>
     </div>
     <div class="fc-row" style="margin-top:10px">
-      <div class="fc-group"><label class="fc-label">Cantidad</label>
+      <div class="fc-group"><label class="fc-label">Cantidad <span style="color:#c00">*</span></label>
         <input class="fc" type="number" id="el-cant" placeholder="Ej: 50"></div>
       <div class="fc-group"><label class="fc-label">Unidad</label>
         <select class="fc" id="el-unidad">
           <option>uds</option><option>kg</option><option>g</option><option>raciones</option><option>bandejas</option><option>L</option>
         </select></div>
     </div>
-    <div class="fc-group" style="margin-top:10px"><label class="fc-label">Empleado</label>
-      <select class="fc" id="el-emp"><option value="">— Seleccionar —</option>${emps.map(e=>`<option>${e}</option>`).join('')}</select>
-    </div>
-    <div class="fc-group" style="margin-top:10px"><label class="fc-label">Destino del producto</label>
+    <div class="fc-group" style="margin-top:10px"><label class="fc-label">Destino</label>
       <div class="dest-row">
         <button class="dest-btn sel" id="el-dest-nev" onclick="selDest('nev')">❄ Nevera<br><span style="font-size:11px;opacity:.7">${ELAB_DLC_NEVERA} días</span></button>
         <button class="dest-btn" id="el-dest-con" onclick="selDest('con')">🧊 Congelador<br><span style="font-size:11px;opacity:.7">1 año</span></button>
@@ -1990,50 +2255,158 @@ function openElabModal(){
       <input type="hidden" id="el-dest-val" value="nevera">
     </div>
     <div class="fc-group" style="margin-top:10px">
-      <label class="fc-label">Nº de Lote <span style="color:#1a4fa8;font-weight:700">(auto-generado)</span></label>
+      <label class="fc-label">Nº de Lote</label>
       <div style="display:flex;align-items:center;gap:8px">
         <span class="lot-code" id="el-lot-disp">${lot}</span>
         <input type="hidden" id="el-lot" value="${lot}">
         <span style="font-size:11px;color:#aaa">${new Date().toLocaleString('es-ES')}</span>
       </div>
     </div>
-    <div class="fc-group" style="margin-top:10px"><label class="fc-label">T° centro del producto al elaborar (°C)</label>
-      <input class="fc" id="el-temp" type="number" step="0.1" placeholder="Temperatura del centro del producto..."></div>
-    <div class="fc-group" style="margin-top:10px"><label class="fc-label">Alérgenos presentes <span style="font-size:10px;color:#888">(pulsa para marcar)</span></label>
-      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px">
-        ${ALERGENOS14.map(a=>`<button type="button" class="moment-pill" id="alg-${a.replace(/ /g,'_')}" onclick="toggleAlerg('${a.replace(/ /g,'_')}')">${a}</button>`).join('')}
+
+    <!-- INGREDIENTES / MATERIAS PRIMAS -->
+    <div style="margin-top:14px;border:2px solid #e3efff;border-radius:12px;overflow:hidden">
+      <div style="background:#e3efff;padding:8px 12px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:13px;font-weight:700;color:#1a4fa8">📦 Ingredientes / Materias primas</span>
+        <span style="font-size:11px;color:#888">Opcional — para trazabilidad</span>
+      </div>
+      <div style="padding:8px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #e3efff">
+        <button onclick="abrirAñadirIngrediente('scan')" style="flex:1;padding:8px;background:#1a4fa8;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-width:80px">📷 Escanear</button>
+        <button onclick="abrirAñadirIngrediente('foto')" style="flex:1;padding:8px;background:#f39c12;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-width:80px">📸 Foto lote</button>
+        <button onclick="abrirAñadirIngrediente('manual')" style="flex:1;padding:8px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-width:80px">✏️ Manual</button>
+      </div>
+      <div id="el-ingr-list" style="padding:8px;min-height:36px">
+        <div style="color:#bbb;font-size:12px;text-align:center;padding:8px" id="el-ingr-empty">Sin ingredientes añadidos</div>
       </div>
     </div>
+
     <div class="fc-group" style="margin-top:10px"><label class="fc-label">Observaciones</label>
-      <input class="fc" id="el-obs" placeholder="Notas, lote materia prima..."></div>
-    <div class="modal-row">
+      <input class="fc" id="el-obs" placeholder="Notas adicionales..."></div>
+    <div class="modal-row" style="margin-top:14px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-green" style="flex:1" onclick="saveElab()">✓ Registrar elaboración</button>
+      <button class="btn btn-green" style="flex:2" onclick="saveElab()">✓ Registrar elaboración</button>
     </div>`);
 }
+
+function _renderElabIngredientes(){
+  const list=document.getElementById('el-ingr-list');
+  if(!list)return;
+  const empty=document.getElementById('el-ingr-empty');
+  const ingrs=window._elabIngredientes||[];
+  if(ingrs.length===0){
+    if(empty)empty.style.display='block';
+    // Remove any rows
+    list.querySelectorAll('.ingr-row').forEach(r=>r.remove());
+    return;
+  }
+  if(empty)empty.style.display='none';
+  list.querySelectorAll('.ingr-row').forEach(r=>r.remove());
+  ingrs.forEach((ing,i)=>{
+    const div=document.createElement('div');
+    div.className='ingr-row';
+    div.style.cssText='display:flex;align-items:center;gap:6px;padding:6px 4px;border-bottom:1px solid #f5f5f5;font-size:13px';
+    div.innerHTML=`<div style="flex:1">
+      <span style="font-weight:700;color:#111">${ing.producto}</span>
+      ${ing.lote?`<span style="color:#1a4fa8;font-size:11px;font-family:monospace;margin-left:4px">L:${ing.lote}</span>`:''}
+    </div>
+    <span style="font-weight:700;color:#27ae60;flex-shrink:0">${ing.cantidad||''} ${ing.unidad||''}</span>
+    <button onclick="_eliminarIngrediente(${i})" style="background:none;border:none;font-size:16px;cursor:pointer;color:#e74c3c;padding:0 4px;flex-shrink:0">✕</button>`;
+    list.appendChild(div);
+  });
+}
+
+function _eliminarIngrediente(i){
+  (window._elabIngredientes||[]).splice(i,1);
+  _renderElabIngredientes();
+}
+
+function abrirAñadirIngrediente(modo){
+  if(modo==='scan'){
+    // Use scanner - on result add to list
+    openScanModal(parsed=>{
+      const nombre=parsed.producto||parsed.nombre||parsed.gtin||'Producto';
+      const lote=parsed.lot||parsed.lote||'';
+      _mostrarFormIngrediente(nombre,lote);
+    });
+  } else if(modo==='foto'){
+    // Use OCR - after OCR apply, show form
+    window._ocrIngredienteMode=true;
+    abrirFotoLoteBolsa('ingr');
+  } else {
+    _mostrarFormIngrediente('','');
+  }
+}
+
+function _mostrarFormIngrediente(nombrePrefill,lotePrefill){
+  openModal(`<div class="modal-title" style="font-size:15px">➕ Añadir ingrediente</div>
+    <div class="fc-group"><label class="fc-label">Producto</label>
+      <input class="fc" id="ingr-prod" placeholder="Nombre del ingrediente" value="${nombrePrefill.replace(/"/g,'&quot;')}" style="font-size:15px"></div>
+    <div class="fc-group" style="margin-top:8px"><label class="fc-label">Nº de Lote</label>
+      <div style="display:flex;gap:6px">
+        <input class="fc" id="ingr-lote" placeholder="Lote (opcional)" value="${lotePrefill}" style="flex:1;font-family:monospace;font-size:14px">
+        <button onclick="abrirFotoLoteBolsa('ingr-lote')" style="padding:8px 10px;background:#f39c12;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;flex-shrink:0">📸</button>
+      </div>
+    </div>
+    <div class="fc-row" style="margin-top:8px">
+      <div class="fc-group"><label class="fc-label">Cantidad</label>
+        <input class="fc" type="number" id="ingr-cant" placeholder="Ej: 2" style="font-size:15px"></div>
+      <div class="fc-group"><label class="fc-label">Unidad</label>
+        <select class="fc" id="ingr-unidad">
+          <option>kg</option><option>g</option><option>L</option><option>uds</option><option>bolsas</option><option>bricks</option><option>latas</option>
+        </select></div>
+    </div>
+    <div class="modal-row" style="margin-top:14px">
+      <button class="btn btn-outline" style="flex:1" onclick="_volverAElab()">← Volver</button>
+      <button class="btn btn-green" style="flex:2" onclick="_confirmarIngrediente()">✓ Añadir</button>
+    </div>`);
+  setTimeout(()=>{const el=document.getElementById('ingr-prod');if(el&&!el.value)el.focus();},100);
+}
+
+function _confirmarIngrediente(){
+  const prod=(document.getElementById('ingr-prod')||{}).value||'';
+  if(!prod){alert('Introduce el nombre del ingrediente');return;}
+  const lote=(document.getElementById('ingr-lote')||{}).value||'';
+  const cant=(document.getElementById('ingr-cant')||{}).value||'';
+  const unidad=(document.getElementById('ingr-unidad')||{}).value||'kg';
+  (window._elabIngredientes=window._elabIngredientes||[]).push({producto:prod,lote,cantidad:cant,unidad});
+  _volverAElab();
+}
+
+function _volverAElab(){
+  closeModal();
+  setTimeout(()=>{openElabModal();_renderElabIngredientes();},80);
+}
+
+
 function selDest(d){
   const map={nev:'nevera',con:'congelador',cli:'cliente'};
   document.getElementById('el-dest-val').value=map[d]||'nevera';
   ['nev','con','cli'].forEach(k=>{const el=document.getElementById('el-dest-'+k);if(el)el.classList.toggle('sel',k===d);});
 }
 function saveElab(){
-  const prod=document.getElementById('el-prod').value;if(!prod){alert('Introduce el nombre del producto');return}
+  const prod=document.getElementById('el-prod').value;if(!prod){alert('Selecciona una elaboración');return}
   const cant=document.getElementById('el-cant').value;if(!cant){alert('Introduce la cantidad');return}
   const unidad=document.getElementById('el-unidad').value;
-  const emp=document.getElementById('el-emp').value;if(!emp){alert('Selecciona empleado');return}
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const dest=document.getElementById('el-dest-val').value;
   const lote=document.getElementById('el-lot').value;
-  const obs=document.getElementById('el-obs').value;
+  const obs=(document.getElementById('el-obs')||{}).value||'';
   const dlc_days=dest==='nevera'?ELAB_DLC_NEVERA:dest==='cliente'?0:ELAB_DLC_CONGELADOR;
   const dlc=dest==='cliente'?today():addDays(today(),dlc_days);
   const recs=ld(K.elab);
-  const temp_el=parseFloat(document.getElementById('el-temp').value)||null;
-  const alergenos=getSelectedAlergenos();
-  const rec={id:genId(),lote,producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,temp:temp_el,alergenos,estado:'en_stock',date:today(),ts:new Date().toISOString()};
+  const ingredientes=window._elabIngredientes||[];
+  // Enlazar recepción de origen
+  const _lr=window._lastRecepData;
+  const recepOrigen=(_lr&&_lr.date===today()&&(prod.toLowerCase().includes((_lr.producto||'').toLowerCase().split(' ')[0])||(_lr.producto||'').toLowerCase().includes(prod.toLowerCase().split(' ')[0])))?_lr:null;
+  if(recepOrigen) window._lastRecepData=null;
+  const rec={id:genId(),lote:lote||(recepOrigen?recepOrigen.lote:''),producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,ingredientes,estado:'en_stock',date:today(),ts:new Date().toISOString(),recep_id:recepOrigen?recepOrigen.id:null};
   recs.push(rec);sv(K.elab,recs);
+  window._elabIngredientes=[];
   closeModal();renderElab();updateScoreChip();
-  // Auto-offer label print
-  setTimeout(()=>{if(confirm('¿Imprimir etiqueta para este lote?'))printElabLabel(rec.id)},200);
+  const elabDate=new Date().toLocaleDateString('es-ES');
+  const _elabProceso=recepOrigen
+    ?['📦 Recibido de '+(recepOrigen.proveedor||'proveedor')+' · '+recepOrigen.date,'🍳 Elaborado · '+elabDate]
+    :['🍳 Elaborado · '+elabDate];
+  setTimeout(()=>addToLabelQueue({tipo:'🍳 ELABORACIÓN',producto:rec.producto,lote:rec.lote,dlc:rec.dlc,emp:rec.emp,ts:rec.ts,destino:dest,proceso:_elabProceso}),300);
 }
 function printElabLabel(rid){
   const r=ld(K.elab).find(x=>x.id===rid);if(!r)return;
@@ -2048,7 +2421,7 @@ function printElabLabel(rid){
   .lb-row{font-size:11px;color:#333;margin-top:2mm}
   .lb-dlc{font-size:13px;font-weight:700;color:#c0392b;margin-top:3mm}
   .lb-dest{font-size:11px;font-weight:700;text-transform:uppercase;color:#2980b9}
-  </style>  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">${'<'+'/script>'}
+  </style>  ${'<'+'/script>'}
 </head><body>
   <div class="label">
     <div class="lb-brand">ALBARABA SL</div>
@@ -2134,6 +2507,14 @@ function previewTrazFoto(evt){
 // ── OCR: LEER NÚMERO DE LOTE POR FOTO ────────────────────────────────────
 function abrirFotoLoteBolsa(contextModule){
   window._flbModule=contextModule||currentMod;
+  // Guardar snapshot del formulario de recepción antes de reemplazar el modal
+  window._flbRecepSnapshot=null;
+  const snap={};
+  ['rc-prod','rc-prov','rc-cant','rc-unit','rc-temp','rc-cad','rc-obs','rc-emp','rc-lote'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) snap[id.replace('rc-','')]=el.value||'';
+  });
+  if(snap.prod!==undefined) window._flbRecepSnapshot=snap;
   openModal(`<div class="modal-title">📸 Leer número de lote</div>
     <div style="font-size:12px;color:#555;margin-bottom:12px;background:#fff9e6;padding:10px;border-radius:8px;border-left:3px solid #f39c12">
       Fotografía la bolsa o etiqueta y la app leerá el número de lote automáticamente.
@@ -2150,8 +2531,12 @@ function abrirFotoLoteBolsa(contextModule){
     </div>
     <div id="flb-ocr-area"></div>
     <div id="flb-resultados"></div>
-    <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button></div>
+    <div class="modal-row" style="margin-top:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="_aplicarOCRResult()">✓ Aplicar</button>
+    </div>
   `);
+  window._ocrLote=null;window._ocrCad=null;
 }
 function leerFotoLote(inp){
   const file=inp.files[0];if(!file)return;
@@ -2161,10 +2546,12 @@ function leerFotoLote(inp){
     ocrArea.innerHTML='<img src="'+e.target.result+'" style="max-width:100%;max-height:160px;border-radius:8px;margin-bottom:10px;display:block"><div id="flb-ocr-status" style="display:flex;align-items:center;gap:10px;padding:10px;background:#f0f4ff;border-radius:8px;margin-bottom:8px"><div style="width:18px;height:18px;border:3px solid #1a4fa8;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0"></div><div><div style="font-size:13px;font-weight:700;color:#1a4fa8">Leyendo número de lote…</div><div id="flb-ocr-prog" style="font-size:11px;color:#888">Iniciando…</div></div></div>';
     if(!document.getElementById('spin-style')){const s=document.createElement('style');s.id='spin-style';s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';document.head.appendChild(s);}
     try{
+      if(!window.Tesseract){const p=document.getElementById('flb-ocr-prog');if(p)p.textContent='Cargando OCR...';await new Promise(r=>waitForLib(()=>window.Tesseract,r));}
       const res=await Tesseract.recognize(e.target.result,'spa+eng',{logger:m=>{if(m.status==='recognizing text'){const p=document.getElementById('flb-ocr-prog');if(p)p.textContent=Math.round((m.progress||0)*100)+'%';}}});
       document.getElementById('flb-ocr-status').innerHTML='<div style="font-size:12px;color:#555">✅ Texto leído</div>';
       const cands=_extraerCandidatosLote(res.data.text);
-      _mostrarCandidatosOCR(res.data.text,cands);
+      const cadCands=_extraerCandidatosCaducidad(res.data.text);
+      _mostrarCandidatosOCR(res.data.text,cands,cadCands);
     }catch(err){
       document.getElementById('flb-ocr-status').innerHTML='<div style="color:#e74c3c;font-size:13px">⚠ No se pudo leer. Escribe manualmente.</div>';
       _mostrarEntradaManualLote();
@@ -2177,14 +2564,57 @@ function _extraerCandidatosLote(text){
   [[/[Ll][Oo][Tt][Ee]?\s*[:\-#]?\s*([A-Z0-9][A-Z0-9\-\/\.]{2,20})/g,1],[/[Ll]\s*[:\-]?\s*([A-Z0-9][A-Z0-9\-\.]{3,18})/g,1],[/\b([A-Z]{1,3}[\-]?\d{4,8}[A-Z]?)\b/g,1],[/\b(\d{6,8}[A-Z]{0,3})\b/g,1]].forEach(([re,g])=>{let m;const r=new RegExp(re.source,re.flags);while((m=r.exec(text))!==null){const v=(m[g]||m[0]).trim().replace(/\s+/g,'');if(v.length>=4&&v.length<=25)s.add(v);}});
   return [...s].slice(0,8);
 }
-function _mostrarCandidatosOCR(rawText,cands){
+function _extraerCandidatosCaducidad(text){
+  const s=new Set();
+  // Formatos: DD/MM/YYYY, DD/MM/YY, YYYY-MM-DD, MM/YYYY, "CAD", "BBD", "consumir antes"
+  const patterns=[
+    [/(?:cad|caducidad|consum[a-z]*\s+antes|best\s+before|bbd|bb|use\s+by)[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/gi,1],
+    [/(?:cad|caducidad|bbd|bb)[:\s]*(\d{2}[\/-]\d{4})/gi,1],
+    [/(\d{2}[\/-]\d{2}[\/-]\d{4})/g,1],
+    [/(\d{2}[\/-]\d{2}[\/-]\d{2})/g,1],
+    [/(\d{4}-\d{2}-\d{2})/g,1],
+    [/(\d{2}[\/-]\d{4})/g,1]
+  ];
+  patterns.forEach(([re,g])=>{let m;const r=new RegExp(re.source,re.flags);while((m=r.exec(text))!==null){
+    const raw=(m[g]||m[0]).trim();
+    // Convertir a YYYY-MM-DD para input[type=date]
+    const iso=_parseDateToISO(raw);
+    if(iso)s.add(iso);
+  }});
+  return[...s].slice(0,4);
+}
+function _parseDateToISO(raw){
+  // DD/MM/YYYY o DD-MM-YYYY
+  let m=raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if(m)return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+  // DD/MM/YY
+  m=raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+  if(m){const y=parseInt(m[3])>50?'19'+m[3]:'20'+m[3];return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');}
+  // MM/YYYY (best before)
+  m=raw.match(/^(\d{2})[\/\-](\d{4})$/);
+  if(m)return m[2]+'-'+m[1]+'-28'; // último día aproximado
+  // YYYY-MM-DD
+  m=raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m)return raw;
+  return null;
+}
+function _mostrarCandidatosOCR(rawText,cands,cadCands){
   const el=document.getElementById('flb-resultados');if(!el)return;
+  cadCands=cadCands||[];
+  let html='';
   if(cands.length){
-    el.innerHTML='<div style="font-size:12px;font-weight:700;color:#1a4fa8;margin-bottom:8px">Toca el lote correcto:</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">'+cands.map(c=>'<button onclick="usarLoteOCR(\''+c.replace(/'/g,"\\'")+"',this)\" style=\"padding:10px 16px;font-size:15px;font-weight:700;font-family:monospace;background:#f0f4ff;border:2px solid #1a4fa8;border-radius:8px;cursor:pointer;color:#1a4fa8\">"+c+'</button>').join('')+'</div><div style="display:flex;gap:8px;margin-top:6px"><input class="fc" id="flb-lote-manual" placeholder="O escribe el lote…" style="flex:1;font-size:15px;font-family:monospace"><button onclick="usarLoteManualOCR()" class="btn btn-outline">✓</button></div>';
+    html+='<div style="font-size:12px;font-weight:700;color:#1a4fa8;margin-bottom:6px">📦 Toca el LOTE correcto:</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+cands.map(c=>'<button onclick="usarLoteOCR(\''+c.replace(/'/g,"\\'")+'\''+',this)" style="padding:8px 14px;font-size:14px;font-weight:700;font-family:monospace;background:#f0f4ff;border:2px solid #1a4fa8;border-radius:8px;cursor:pointer;color:#1a4fa8">'+c+'</button>').join('')+'</div>';
   }else{
-    el.innerHTML='<div style="font-size:12px;color:#888;margin-bottom:8px">No se detectó lote. Escribe manualmente:</div>';
-    _mostrarEntradaManualLote();
+    html+='<div style="font-size:12px;color:#888;margin-bottom:6px">No se detectó lote automáticamente.</div>';
   }
+  html+='<div style="display:flex;gap:8px;margin-bottom:10px"><input class="fc" id="flb-lote-manual" placeholder="Nº de lote..." style="flex:1;font-size:14px;font-family:monospace"><button onclick="usarLoteManualOCR()" class="btn btn-outline" style="flex-shrink:0">✓ Lote</button></div>';
+  if(cadCands.length){
+    html+='<div style="font-size:12px;font-weight:700;color:#27ae60;margin-bottom:6px;margin-top:4px">📅 Toca la CADUCIDAD correcta:</div>';
+    html+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+cadCands.map(d=>'<button onclick="usarCadOCR(\''+d+'\',this)" style="padding:8px 14px;font-size:14px;font-weight:700;background:#f0fff4;border:2px solid #27ae60;border-radius:8px;cursor:pointer;color:#27ae60">'+d+'</button>').join('')+'</div>';
+  }
+  html+='<div style="display:flex;gap:8px"><input class="fc" type="date" id="flb-cad-manual" style="flex:1"><button onclick="usarCadManualOCR()" class="btn btn-outline" style="flex-shrink:0;background:#e8f5e9;color:#27ae60">✓ Fecha</button></div>';
+  el.innerHTML=html;
 }
 function _mostrarEntradaManualLote(){
   const el=document.getElementById('flb-resultados');if(!el)return;
@@ -2193,18 +2623,61 @@ function _mostrarEntradaManualLote(){
 function usarLoteOCR(lote,btn){
   document.querySelectorAll('[onclick^="usarLoteOCR"]').forEach(b=>{b.style.background='#f0f4ff';b.style.borderColor='#1a4fa8';b.style.color='#1a4fa8';});
   btn.style.background='#1a4fa8';btn.style.color='#fff';
-  setTimeout(()=>_aplicarLoteOCR(lote),200);
+  window._ocrLote=lote;
 }
 function usarLoteManualOCR(){
   const inp=document.getElementById('flb-lote-manual');
   if(!inp||(inp.value||'').trim()===''){alert('Escribe el número de lote');return;}
-  _aplicarLoteOCR(inp.value.trim());
+  window._ocrLote=inp.value.trim();
+  _aplicarOCRResult();
 }
-function _aplicarLoteOCR(lote){
+function usarCadOCR(cad,btn){
+  document.querySelectorAll('[onclick^="usarCadOCR"]').forEach(b=>{b.style.background='#f0fff4';b.style.borderColor='#27ae60';b.style.color='#27ae60';});
+  btn.style.background='#27ae60';btn.style.color='#fff';
+  window._ocrCad=cad;
+}
+function usarCadManualOCR(){
+  const inp=document.getElementById('flb-cad-manual');
+  if(!inp||!inp.value){alert('Selecciona la fecha de caducidad');return;}
+  window._ocrCad=inp.value;
+  _aplicarOCRResult();
+}
+function _aplicarOCRResult(){
+  const lote=window._ocrLote||'';
+  const cad=window._ocrCad||'';
+  if(!lote&&!cad){alert('Selecciona al menos el lote o la caducidad');return;}
+  _aplicarLoteOCR(lote,cad);
+}
+function _aplicarLoteOCR(lote,cad){
   closeModal();
+  window._ocrLote=null;window._ocrCad=null;
   setTimeout(()=>{
-    ['recep-lote','elab-lote','congel-lote','descongel-lote','rg2-lote'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=lote;});
-    const tq=document.getElementById('traz-q');if(tq){tq.value=lote;renderTraz();}
+    // Si había un formulario de recepción abierto, restaurarlo con el lote
+    if(window._flbRecepSnapshot){
+      const snap=window._flbRecepSnapshot;
+      window._flbRecepSnapshot=null;
+      // Preparar datos para que showRecepEntry los restaure
+      recepAlbaranData=Object.assign({},snap,{lote});
+      showRecepEntry('manual');
+      // Restaurar campos adicionales no cubiertos por showRecepEntry
+      setTimeout(()=>{
+        ['unit','temp','obs','emp'].forEach(k=>{
+          const el=document.getElementById('rc-'+k);
+          if(el&&snap[k]) el.value=snap[k];
+        });
+        const loteEl=document.getElementById('rc-lote')||document.getElementById('re-lote');
+        if(loteEl&&lote){loteEl.value=lote;loteEl.style.borderColor='#27ae60';loteEl.style.boxShadow='0 0 0 2px rgba(39,174,96,.3)';}
+        const cadEl=document.getElementById('rc-cad')||document.getElementById('re-cad');
+        if(cadEl&&cad){cadEl.value=cad;cadEl.style.borderColor='#27ae60';}
+      },180);
+      return;
+    }
+    // Sin formulario abierto: rellenar cualquier campo de lote/cad visible
+    ['rc-lote','re-lote','recep-lote','elab-lote','el-lot','congel-lote','cg-lote','descongel-lote','rg2-lote'].forEach(id=>{
+      const el=document.getElementById(id);if(el&&lote)el.value=lote;
+    });
+    if(cad)['rc-cad','re-cad','recep-cad'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=cad;});
+    const tq=document.getElementById('traz-q');if(tq){tq.value=lote||cad;renderTraz();}
   },200);
 }
 // ── FIN OCR FOTO LOTE ─────────────────────────────────────────────────────
@@ -2333,7 +2806,7 @@ function printStepLabel(data){
     .lb-row{font-size:10px;color:#333}
     .lb-dlc{font-size:12px;font-weight:700;color:#c0392b;margin-top:2mm;padding:2mm;background:#fff0f0;border-radius:2mm}
     .lb-emp{font-size:10px;color:#555;margin-top:auto;border-top:1px solid #eee;padding-top:2mm}
-  </style>  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">${'<'+'/script>'}
+  </style>  ${'<'+'/script>'}
 </head><body>
   <div class="lb">
     <div class="lb-tipo">${data.tipo}</div>
@@ -2350,11 +2823,168 @@ function printStepLabel(data){
   </body></html>`);w.document.close();
 }
 
-function autoLabel(data){
-  const cfg=localStorage.getItem('a_label_auto');
-  if(cfg==='off')return;
-  printStepLabel(data);
+function _quickCopies(printFn){
+  // Pregunta copias y ejecuta la función de impresión N veces
+  openModal(`
+    <div class="modal-title" style="text-align:center">🖨 ¿Cuántas copias?</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:20px 0">
+      <button onclick="adjCopias('_qc',-1)" style="width:44px;height:44px;border:2px solid #1a4fa8;border-radius:12px;background:#fff;font-size:22px;cursor:pointer;color:#1a4fa8;font-weight:700">−</button>
+      <span id="cop-_qc" style="font-size:40px;font-weight:900;min-width:60px;text-align:center;color:#1a4fa8">1</span>
+      <button onclick="adjCopias('_qc',1)" style="width:44px;height:44px;border:2px solid #1a4fa8;border-radius:12px;background:#fff;font-size:22px;cursor:pointer;color:#1a4fa8;font-weight:700">+</button>
+    </div>
+    <div class="modal-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="
+        const n=parseInt(document.getElementById('cop-_qc').textContent)||1;
+        closeModal();
+        setTimeout(()=>{for(let i=0;i<n;i++)printFn();},200);
+      ">✓ Imprimir</button>
+    </div>
+  `);
 }
+
+function _quickCopiesData(data){
+  // Versión para imprimir etiqueta de datos con N copias, luego vuelve a Etiquetas
+  openModal(`
+    <div class="modal-title" style="text-align:center">🖨 ¿Cuántas copias?</div>
+    <div style="background:#f0f4ff;border-radius:10px;padding:10px;margin-bottom:12px;font-size:13px;text-align:center">
+      <strong>${data.producto||data.tipo||'Etiqueta'}</strong>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:16px 0">
+      <button onclick="adjCopias('_qcd',-1)" style="width:44px;height:44px;border:2px solid #1a4fa8;border-radius:12px;background:#fff;font-size:22px;cursor:pointer;color:#1a4fa8;font-weight:700">−</button>
+      <span id="cop-_qcd" style="font-size:40px;font-weight:900;min-width:60px;text-align:center;color:#1a4fa8">1</span>
+      <button onclick="adjCopias('_qcd',1)" style="width:44px;height:44px;border:2px solid #1a4fa8;border-radius:12px;background:#fff;font-size:22px;cursor:pointer;color:#1a4fa8;font-weight:700">+</button>
+    </div>
+    <div class="modal-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="
+        const n=parseInt(document.getElementById('cop-_qcd').textContent)||1;
+        closeModal();
+        window._qcdData=arguments[0]||null;
+        setTimeout(()=>{
+          _batchPrint([{r:{
+            producto:${JSON.stringify('')}||'',lote:'',dlc:'',ts:'',proveedor:'',emp:''
+          },cop:n,tipo:'elab'}]);
+          setTimeout(()=>showMod('etiquetas'),800);
+        },200);
+      ">✓ Imprimir</button>
+    </div>
+  `);
+  // Store data for the onclick
+  window._qcdPending=data;
+}
+
+// ── LABEL QUEUE SYSTEM ──────────────────────────────────────
+// Non-blocking: adds silently, shows floating badge, user prints when ready
+let _labelQueue = [];
+
+function _updatePrintBadge(){
+  const badge = document.getElementById('print-badge');
+  const count = document.getElementById('print-badge-count');
+  if(!badge) return;
+  if(_labelQueue.length === 0){
+    badge.style.display = 'none';
+  } else {
+    badge.style.display = 'flex';
+    if(count) count.textContent = _labelQueue.length + ' etiqueta' + (_labelQueue.length===1?'':'s');
+  }
+}
+
+function addToLabelQueue(data){
+  if(localStorage.getItem('a_label_auto')==='off') return;
+  _labelQueue.push({data, cop:1});
+  _updatePrintBadge();
+  // Show brief toast, non-blocking
+  _showQueueToast(data.producto||'Etiqueta');
+}
+
+function _showQueueToast(nombre){
+  let t = document.getElementById('queue-toast');
+  if(!t){
+    t = document.createElement('div');
+    t.id = 'queue-toast';
+    t.style.cssText = 'position:fixed;bottom:130px;left:50%;transform:translateX(-50%);background:#333;color:#fff;'+
+      'padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;z-index:9998;'+
+      'pointer-events:none;transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = '✓ "' + nombre.substring(0,22) + '" añadida a cola';
+  t.style.opacity = '1';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(()=>{ t.style.opacity='0'; }, 2000);
+}
+
+function _showLabelQueuePopup(){
+  const DEST_ICON={nevera:'🧊',congelador:'❄️',hoy:'🍽'};
+  const rows = _labelQueue.map((item,i) => {
+    const d = item.data;
+    const destIcon = DEST_ICON[d.destino||'nevera']||'🧊';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #f0f0f0">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:800;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.producto||''}</div>
+        <div style="font-size:11px;color:#888">${destIcon} ${(d.destino||'nevera').toUpperCase()}${d.dlc?' · hasta '+fmtDate(d.dlc):''}</div>
+      </div>
+      <button onclick="adjCopias('lq${i}',-1)" style="width:30px;height:30px;border:1.5px solid #ddd;border-radius:8px;background:#fff;font-size:18px;cursor:pointer">−</button>
+      <span id="cop-lq${i}" style="min-width:26px;text-align:center;font-weight:900;font-size:16px;color:#1a4fa8">${item.cop}</span>
+      <button onclick="adjCopias('lq${i}',1)" style="width:30px;height:30px;border:1.5px solid #1a4fa8;border-radius:8px;background:#fff;font-size:18px;cursor:pointer;color:#1a4fa8">+</button>
+      <button onclick="_removeFromQueue(${i})" style="width:28px;height:28px;border:none;background:none;font-size:16px;color:#e74c3c;cursor:pointer">✕</button>
+    </div>`;
+  }).join('');
+
+  openModal(`
+    <div class="modal-title" style="text-align:center;font-size:16px">🖨 Cola de etiquetas</div>
+    <div style="border:1.5px solid #e3efff;border-radius:10px;overflow:hidden;margin-bottom:12px">
+      ${rows}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal();_labelQueue=[]">Descartar</button>
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Seguir añadiendo</button>
+      <button class="btn btn-green" style="flex:2" onclick="_printLabelQueue()">🖨 Imprimir todo</button>
+    </div>
+  `);
+}
+
+function _removeFromQueue(i){
+  _labelQueue.splice(i,1);
+  _updatePrintBadge();
+  if(_labelQueue.length===0){closeModal();return;}
+  _showLabelQueuePopup();
+}
+
+function _printLabelQueue(){
+  // Sync copy counts from DOM
+  _labelQueue.forEach((item,i)=>{
+    const el=document.getElementById('cop-lq'+i);
+    if(el) item.cop=parseInt(el.textContent)||1;
+  });
+  const items=_labelQueue.map((item,i)=>({
+    r:{
+      producto:item.data.producto||'',
+      lote:item.data.lote||'',
+      dlc:item.data.dlc||'',
+      caducidad:item.data.dlc||'',
+      ts:item.data.ts||new Date().toISOString(),
+      emp:item.data.emp||'',
+      destino:item.data.destino||'nevera',
+      proceso:item.data.proceso||[]
+    },
+    cop:item.cop,
+    tipo:'elab'
+  }));
+  _labelQueue=[];
+  _updatePrintBadge();
+  closeModal();
+  setTimeout(()=>_batchPrint(items),200);
+}
+
+// Keep autoLabel for backward compatibility — redirects to queue
+function autoLabel(data){
+  addToLabelQueue(data);
+}
+
+// _doAutoLabel replaced by queue system
+
+
 
 // ============================================================
 // TRAZABILIDAD — complete lot chain view
@@ -2505,40 +3135,101 @@ function renderCongel(){
     </div>`;
 }
 function openCongelModal(){
-  const emps=ld(K.emp);const elabs=ld(K.elab).filter(r=>r.destino==='congelador'&&r.estado!=='servido');
+  const elabs=ld(K.elab).filter(r=>r.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const prods=ld(K.recep).sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,30);
+
+  function itemBtn(nombre,lote,cant,unidad){
+    const n=nombre.replace(/'/g,"\'"), l=(lote||'').replace(/'/g,"\'");
+    const c=(cant||'').toString().replace(/'/g,"\'"), u=(unidad||'').replace(/'/g,"\'");
+    return `<button onclick="selCongelItem('${n}','${l}','${c}','${u}')"
+      style="text-align:left;background:#f8faff;border:1px solid #e3efff;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:13px;width:100%">
+      <span style="font-weight:700;color:#111">${nombre}</span>
+      ${lote?`<span style="color:#1a4fa8;font-size:11px;font-family:monospace;margin-left:6px">L:${lote}</span>`:''}
+      ${cant?`<span style="color:#888;font-size:11px;margin-left:6px">${cant} ${unidad||''}</span>`:''}
+    </button>`;
+  }
+
   openModal(`<div class="modal-title">🧊 Registro de Congelación</div>
-    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
-      <button onclick="scanToFields({prod:'cg-prod', lote:'cg-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+
+    <!-- Selector de origen -->
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <button onclick="toggleCongelTab('elab')" id="ctab-elab" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:2px solid #1a4fa8;background:#1a4fa8;color:#fff;cursor:pointer">🍳 Elaboraciones (${elabs.length})</button>
+      <button onclick="toggleCongelTab('prod')" id="ctab-prod" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:8px;border:2px solid #e67e22;background:#fff;color:#e67e22;cursor:pointer">📦 Productos (${prods.length})</button>
     </div>
-    <div class="fc-group"><label class="fc-label">Producto</label>
-      <input class="fc" id="cg-prod" placeholder="Nombre del producto" list="cg-prod-list">
-      <datalist id="cg-prod-list">${elabs.map(e=>`<option value="${e.producto}">`).join('')}</datalist>
+    <div id="ctab-elab-panel" style="max-height:150px;overflow-y:auto;border:1.5px solid #e3efff;border-radius:10px;padding:4px;margin-bottom:10px;display:flex;flex-direction:column;gap:3px">
+      ${elabs.length?elabs.map(e=>itemBtn(e.producto,e.lote,e.cantidad,e.unidad)).join(''):'<div style="padding:10px;color:#aaa;text-align:center;font-size:12px">Sin elaboraciones activas</div>'}
     </div>
-    <div class="fc-row" style="margin-top:10px">
+    <div id="ctab-prod-panel" style="max-height:150px;overflow-y:auto;border:1.5px solid #fde8cc;border-radius:10px;padding:4px;margin-bottom:10px;display:none;flex-direction:column;gap:3px">
+      ${prods.length?prods.map(r=>itemBtn(r.producto,r.lote,r.cantidad,r.unidad||'kg')).join(''):'<div style="padding:10px;color:#aaa;text-align:center;font-size:12px">Sin recepciones guardadas</div>'}
+    </div>
+
+    <!-- Scan / Foto -->
+    <div style="display:flex;gap:6px;margin-bottom:10px">
+      <button onclick="scanToFields({prod:'cg-prod',lote:'cg-lote'})" style="flex:1;padding:8px;background:#1a4fa8;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📷 Escanear</button>
+      <button onclick="abrirFotoLoteBolsa('congel')" style="flex:1;padding:8px;background:#f39c12;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📸 Foto lote</button>
+    </div>
+
+    <div class="fc-group"><label class="fc-label">Producto <span style="color:#c00">*</span></label>
+      <input class="fc" id="cg-prod" placeholder="Nombre del producto" style="font-weight:700"></div>
+    <div style="display:flex;gap:6px;margin-top:8px">
+      <div class="fc-group" style="flex:1"><label class="fc-label">Nº Lote</label>
+        <div style="display:flex;gap:4px">
+          <input class="fc" id="cg-lote" placeholder="Lote..." style="font-family:monospace;flex:1">
+          <button onclick="abrirFotoLoteBolsa('cg-lote')" style="padding:6px 8px;background:#f39c12;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px;flex-shrink:0">📸</button>
+        </div>
+      </div>
+    </div>
+    <div class="fc-row" style="margin-top:8px">
       <div class="fc-group"><label class="fc-label">Cantidad</label>
         <input class="fc" type="number" id="cg-cant" placeholder="Cantidad"></div>
       <div class="fc-group"><label class="fc-label">Unidad</label>
-        <select class="fc" id="cg-unidad"><option>uds</option><option>kg</option><option>bandejas</option></select></div>
+        <select class="fc" id="cg-unidad"><option>uds</option><option>kg</option><option>g</option><option>bandejas</option><option>bolsas</option></select></div>
     </div>
-    <div class="fc-row" style="margin-top:10px">
+    <div class="fc-row" style="margin-top:8px">
       <div class="fc-group"><label class="fc-label">T° entrada (°C)</label>
         <input class="fc" type="number" step="0.1" id="cg-tent" placeholder="°C al congelar"></div>
       <div class="fc-group"><label class="fc-label">T° final (°C)</label>
-        <input class="fc" type="number" step="0.1" id="cg-tfin" placeholder="°C tras congelar"></div>
+        <input class="fc" type="number" step="0.1" id="cg-tfin" placeholder="°C objetivo"></div>
     </div>
-    <div class="fc-group" style="margin-top:10px"><label class="fc-label">Empleado</label>
-      <select class="fc" id="cg-emp"><option value="">— Seleccionar —</option>${emps.map(e=>`<option>${e}</option>`).join('')}</select>
-    </div>
-    <div class="fc-group" style="margin-top:8px"><label class="fc-label">Nº Lote (opcional)</label>
-      <input class="fc" id="cg-lote" placeholder="Lote de la elaboración"></div>
-    <div class="modal-row">
+    <div class="modal-row" style="margin-top:12px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-green" style="flex:1" onclick="saveCongel()">✓ Guardar</button>
     </div>`);
 }
+
+function toggleCongelTab(tab){
+  const eBtn=document.getElementById('ctab-elab');
+  const pBtn=document.getElementById('ctab-prod');
+  const ePanel=document.getElementById('ctab-elab-panel');
+  const pPanel=document.getElementById('ctab-prod-panel');
+  if(!eBtn||!pBtn||!ePanel||!pPanel) return;
+  if(tab==='elab'){
+    eBtn.style.background='#1a4fa8';eBtn.style.color='#fff';
+    pBtn.style.background='#fff';pBtn.style.color='#e67e22';
+    ePanel.style.display='flex';pPanel.style.display='none';
+  } else {
+    pBtn.style.background='#e67e22';pBtn.style.color='#fff';
+    eBtn.style.background='#fff';eBtn.style.color='#1a4fa8';
+    pPanel.style.display='flex';ePanel.style.display='none';
+  }
+}
+
+function selCongelItem(prod,lote,cant,unidad){
+  const p=document.getElementById('cg-prod');
+  const l=document.getElementById('cg-lote');
+  const c=document.getElementById('cg-cant');
+  const u=document.getElementById('cg-unidad');
+  if(p){p.value=prod;p.style.borderColor='#27ae60';}
+  if(l&&lote){l.value=lote;l.style.borderColor='#27ae60';}
+  if(c&&cant){c.value=cant;}
+  if(u&&unidad){
+    for(let i=0;i<u.options.length;i++){if(u.options[i].value===unidad){u.selectedIndex=i;break;}}
+  }
+  document.getElementById('cg-tent')&&document.getElementById('cg-tent').focus();
+}
 function saveCongel(){
   const prod=document.getElementById('cg-prod').value;if(!prod){alert('Introduce el producto');return}
-  const emp=document.getElementById('cg-emp').value;if(!emp){alert('Selecciona empleado');return}
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const recs=ld(K.congel);
   recs.push({id:genId(),producto:prod,
     cantidad:document.getElementById('cg-cant').value,
@@ -2549,11 +3240,10 @@ function saveCongel(){
     date:today(),ts:new Date().toISOString()});
   sv(K.congel,recs);closeModal();renderCongel();
   const last=recs[recs.length-1];
-  autoLabel({tipo:'CONGELACIÓN',producto:last.producto,lote:last.lote||'—',
-    emp:last.emp,fecha:fmtDate(last.ts),
-    linea2:'Cantidad: '+(last.cantidad||'—')+' '+(last.unidad||''),
-    linea3:'T° entrada: '+(last.temp_entrada||'—')+'°C',
-    dlc:null,color:'#2980b9'});
+  autoLabel({tipo:'❄ CONGELACIÓN',producto:last.producto,lote:last.lote||'—',
+    emp:emp,dlc:last.dlc,ts:new Date().toISOString(),
+    proceso:['🍳 Elaborado','❄ Congelado · '+new Date().toLocaleDateString('es-ES')]
+  })
 }
 
 // ============================================================
@@ -2624,17 +3314,42 @@ function openDescongelFor(elabId){
     </div>`);
 }
 function openDescongelModal(){
-  const emps=ld(K.emp);
-  openModal(`<div class="modal-title">🔄 Descongelación — entrada manual</div>
-    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
+  // Elaboraciones congeladas disponibles
+  const congeladas=ld(K.elab).filter(x=>x.destino==='congelador'&&x.estado!=='servido')
+    .sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  // También productos en congelador (de K.congel)
+  const prodCongel=ld(K.congel||'a_congel').filter(x=>!x.fechaDescongel)
+    .sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+
+  openModal(`<div class="modal-title">🔄 Descongelación</div>
+
+    ${congeladas.length||prodCongel.length ? `<div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#1a4fa8;margin-bottom:6px">❄ Selecciona lo que vas a descongelar:</div>
+      <div style="display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;border:1.5px solid #d0e8ff;border-radius:10px;padding:4px">
+        ${congeladas.map(e=>`<button onclick="selDescongelItem('${e.producto.replace(/'/g,"\'")}','${(e.lote||'').replace(/'/g,"\'")}') "
+          style="text-align:left;background:#f0f8ff;border:1px solid #d0e8ff;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px">
+          <span style="font-size:10px;background:#2980b9;color:#fff;border-radius:4px;padding:1px 5px;margin-right:6px">ELAB</span>
+          <span style="font-weight:700">${e.producto}</span>
+          ${e.lote?`<span style="color:#1a4fa8;font-size:11px;font-family:monospace;margin-left:6px">L:${e.lote}</span>`:''}
+          <span style="color:#888;font-size:10px;float:right">${e.date||''}</span>
+        </button>`).join('')}
+        ${prodCongel.map(p=>`<button onclick="selDescongelItem('${(p.producto||p.nombre||'').replace(/'/g,"\'")}','${(p.lote||'').replace(/'/g,"\'")}') "
+          style="text-align:left;background:#f5f0ff;border:1px solid #d8c8ff;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px">
+          <span style="font-size:10px;background:#8e44ad;color:#fff;border-radius:4px;padding:1px 5px;margin-right:6px">PROD</span>
+          <span style="font-weight:700">${p.producto||p.nombre||'—'}</span>
+          ${p.lote?`<span style="color:#8e44ad;font-size:11px;font-family:monospace;margin-left:6px">L:${p.lote}</span>`:''}
+          <span style="color:#888;font-size:10px;float:right">${p.date||''}</span>
+        </button>`).join('')}
+      </div>
+    </div>` : '<div style="font-size:12px;color:#888;margin-bottom:10px;padding:8px;background:#f9f9f9;border-radius:8px">No hay elaboraciones congeladas registradas — introduce manualmente</div>'}
+
+    <div style="margin-bottom:10px;padding:8px 10px;background:#f0f4ff;border-radius:8px">
       <button onclick="scanToFields({prod:'dc2-prod', lote:'dc2-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
     </div>
     <div class="fc-group"><label class="fc-label">Producto</label>
       <input class="fc" id="dc2-prod" placeholder="Nombre del producto"></div>
     <div class="fc-group" style="margin-top:8px"><label class="fc-label">Nº Lote</label>
       <input class="fc" id="dc2-lote" placeholder="Lote de la elaboración"></div>
-    <div class="fc-group" style="margin-top:8px"><label class="fc-label">Empleado</label>
-      <select class="fc" id="dc2-emp"><option value="">— Seleccionar —</option>${emps.map(e=>`<option>${e}</option>`).join('')}</select></div>
     <div class="fc-group" style="margin-top:8px"><label class="fc-label">T° al sacar del congelador</label>
       <input class="fc" type="number" step="0.1" id="dc2-temp" placeholder="°C"></div>
     <div class="modal-row">
@@ -2642,9 +3357,16 @@ function openDescongelModal(){
       <button class="btn btn-green" style="flex:1" onclick="saveDescongel2()">✓ Registrar</button>
     </div>`);
 }
+
+function selDescongelItem(prod, lote){
+  const p=document.getElementById('dc2-prod');
+  const l=document.getElementById('dc2-lote');
+  if(p) p.value=prod;
+  if(l) l.value=lote;
+}
 function saveDescongel(elabId){
   const elab=ld(K.elab).find(x=>x.id===elabId);if(!elab)return;
-  const emp=document.getElementById('dc-emp').value;if(!emp){alert('Selecciona empleado');return}
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const temp=parseFloat(document.getElementById('dc-temp').value)||null;
   const met=document.getElementById('dc-met').value;
   const dlc=document.getElementById('dc-dlc').value;
@@ -2657,15 +3379,14 @@ function saveDescongel(elabId){
   if(idx>=0){elabs[idx].estado='en_descongel';elabs[idx].dlc=dlc;sv(K.elab,elabs)}
   closeModal();renderDescongel();
   const last=ld(K.descongel).slice(-1)[0];
-  autoLabel({tipo:'DESCONGELACIÓN',producto:elab.producto,lote:elab.lote,
-    emp,fecha:fmtDate(new Date().toISOString()),
-    linea2:'Método: '+met,
-    linea3:'T° al sacar: '+(temp||'—')+'°C',
-    dlc:dlc,color:'#8e44ad'});
+  const descongelDate=new Date().toLocaleDateString('es-ES');
+  autoLabel({tipo:'🔄 DESCONGELACIÓN',producto:elab.producto,lote:elab.lote,
+    emp,dlc:dlc,ts:new Date().toISOString(),
+    proceso:['❄ Congelado','🔄 Descongelado · '+descongelDate+' · Método: '+met]});
 }
 function saveDescongel2(){
   const prod=document.getElementById('dc2-prod').value;if(!prod){alert('Introduce el producto');return}
-  const emp=document.getElementById('dc2-emp').value;if(!emp){alert('Selecciona empleado');return}
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const recs=ld(K.descongel);
   recs.push({id:genId(),lote_ref:document.getElementById('dc2-lote').value,producto:prod,emp,
     temp_inicio:parseFloat(document.getElementById('dc2-temp').value)||null,
@@ -2743,7 +3464,6 @@ function openRegenForDescongel(descongelId){
 }
 function openRegenModal(){window._regenRef={origen:'manual'};_showRegenForm('','');}
 function _showRegenForm(producto,lote){
-  const wks=(ld(K.workers)||ld(K.emp)||[]).map(w=>`<option value="${typeof w==='string'?w:(w.nombre||w)}">${typeof w==='string'?w:(w.nombre||w)}</option>`).join('');
   openModal(`<div class="modal-title">🔥 Registro de Regeneración</div>
     ${producto?`<div style="background:#fff3e0;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px">📦 <strong>${producto}</strong>${lote?' · Lote: '+lote:''}</div>`:''}
     <div class="form-row"><label class="form-label">Producto *</label><input class="fc" id="rg2-prod" value="${producto}" placeholder="Nombre del producto"></div>
@@ -2756,7 +3476,6 @@ function _showRegenForm(producto,lote){
         </div></div>
       <div class="form-row"><label class="form-label">Porciones</label><input class="fc" id="rg2-porc" type="number" placeholder="Nº"></div>
     </div>
-    <div class="form-row"><label class="form-label">Trabajador *</label><select class="fc" id="rg2-emp"><option value="">— Selecciona —</option>${wks}</select></div>
     <div class="form-row"><label class="form-label">Observaciones</label><textarea class="fc" id="rg2-obs" rows="2" placeholder="Incidencias..."></textarea></div>
     <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button><button class="btn btn-green" style="flex:1" onclick="saveRegen2()">✓ Guardar</button></div>`);
   setTimeout(()=>{const t=document.getElementById('rg2-temp');if(t)t.focus();},150);
@@ -2770,7 +3489,7 @@ function saveRegen2(){
   const lote=(document.getElementById('rg2-lote')||{}).value||'';
   const temp=parseFloat((document.getElementById('rg2-temp')||{}).value);
   const porc=(document.getElementById('rg2-porc')||{}).value||'';
-  const emp=(document.getElementById('rg2-emp')||{}).value||'';
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const obs=(document.getElementById('rg2-obs')||{}).value||'';
   if(!prod){alert('Indica el producto');return;}
   if(isNaN(temp)){alert('Indica la temperatura de centro');return;}
@@ -2786,6 +3505,11 @@ function saveRegen2(){
   if(ref.elabId){const elabs=ld(K.elab)||[];const i=elabs.findIndex(x=>x.id===ref.elabId);if(i!==-1){elabs[i].estado='servido';sv(K.elab,elabs);}}
   if(ref.descongelId){const descs=ld(K.descongel)||[];const i=descs.findIndex(x=>x.id===ref.descongelId);if(i!==-1){descs[i].estado='servido';sv(K.descongel,descs);}}
   const regens=ld(K.regen)||[];regens.push(rec);sv(K.regen,regens);
+  const regenDate=new Date().toLocaleDateString('es-ES');
+  const regenOk=temp>=70;
+  setTimeout(()=>autoLabel({tipo:'🔥 REGENERACIÓN'+(regenOk?' ✓':'⚠ NOK'),producto:prod,lote:lote||'—',
+    emp,dlc:null,ts:rec.ts,
+    proceso:['❄ Congelado/Nevera','🔥 Regenerado · '+regenDate+' · '+temp+'°C'+(regenOk?' ✓':'⚠ <70°C')]}),300);
   closeModal();renderRegen();
 }
 
@@ -2863,9 +3587,15 @@ function saveTserv(){
   const emp=document.getElementById('ts2-emp').value;if(!emp){alert('Selecciona empleado');return}
   const tipo=document.getElementById('ts2-tipo').value;
   const recs=ld(K.tserv);
-  recs.push({id:genId(),producto:prod,temp,tipo,emp,
-    lote:document.getElementById('ts2-lote').value,date:today(),ts:new Date().toISOString()});
-  sv(K.tserv,recs);closeModal();renderTserv();
+  const tsRec={id:genId(),producto:prod,temp,tipo,emp,
+    lote:document.getElementById('ts2-lote').value,date:today(),ts:new Date().toISOString()};
+  recs.push(tsRec);sv(K.tserv,recs);
+  const tservDate=new Date().toLocaleDateString('es-ES');
+  const tempOk=(tipo==='caliente'&&temp>=65)||(tipo==='frio'&&temp<=8)||(tipo==='congelado'&&temp<=-15)||(tipo==='otro');
+  setTimeout(()=>autoLabel({tipo:'🌡 SERVICIO'+(tempOk?' ✓':'⚠ NOK'),producto:prod,
+    emp,dlc:null,ts:tsRec.ts,
+    proceso:['🍳 Elaborado','🌡 Servido · '+tservDate+' · '+temp+'°C ('+tipo+')'+(tempOk?' ✓':'⚠')]}),300);
+  closeModal();renderTserv();
 }
 
 // ============================================================
@@ -3367,7 +4097,7 @@ function togglePreopNOK(i){
   document.getElementById('pi-corr-'+i).style.display='block';
 }
 function savePreop(){
-  const emp=document.getElementById('pp-emp').value;if(!emp){alert('Selecciona empleado');return}
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const results=PREOP_CHECKS.map((chk,i)=>{
     const ok=!document.getElementById('pp-nc'+i).classList.contains('sel');
     const desc=!ok?document.getElementById('pi-desc-'+i).value:'';
@@ -3534,7 +4264,7 @@ function printReport(title,code,tableHead,rows,desde,hasta){
     .sline{border-top:1px solid #333;margin-top:35px;padding-top:4px;font-size:8px;color:#666;font-weight:600}
     .page-note{font-size:8px;color:#aaa;margin-top:6px;text-align:right}
     @media print{body{margin:10mm 10mm 15mm}button{display:none!important}}
-  </style>  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">${'<'+'/script>'}
+  </style>  ${'<'+'/script>'}
 </head><body>
   <div class="rh">
     <div class="rh-left">
@@ -3715,7 +4445,7 @@ function printMA04(){
     tr:nth-child(even){background:#f8f9ff}
     .ccp{font-weight:700;color:#c0392b}
     @media print{body{padding:0}button{display:none}}
-  </style>  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js">${'<'+'/script>'}
+  </style>  ${'<'+'/script>'}
 </head><body>
   <h1>MA04 — Cuadro de Gestión de Análisis de Peligros y PCC</h1>
   <h2>ALBARABA SL · Fecha: ${new Date().toLocaleDateString('es-ES')} · Rev.01</h2>
@@ -3734,8 +4464,20 @@ function printMA04(){
 function printInfNoConf(){
   const{desde,hasta}=getDateRange();
   const recs=ld(K.noconf).filter(r=>inRange(r.ts||r.date,desde,hasta));
-  const rows=recs.map(r=>`<tr><td>${fmtDate(r.ts)}</td><td>${r.tipo}</td><td>${r.modulo||'—'}</td><td>${r.descripcion?.slice(0,50)||'—'}</td><td>${r.accion?.slice(0,40)||'—'}</td><td style="font-weight:700;color:${r.estado==='Cerrada'?'#27ae60':'#e74c3c'}">${r.estado}</td><td>${r.emp}</td></tr>`);
-  printReport('PA09 · Registro No Conformidades y Acciones Correctivas','Rev.01',['Fecha','Tipo','Módulo','Descripción','Acción correctiva','Estado','Responsable'],rows,desde,hasta);
+  const rows=recs.map(r=>`<tr>
+    <td style="white-space:nowrap">${fmtDate(r.ts)}</td>
+    <td>${r.tipo}</td>
+    <td>${r.modulo||'—'}</td>
+    <td style="min-width:180px">${(r.descripcion||'—').replace(/\n/g,'<br>')}</td>
+    <td style="min-width:150px;color:${r.accion?'#065f46':'#999'}">${(r.accion||'Pendiente').replace(/\n/g,'<br>')}</td>
+    <td style="min-width:120px;color:#555;font-style:italic">${(r.preventiva||'—').replace(/\n/g,'<br>')}</td>
+    <td style="font-weight:700;color:${r.estado==='Cerrada'?'#27ae60':'#e74c3c'}">${r.estado}</td>
+    <td style="white-space:nowrap">${r.emp}</td>
+    <td style="white-space:nowrap">${r.fechaCierre?fmtDate(r.fechaCierre):'—'}</td>
+  </tr>`);
+  printReport('PA09 · Registro No Conformidades y Acciones Correctivas','Rev.01',
+    ['Fecha','Tipo','Módulo','Descripción del problema','Acción correctiva','Acción preventiva','Estado','Responsable','Fecha cierre'],
+    rows,desde,hasta);
 }
 function printInfFormacion(){
   const{desde,hasta}=getDateRange();
@@ -3981,7 +4723,7 @@ function renderCfg(){
       </div>
     </div>
     <div class="card">
-      <div class="card-head"><h3>🖨 Brother QL-820NWBC · 62mm</h3></div>
+      <div class="card-head"><h3>🖨 Impresora Brother QL</h3></div>
       <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
         <div class="fc-group"><label class="fc-label">IP de la impresora en red WiFi</label>
           <div style="display:flex;gap:8px">
@@ -3989,12 +4731,17 @@ function renderCfg(){
             <button class="btn btn-green" onclick="saveQLIp()">Guardar</button>
           </div>
         </div>
+        <div class="fc-group"><label class="fc-label">Tamaño de etiqueta predeterminado</label>
+          <select class="fc" onchange="localStorage.setItem('a_lbl_size',this.value);renderEtiquetas&&renderEtiquetas()">
+            ${Object.keys(LBL_SIZES).map(s=>`<option value="${s}" ${(localStorage.getItem('a_lbl_size')||'QL-62mm-cont')===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
         <div class="alert-box alert-ok" style="font-size:12px;font-weight:400">
-          <strong>Configuración Brother QL-820NWBC:</strong>
+          <strong>Configuración Brother QL:</strong>
           <div style="margin-top:6px">1. Conecta la impresora a tu red WiFi (ajustes del panel Brother)</div>
           <div>2. Anota la IP que aparece en su pantalla o en el informe de red</div>
           <div>3. Pon esa IP arriba y pulsa Guardar</div>
-          <div style="margin-top:6px">Las etiquetas se generan en <strong>formato 62mm</strong> y al imprimir se abrirá el diálogo del sistema — selecciona la impresora Brother</div>
+          <div style="margin-top:6px">Las etiquetas se generan en <strong>formato 29×90mm</strong>. Al pulsar Imprimir se abrirá el diálogo del sistema — selecciona tu impresora Brother QL</div>
         </div>
         <div class="fc-group"><label class="fc-label">Etiquetas automáticas al registrar</label>
           <div class="moment-row">
@@ -4002,7 +4749,7 @@ function renderCfg(){
             <button class="moment-pill ${localStorage.getItem('a_label_auto')==='off'?'sel':''}" id="lbl-off" onclick="setLabelAuto(false)">✗ Desactivadas</button>
           </div>
         </div>
-        <button class="btn btn-outline btn-block" onclick="testPrint()">🖨 Imprimir etiqueta de prueba (62mm)</button>
+        <button class="btn btn-green btn-block" onclick="testPrint()">🖨 Imprimir etiqueta de prueba (29×90mm)</button>
       </div>
     </div>
     <div class="card">
@@ -4015,6 +4762,49 @@ function renderCfg(){
       </div>
     </div>`;
 }
+function testPrint(){
+  const size=LBL_SIZES['QL-29x90mm'];
+  const wMm=parseFloat(size.w);
+  const fTitle=Math.max(3.5,wMm*0.165)+'mm';
+  const fLot  =Math.max(2.8,wMm*0.12)+'mm';
+  const fDate =Math.max(2.8,wMm*0.115)+'mm';
+  const fSmall=Math.max(1.8,wMm*0.075)+'mm';
+  const pad   =Math.max(1.5,wMm*0.05)+'mm';
+  const w=window.open('','_blank','width=200,height=420');
+  if(!w){alert('Permite ventanas emergentes para imprimir');return;}
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{width:29mm;height:90mm;background:#fff;font-family:Arial,Helvetica,sans-serif}
+    @page{size:29mm 90mm;margin:0}
+    @media print{html,body{width:29mm;height:90mm}.no-print{display:none!important}}
+    .label{width:29mm;height:90mm;padding:${pad};display:flex;flex-direction:column;gap:0.8mm;overflow:hidden;border:0.3mm solid #000}
+    .f-tipo{font-size:${fSmall};font-weight:900;color:#1a4fa8;text-transform:uppercase;letter-spacing:0.3px;background:#e3efff;padding:0.3mm 1mm;border-radius:0.5mm;display:inline-block;margin-bottom:0.5mm}
+    .f-proc{font-size:${fSmall};color:#888;line-height:1.2;margin-bottom:0.5mm}
+    .f-co{font-size:${fSmall};font-weight:900;color:#1a4fa8;text-transform:uppercase}
+    .f-title{font-size:${fTitle};font-weight:900;color:#000;line-height:1.15;word-break:break-word}
+    .f-lot{font-size:${fLot};font-weight:900;font-family:monospace;background:#e3efff;padding:0.5mm 1mm;border-radius:0.8mm}
+    .f-dlc{font-size:${fDate};font-weight:900;color:#c0392b}
+    .f-date{font-size:${fDate};color:#333}
+    .f-small{font-size:${fSmall};color:#888}
+    .sep{height:0.3mm;background:#ddd;margin:0.5mm 0}
+    .no-print{margin:4px;padding:6px 16px;background:#1a4fa8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+  </style></head><body>
+    <div class="label">
+      <div class="f-co">ALBARABA SL</div>
+      <div class="sep"></div>
+      <div class="f-title">⭐ Etiqueta de Prueba</div>
+      <div class="f-lot">LOTE: TEST-2026</div>
+      <div class="f-date">Entrada: ${new Date().toLocaleDateString('es-ES')}</div>
+      <div class="f-dlc">⏱ Consumir antes: 30/06/2026</div>
+      <div class="f-small" style="margin-top:auto">Resp: Sistema APPCC</div>
+    </div>
+    <button class="no-print" onclick="window.print()">🖨 Imprimir</button>
+    <script>setTimeout(()=>window.print(),500)${String.fromCharCode(60)+'/script>'}
+  </body></html>`);
+  w.document.close();
+}
+
 function saveQLIp(){
   const ip=document.getElementById('cfg-ql-ip').value.trim();
   localStorage.setItem('a_ql_ip',ip);
@@ -4036,7 +4826,7 @@ function saveNewEmp(){
   const n=(document.getElementById('emp-new-name')||{}).value||'';
   if(!n.trim()){alert('Introduce un nombre');return;}
   const emps=ld(K.emp);emps.push(n.trim());sv(K.emp,emps);
-  buildWorkerPickerBtns();closeModal();renderCfg();
+  closeModal();renderCfg();
 }
 function openEditEmpModal(i,current){
   openModal(`<div class="modal-title">✏️ Editar Empleado</div>
@@ -4053,14 +4843,14 @@ function saveEditEmp(i){
   const n=(document.getElementById('emp-edit-name')||{}).value||'';
   if(!n.trim()){alert('Introduce un nombre');return;}
   const emps=ld(K.emp);emps[i]=n.trim();sv(K.emp,emps);
-  buildWorkerPickerBtns();closeModal();renderCfg();
+  closeModal();renderCfg();
 }
 function addEmp(){openAddEmpModal();}
 function delEmp(i){
   const emps=ld(K.emp);
   if(!confirm('¿Eliminar a '+emps[i]+'?'))return;
   emps.splice(i,1);sv(K.emp,emps);
-  buildWorkerPickerBtns();renderCfg();
+  renderCfg();
 }
 function addZona(){
   const name=prompt('Nombre de la cámara/zona:');if(!name)return;
@@ -4105,6 +4895,13 @@ function importData(e){
 // ============================================================
 let _scanner = null;
 let _scannerActive = false;
+// Esperar a que un script CDN async se cargue (hasta 3s)
+function waitForLib(checkFn,callback,tries){
+  tries=tries||0;
+  if(checkFn()){callback();return;}
+  if(tries>30){callback();return;} // timeout — intenta igual
+  setTimeout(()=>waitForLib(checkFn,callback,tries+1),100);
+}
 
 // GS1 Application Identifier lengths (fixed-length AIs)
 const GS1_AI_FIXED = {
@@ -4345,12 +5142,9 @@ function openScanModal(onResult) {
     <button class="btn btn-outline btn-block" style="margin-top:12px" onclick="stopScanner();closeModal()">Cancelar</button>
   `);
 
-  setTimeout(() => {
-    if (!window.Html5Qrcode) {
-      document.getElementById('scan-result').innerHTML =
-        '<span style="color:#e74c3c">⚠ Librería de escaneo no disponible. Comprueba la conexión a internet.</span>';
-      return;
-    }
+  waitForLib(()=>window.Html5Qrcode, ()=>{
+    const scanEl=document.getElementById('scan-reader');
+    if(!scanEl){return;} // modal cerrado antes de que cargase
     _scanner = new Html5Qrcode('scan-reader');
     _scannerActive = true;
     _scanner.start(
@@ -4368,9 +5162,9 @@ function openScanModal(onResult) {
       () => {} // ignore per-frame errors
     ).catch(err => {
       document.getElementById('scan-result').innerHTML =
-        `<span style="color:#e74c3c">⚠ No se puede acceder a la cámara.<br>Comprueba los permisos del navegador.</span>`;
+        `<span style="color:#e74c3c">⚠ No se puede acceder a la cámara.<br>Permite el acceso en los ajustes del navegador.</span><br><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="stopScanner();closeModal()">Cancelar</button>`;
     });
-  }, 300);
+  });
 }
 
 // ── HANDLE SCAN RESULT IN RECEPCIÓN ─────────────────────────
@@ -4432,25 +5226,41 @@ function renderAbat(){
     </div>`;
 }
 function openAbatModal(){
-  const emps=ld(K.emp);
-  const elabs=ld(K.elab).filter(x=>x.estado==='elaborado'||x.estado==='en_nevera').slice(0,30);
+  // All active elaborations (en_stock is the state used by saveElab)
+  const elabs=ld(K.elab).filter(x=>x.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   openModal(`<div class="modal-title">❄ Registro Abatidor</div>
-    <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
-      <button onclick="scanToFields({prod:'ab-prod', lote:'ab-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
+
+    <!-- Elaboraciones activas para seleccionar -->
+    ${elabs.length ? `<div style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#1a4fa8;margin-bottom:6px">📋 Elaboraciones activas — toca para seleccionar:</div>
+      <div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;border:1.5px solid #e3efff;border-radius:10px;padding:4px">
+        ${elabs.map(e=>`<button onclick="selAbatElab('${e.producto.replace(/'/g,"\'")}','${(e.lote||'').replace(/'/g,"\'")}','${(e.cantidad||'')} ${(e.unidad||'')}'.trim())" 
+          style="text-align:left;background:#f8faff;border:1px solid #e3efff;border-radius:8px;padding:8px 10px;cursor:pointer;font-size:13px">
+          <span style="font-weight:700;color:#111">${e.producto}</span>
+          ${e.lote?`<span style="color:#1a4fa8;font-size:11px;font-family:monospace;margin-left:6px">L:${e.lote}</span>`:''}
+          ${e.cantidad?`<span style="color:#888;font-size:11px;margin-left:6px">${e.cantidad} ${e.unidad||''}</span>`:''}
+          <span style="color:#888;font-size:10px;float:right">${e.date||''}</span>
+        </button>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div style="margin-bottom:10px;padding:8px 10px;background:#f0f4ff;border-radius:8px">
+      <button onclick="scanToFields({prod:'ab-prod', lote:'ab-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
     </div>
+
     <div class="fc-group"><label class="fc-label">Producto / Elaboración</label>
-      <input class="fc" id="ab-prod" list="ab-prod-list" placeholder="Nombre del producto...">
-      <datalist id="ab-prod-list">${elabs.map(e=>`<option value="${e.producto} (${e.lote})">`).join('')}</datalist>
+      <input class="fc" id="ab-prod" placeholder="Nombre del producto..." style="font-weight:700">
     </div>
-    <div class="fc-group"><label class="fc-label">Lote de referencia</label>
-      <input class="fc" id="ab-lote" placeholder="Número de lote...">
+    <div class="fc-group"><label class="fc-label">Lote</label>
+      <input class="fc" id="ab-lote" placeholder="Número de lote..." style="font-family:monospace">
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="fc-group"><label class="fc-label">T° entrada (°C) — debe ser ≥60°C</label>
-        <input class="fc" id="ab-ti" type="number" step="0.1" placeholder="ej: 68">
+      <div class="fc-group"><label class="fc-label">T° entrada (°C)</label>
+        <input class="fc" id="ab-ti" type="number" step="0.1" placeholder="≥60°C">
       </div>
-      <div class="fc-group"><label class="fc-label">T° salida (°C) — debe ser ≤10°C</label>
-        <input class="fc" id="ab-tf" type="number" step="0.1" placeholder="ej: 8">
+      <div class="fc-group"><label class="fc-label">T° salida (°C)</label>
+        <input class="fc" id="ab-tf" type="number" step="0.1" placeholder="≤10°C">
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -4464,18 +5274,27 @@ function openAbatModal(){
     <div class="fc-group"><label class="fc-label">Cantidad</label>
       <input class="fc" id="ab-cant" placeholder="ej: 2 kg, 3 bandejas...">
     </div>
-    <div class="fc-group"><label class="fc-label">Empleado</label>
-      <select class="fc" id="ab-emp"><option value="">— Seleccionar —</option>${emps.map(e=>`<option>${e}</option>`).join('')}</select>
-    </div>
-    <input class="fc" id="ab-obs" placeholder="Observaciones...">
-    <div class="modal-row">
+    <input class="fc" id="ab-obs" placeholder="Observaciones..." style="margin-top:8px">
+    <div class="modal-row" style="margin-top:12px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
       <button class="btn btn-green" style="flex:1" onclick="saveAbat()">✓ Guardar</button>
     </div>`);
 }
+
+function selAbatElab(prod, lote, cant){
+  const p=document.getElementById('ab-prod');
+  const l=document.getElementById('ab-lote');
+  const c=document.getElementById('ab-cant');
+  if(p){p.value=prod;p.style.borderColor='#27ae60';}
+  if(l&&lote){l.value=lote;l.style.borderColor='#27ae60';}
+  if(c&&cant.trim()){c.value=cant.trim();}
+  // Scroll down to temps
+  const ti=document.getElementById('ab-ti');
+  if(ti)setTimeout(()=>ti.focus(),100);
+}
 function saveAbat(){
   const prod=document.getElementById('ab-prod').value;if(!prod){alert('Introduce el producto');return}
-  const emp=document.getElementById('ab-emp').value;if(!emp){alert('Selecciona empleado');return}
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const ti=parseFloat(document.getElementById('ab-ti').value);
   const tf=parseFloat(document.getElementById('ab-tf').value);
   const hi=document.getElementById('ab-hi').value;
@@ -4503,11 +5322,11 @@ function saveAbat(){
     date:today(),ts:new Date().toISOString()};
   const recs=ld(K.abat);recs.push(rec);sv(K.abat,recs);
   closeModal();renderAbat();updateScoreChip();
-  autoLabel({tipo:'ABATIMIENTO'+(conforme?' ✓ CONFORME':' ⚠ NOK'),producto:prod,lote:rec.lote||'—',
-    emp,fecha:fmtDT(rec.ts),
-    linea2:'T° entrada: '+ti+'°C → T° salida: '+tf+'°C',
-    linea3:'Duración: '+(durMinutos?Math.round(durMinutos)+'min':'—')+(conforme?' · APTO CONGELACIÓN':''),
-    dlc:null,color:conforme?'#2980b9':'#e74c3c'});
+  autoLabel({tipo:'❄ ABATIMIENTO'+(conforme?' ✓':'⚠ NOK'),producto:prod,
+    lote:document.getElementById('ab-lote')?.value||'',emp,dlc:'',
+    ts:new Date().toISOString(),
+    proceso:['🍳 Elaborado','❄ Abatido · '+new Date().toLocaleDateString('es-ES')+(conforme?' ✓ Conforme':' ⚠ No conforme')]
+  })
 }
 function viewAbat(id){
   const r=ld(K.abat).find(x=>x.id===id);if(!r)return;
@@ -4696,7 +5515,8 @@ function renderNoConf(){
           <div class="list-main">
             <div class="list-title">${r.tipo}</div>
             <div class="list-sub">${r.emp} · ${fmtDate(r.ts)} · ${r.modulo||'General'}</div>
-            <div style="font-size:11px;color:#888">${r.descripcion?.slice(0,60)||'—'}...</div>
+            <div style="font-size:11px;color:#888;margin-bottom:2px">${r.descripcion?.slice(0,70)||'—'}</div>
+            <div style="font-size:11px;color:${r.accion?'#065f46':'#e67e22'}">${r.accion?'✓ Acc.correctiva: '+r.accion.slice(0,50):'⚠ Sin acción correctiva registrada'}</div>
           </div>
           <div class="list-right"><span class="list-badge ${cl}">${r.estado}</span></div>
         </div>`;
@@ -4752,22 +5572,38 @@ function saveNoConf(){
 function viewNoConf(id){
   const r=ld(K.noconf).find(x=>x.id===id);if(!r)return;
   openModal(`<div class="modal-title">⚠ No Conformidad</div>
-    <div style="font-size:11px;color:#888;margin-bottom:10px">${r.emp} · ${fmtDT(r.ts)} · ${r.modulo}</div>
-    <div style="font-size:13px;font-weight:700;color:#e74c3c;margin-bottom:8px">${r.tipo}</div>
-    <div style="font-size:12px;margin-bottom:8px"><strong>Descripción:</strong><br>${r.descripcion||'—'}</div>
-    <div style="font-size:12px;margin-bottom:8px"><strong>Acción correctiva:</strong><br>${r.accion||'—'}</div>
-    <div style="font-size:12px;margin-bottom:8px"><strong>Acción preventiva:</strong><br>${r.preventiva||'—'}</div>
-    <div class="fc-group"><label class="fc-label">Actualizar estado</label>
+    <div style="font-size:11px;color:#888;margin-bottom:10px">${r.emp} · ${fmtDT(r.ts)} · ${r.modulo||'General'}</div>
+    <div style="font-size:13px;font-weight:700;color:#e74c3c;margin-bottom:10px">${r.tipo}</div>
+    <div class="fc-group"><label class="fc-label">Descripción del problema</label>
+      <textarea class="fc" id="nc-upd-desc" rows="3" placeholder="Qué ocurrió, cuándo, cómo se detectó...">${esc(r.descripcion||'')}</textarea>
+    </div>
+    <div class="fc-group"><label class="fc-label">Acción correctiva inmediata</label>
+      <textarea class="fc" id="nc-upd-acc" rows="2" placeholder="Qué se hizo para corregirlo...">${esc(r.accion||'')}</textarea>
+    </div>
+    <div class="fc-group"><label class="fc-label">Acción preventiva (evitar que se repita)</label>
+      <input class="fc" id="nc-upd-prev" value="${esc(r.preventiva||'')}" placeholder="Medida preventiva...">
+    </div>
+    <div class="fc-group"><label class="fc-label">Estado</label>
       <select class="fc" id="nc-upd-est">${NC_ESTADOS.map(s=>`<option ${s===r.estado?'selected':''}>${s}</option>`).join('')}</select>
     </div>
     <div class="modal-row">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cerrar</button>
-      <button class="btn btn-green" style="flex:1" onclick="updateNoConf('${r.id}')">Actualizar estado</button>
+      <button class="btn btn-green" style="flex:1" onclick="updateNoConf('${r.id}')">✓ Guardar cambios</button>
     </div>`);
 }
 function updateNoConf(id){
   const recs=ld(K.noconf);const idx=recs.findIndex(x=>x.id===id);
-  if(idx>=0){recs[idx].estado=document.getElementById('nc-upd-est').value;recs[idx].fechaCierre=today();}
+  if(idx>=0){
+    const desc=(document.getElementById('nc-upd-desc')||{}).value;
+    const acc=(document.getElementById('nc-upd-acc')||{}).value;
+    const prev=(document.getElementById('nc-upd-prev')||{}).value;
+    const est=document.getElementById('nc-upd-est').value;
+    if(desc!==undefined) recs[idx].descripcion=desc.trim();
+    if(acc!==undefined) recs[idx].accion=acc.trim();
+    if(prev!==undefined) recs[idx].preventiva=prev.trim();
+    recs[idx].estado=est;
+    if(est==='Cerrada') recs[idx].fechaCierre=today();
+  }
   sv(K.noconf,recs);closeModal();renderNoConf();
 }
 
@@ -4980,7 +5816,7 @@ function calcDesv(){
 }
 function saveContras(){
   const eq=document.getElementById('ct-eq').value;if(!eq){alert('Introduce el equipo');return}
-  const emp=document.getElementById('ct-emp').value;if(!emp){alert('Selecciona responsable');return}
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const tp=parseFloat(document.getElementById('ct-tp').value);
   const te=parseFloat(document.getElementById('ct-te').value);
   if(isNaN(tp)||isNaN(te)){alert('Introduce las temperaturas');return}
@@ -5069,6 +5905,9 @@ function savePlagas(){
 // DISEÑADOR DE ETIQUETAS PERSONALIZADAS
 // ============================================================
 const LBL_SIZES={
+  'QL-62mm-cont':{w:'62mm',h:'auto',wpx:234,hpx:0,brother:true,cont:true},
+  'QL-29mm-cont':{w:'29mm',h:'auto',wpx:110,hpx:0,brother:true,cont:true,narrow:true},
+  'QL-29x90mm': {w:'29mm',h:'90mm', wpx:110,hpx:340,brother:true,narrow:true},
   'QL-62x100mm':{w:'62mm',h:'100mm',wpx:234,hpx:378,brother:true},
   'QL-62x60mm': {w:'62mm',h:'60mm', wpx:234,hpx:227,brother:true},
   'QL-62x29mm': {w:'62mm',h:'29mm', wpx:234,hpx:110,brother:true},
@@ -5084,27 +5923,329 @@ const LBL_PLANTILLAS=[
   {id:'libre',nombre:'Etiqueta libre',campos:['empresa','texto1','texto2','texto3','fecha','emp']}
 ];
 function renderEtiquetas(){
-  const elabs=ld(K.elab).slice(0,10);
-  document.getElementById('etiquetas-body').innerHTML=`
-    <div class="card">
-      <div class="card-head"><h3>🏷 Plantillas de etiqueta</h3></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px">
-        ${LBL_PLANTILLAS.map(p=>`<button class="btn btn-outline btn-block" onclick="abrirDiseñador('${p.id}')" style="padding:14px 8px;font-size:13px">
-          🏷 ${p.nombre}
-        </button>`).join('')}
+  const savedOrient=localStorage.getItem('a_lbl_orient')||'portrait';
+  const elabs=(ld(K.elab)||[]).filter(e=>e.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50);
+  const receps=(ld(K.recep)||[]).sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50);
+  const openSections=JSON.parse(localStorage.getItem('a_etq_open')||'{"elab":true,"prod":false}');
+
+  function destBadge(def){
+    const opts=[
+      {v:'nevera',    icon:'🧊', label:'NEVERA',      bg:'#e3f0ff', col:'#1a4fa8'},
+      {v:'congelador',icon:'❄️', label:'CONGELADOR',  bg:'#e8f4fd', col:'#0d6efd'},
+      {v:'hoy',       icon:'🍽', label:'HOY',          bg:'#fff3cd', col:'#856404'},
+    ];
+    return opts.map(o=>`<button onclick="selectDest(this,'${o.v}')" data-dest="${o.v}"
+      style="padding:3px 7px;font-size:10px;font-weight:700;border-radius:5px;border:2px solid ${o.col};
+      background:${o.v===def?o.bg:'#fff'};color:${o.col};cursor:pointer">${o.icon} ${o.label}</button>`).join('');
+  }
+
+  function itemRow(r, tipo, def){
+    const sub = tipo==='elab'
+      ? (r.lote?'L:'+r.lote+' · ':'')+(r.dlc?'Cad:'+fmtDate(r.dlc):'')
+      : (r.lote?'L:'+r.lote+' · ':'')+(r.proveedor||'')+(r.date?' · '+r.date:'');
+    return `<div style="border-bottom:1px solid #f0f0f0">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
+        <input type="checkbox" id="chk-${tipo}-${r.id}" style="width:20px;height:20px;flex-shrink:0;accent-color:#1a4fa8">
+        <div style="flex:1;cursor:pointer;min-width:0" onclick="document.getElementById('chk-${tipo}-${r.id}').click()">
+          <div style="font-size:14px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.producto}</div>
+          <div style="font-size:11px;color:#888">${sub}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:3px;flex-shrink:0">
+          <button onclick="adjCopias('${tipo}-${r.id}',-1)" style="width:28px;height:28px;border:1.5px solid #ddd;border-radius:8px;background:#fff;font-size:18px;cursor:pointer">−</button>
+          <span id="cop-${tipo}-${r.id}" style="min-width:24px;text-align:center;font-weight:900;font-size:15px">1</span>
+          <button onclick="adjCopias('${tipo}-${r.id}',1)" style="width:28px;height:28px;border:1.5px solid #1a4fa8;border-radius:8px;background:#fff;font-size:18px;cursor:pointer;color:#1a4fa8">+</button>
+        </div>
       </div>
-    </div>
-    <div class="card" style="margin-top:10px">
-      <div class="card-head"><h3>Imprimir etiqueta de lote</h3></div>
-      <div style="padding:10px;display:flex;flex-direction:column;gap:8px">
-        <select class="fc" id="lbl-elab-sel">
-          <option value="">— Seleccionar elaboración —</option>
-          ${elabs.map(e=>`<option value="${e.id}">${e.producto} · L:${e.lote} · ${fmtDate(e.ts)}</option>`).join('')}
-        </select>
-        <button class="btn btn-green" onclick="printElabLabelSelected()">🖨 Imprimir etiqueta lote</button>
+      <div style="display:flex;gap:4px;padding:0 12px 8px 40px" id="dest-wrap-${tipo}-${r.id}">
+        <input type="hidden" id="dest-${tipo}-${r.id}" value="${def}">
+        ${destBadge(def)}
       </div>
     </div>`;
+  }
+
+  document.getElementById('etiquetas-body').innerHTML=`
+    <!-- Barra superior -->
+    <div style="padding:10px 14px 6px;display:flex;align-items:center;gap:6px">
+      <div style="display:flex;gap:4px;flex-shrink:0">
+        <button onclick="setOrient('portrait')" style="padding:5px 10px;font-size:12px;font-weight:700;border-radius:6px;border:2px solid #1a4fa8;background:${savedOrient==='portrait'?'#1a4fa8':'#fff'};color:${savedOrient==='portrait'?'#fff':'#1a4fa8'};cursor:pointer">▯ Vertical</button>
+        <button onclick="setOrient('landscape')" style="padding:5px 10px;font-size:12px;font-weight:700;border-radius:6px;border:2px solid #1a4fa8;background:${savedOrient==='landscape'?'#1a4fa8':'#fff'};color:${savedOrient==='landscape'?'#fff':'#1a4fa8'};cursor:pointer">▭ Horizontal</button>
+      </div>
+      <button class="btn btn-green" style="flex:1;padding:8px;font-size:14px;font-weight:700" onclick="_printSelected('all')">🖨 IMPRIMIR MARCADOS</button>
+    </div>
+
+    <!-- SECCIÓN: ELABORACIONES -->
+    <div class="card" style="margin-top:8px;overflow:hidden">
+      <div onclick="toggleEtqSection('elab')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8faff;border-bottom:${openSections.elab?'1px solid #e3efff':'none'}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">🍳</span>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#1a4fa8">Elaboraciones</div>
+            <div style="font-size:11px;color:#888">${elabs.length} preparaciones activas</div>
+          </div>
+        </div>
+        <span style="font-size:20px;color:#1a4fa8;font-weight:700">${openSections.elab?'▲':'▼'}</span>
+      </div>
+      ${openSections.elab ? `<div>${elabs.length ? elabs.map(e=>itemRow(e,'elab',e.destino||'nevera')).join('') : '<div style="padding:14px;color:#aaa;text-align:center;font-size:13px">Sin elaboraciones activas</div>'}</div>` : ''}
+    </div>
+
+    <!-- SECCIÓN: PRODUCTOS RECIBIDOS -->
+    <div class="card" style="margin-top:8px;overflow:hidden">
+      <div onclick="toggleEtqSection('prod')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#fff8f0;border-bottom:${openSections.prod?'1px solid #fde8cc':'none'}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">📦</span>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#e67e22">Productos recibidos</div>
+            <div style="font-size:11px;color:#888">${receps.length} recepciones recientes</div>
+          </div>
+        </div>
+        <span style="font-size:20px;color:#e67e22;font-weight:700">${openSections.prod?'▲':'▼'}</span>
+      </div>
+      ${openSections.prod ? `<div>${receps.length ? receps.map(r=>itemRow(r,'recep','nevera')).join('') : '<div style="padding:14px;color:#aaa;text-align:center;font-size:13px">Sin recepciones guardadas</div>'}</div>` : ''}
+    </div>
+
+    <!-- SECCIÓN: ETIQUETA MANUAL -->
+    <div class="card" style="margin-top:8px">
+      <div onclick="toggleEtqSection('manual')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f5fff8;border-bottom:${openSections.manual?'1px solid #d4edda':'none'}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">✏️</span>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#27ae60">Etiqueta manual</div>
+            <div style="font-size:11px;color:#888">Sin registro previo</div>
+          </div>
+        </div>
+        <span style="font-size:20px;color:#27ae60;font-weight:700">${openSections.manual?'▲':'▼'}</span>
+      </div>
+      ${openSections.manual ? `<div style="padding:12px;display:grid;gap:8px">
+        <input class="fc" id="etq-man-prod" placeholder="Nombre del producto *" style="font-size:15px;font-weight:700">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><label style="font-size:11px;color:#888">Caducidad</label><input class="fc" id="etq-man-cad" type="date"></div>
+          <div><label style="font-size:11px;color:#888">Nº lote</label><input class="fc" id="etq-man-lote" placeholder="Lote"></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:12px;color:#888">Destino:</span>
+          <div style="display:flex;gap:4px" id="etq-man-dest-wrap">
+            <input type="hidden" id="etq-man-dest" value="nevera">
+            <button onclick="selectDest(this,'nevera')" data-dest="nevera" style="padding:4px 8px;font-size:11px;font-weight:700;border-radius:6px;border:2px solid #1a4fa8;background:#e3f0ff;color:#1a4fa8;cursor:pointer">🧊 NEVERA</button>
+            <button onclick="selectDest(this,'congelador')" data-dest="congelador" style="padding:4px 8px;font-size:11px;font-weight:700;border-radius:6px;border:2px solid #0d6efd;background:#fff;color:#0d6efd;cursor:pointer">❄️ CONGELADOR</button>
+            <button onclick="selectDest(this,'hoy')" data-dest="hoy" style="padding:4px 8px;font-size:11px;font-weight:700;border-radius:6px;border:2px solid #856404;background:#fff;color:#856404;cursor:pointer">🍽 HOY</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:3px;margin-left:auto">
+            <button onclick="adjCopias('etq-man',-1)" style="width:28px;height:28px;border:1.5px solid #ddd;border-radius:8px;background:#fff;font-size:18px;cursor:pointer">−</button>
+            <span id="cop-etq-man" style="min-width:24px;text-align:center;font-weight:900;font-size:15px">1</span>
+            <button onclick="adjCopias('etq-man',1)" style="width:28px;height:28px;border:1.5px solid #1a4fa8;border-radius:8px;background:#fff;font-size:18px;cursor:pointer;color:#1a4fa8">+</button>
+          </div>
+        </div>
+        <button class="btn btn-green btn-block" onclick="_printManual()">🖨 Imprimir etiqueta manual</button>
+      </div>` : ''}
+    </div>`;
 }
+
+function toggleEtqSection(key){
+  const open=JSON.parse(localStorage.getItem('a_etq_open')||'{"elab":true,"prod":false}');
+  open[key]=!open[key];
+  localStorage.setItem('a_etq_open',JSON.stringify(open));
+  renderEtiquetas();
+}
+
+
+function adjCopias(key, delta){
+  const el=document.getElementById('cop-'+key);
+  if(!el)return;
+  const v=Math.max(1,Math.min(20,(parseInt(el.textContent)||1)+delta));
+  el.textContent=v;
+}
+
+function setOrient(o){
+  localStorage.setItem('a_lbl_orient',o);
+  renderEtiquetas();
+}
+function selectDest(btn,val){
+  // Find parent dest-wrap and update hidden + button styles
+  const wrap=btn.parentElement;
+  const hidden=wrap.querySelector('input[type=hidden]');
+  if(hidden)hidden.value=val;
+  const destColors={nevera:'#1a4fa8',congelador:'#0d6efd',hoy:'#856404'};
+  const destBg={nevera:'#e3f0ff',congelador:'#e8f4fd',hoy:'#fff3cd'};
+  wrap.querySelectorAll('button[data-dest]').forEach(b=>{
+    const bv=b.getAttribute('data-dest');
+    const col=destColors[bv]||'#1a4fa8';
+    b.style.background=bv===val?(destBg[bv]||'#e3f0ff'):'#fff';
+    b.style.borderColor=col;
+    b.style.color=col;
+  });
+}
+
+function _printManual(){
+  const prod=(document.getElementById('etq-man-prod')||{}).value||'';
+  if(!prod){alert('Introduce el nombre del producto');return;}
+  const cad=(document.getElementById('etq-man-cad')||{}).value||'';
+  const lote=(document.getElementById('etq-man-lote')||{}).value||'';
+  const destino=(document.getElementById('etq-man-dest')||{}).value||'nevera';
+  const cop=parseInt((document.getElementById('cop-etq-man')||{}).textContent)||1;
+  _batchPrint([{r:{producto:prod,lote,dlc:cad,caducidad:cad,destino,ts:new Date().toISOString(),proceso:[]},cop,tipo:'manual'}]);
+}
+
+function _printSelected(tipo){
+  const items=[];
+  const tipos=tipo==='all'?['elab','recep']:[tipo];
+  tipos.forEach(t=>{
+    const src_=t==='elab'?ld(K.elab)||[]:ld(K.recep)||[];
+    src_.forEach(r=>{
+      const chk=document.getElementById('chk-'+t+'-'+r.id);
+      if(!chk||!chk.checked)return;
+      const cop=parseInt((document.getElementById('cop-'+t+'-'+r.id)||{}).textContent)||1;
+      const destEl=document.getElementById('dest-'+t+'-'+r.id);
+      const destino=destEl?destEl.value:(r.destino||'nevera');
+      items.push({r:Object.assign({},r,{destino}),cop,tipo:t});
+    });
+  });
+  if(!items.length){alert('Marca al menos un producto con el checkbox');return;}
+  _batchPrint(items);
+}
+
+function _generateQRDataURL(text, sizePx){
+  return new Promise(resolve=>{
+    const div=document.createElement('div');
+    div.style.cssText='position:absolute;left:-9999px;top:-9999px';
+    document.body.appendChild(div);
+    try{
+      new QRCode(div,{text,width:sizePx,height:sizePx,correctLevel:QRCode.CorrectLevel.M});
+      setTimeout(()=>{
+        const canvas=div.querySelector('canvas');
+        const url=canvas?canvas.toDataURL('image/png'):'';
+        document.body.removeChild(div);
+        resolve(url);
+      },80);
+    }catch(e){document.body.removeChild(div);resolve('');}
+  });
+}
+
+async function _batchPrint(items, orient){
+  orient = orient || localStorage.getItem('a_lbl_orient') || 'portrait';
+  const wMm = 62;
+  const empresa = getCfgEmp().razon || 'ALBARABA SL';
+
+  const fTitle  = '11mm';
+  const fDlc    = '13mm';
+  const fDate   = '5.5mm';
+  const fDest   = '7mm';
+  const fSmall  = '4mm';
+  const fEmp    = '3.5mm';
+
+  const DEST_STYLES = {
+    nevera:     {icon:'🧊', label:'NEVERA',      bg:'#e3f0ff', col:'#1a4fa8'},
+    congelador: {icon:'❄️',  label:'CONGELADOR',  bg:'#cce5ff', col:'#0d6efd'},
+    hoy:        {icon:'🍽',  label:'CONSUMO HOY', bg:'#fff3cd', col:'#856404'},
+  };
+
+  const qrSize = orient==='landscape' ? 140 : 160;
+
+  // Pre-generate all QR codes in the main app before opening popup
+  const allItems = [];
+  for(const {r, cop, tipo} of items){
+    const producto = r.producto || '';
+    const lote     = r.lote     || '';
+    const dlc      = r.dlc      || r.caducidad || '';
+    const proceso  = r.proceso  || [];
+    const qrData   = 'ALB|'+producto+'|'+lote+'|'+dlc+'|'+(r.emp||'')+'|'+proceso.join(';');
+    const qrUrl    = await _generateQRDataURL(qrData, qrSize);
+    allItems.push({r, cop, tipo, qrUrl});
+  }
+
+  let labelsHtml = '';
+
+  allItems.forEach(({r, cop, tipo, qrUrl}) => {
+    const producto = r.producto || '';
+    const lote     = r.lote     || '';
+    const dlc      = r.dlc      || r.caducidad || '';
+    const fecha    = r.ts ? new Date(r.ts).toLocaleDateString('es-ES') : (r.date || today());
+    const destino  = r.destino  || 'nevera';
+    const ds       = DEST_STYLES[destino] || DEST_STYLES.nevera;
+    const proceso  = r.proceso  || [];
+    const dlcFmt   = dlc ? (tipo==='recep' ? fmtExpiryDisplay(dlc) : fmtDate(dlc)) : '—';
+    const qrImg    = qrUrl ? `<img src="${qrUrl}" style="width:${qrSize*0.264}mm;height:${qrSize*0.264}mm">` : '';
+
+    for(let i = 0; i < cop; i++){
+      if(orient === 'landscape'){
+        labelsHtml += `<div class="label">
+          <div class="label-left">
+            <div class="f-emp">${empresa}</div>
+            <div class="f-title">${producto}</div>
+            <div class="f-fecha">📅 ${fecha}</div>
+            <div class="f-dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
+            ${lote ? `<div class="f-lote">LOTE: ${lote}</div>` : ''}
+            <div class="f-dlc-label">CONSUMIR ANTES DE:</div>
+            <div class="f-dlc">${dlcFmt}</div>
+          </div>
+          <div class="label-right">
+            ${qrImg}
+            ${proceso.length ? `<div class="f-proc">${proceso.join(' → ')}</div>` : ''}
+          </div>
+        </div>`;
+      } else {
+        labelsHtml += `<div class="label">
+          <div class="f-emp">${empresa}</div>
+          <div class="sep"></div>
+          <div class="f-title">${producto}</div>
+          <div class="f-fecha">📅 ${fecha}</div>
+          <div class="f-dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
+          ${lote ? `<div class="f-lote">LOTE: ${lote}</div>` : ''}
+          <div class="sep"></div>
+          <div class="f-dlc-label">CONSUMIR ANTES DE:</div>
+          <div class="f-dlc">${dlcFmt}</div>
+          <div class="sep"></div>
+          <div class="qr-wrap">${qrImg}${proceso.length ? `<div class="f-proc">${proceso.join(' → ')}</div>` : ''}</div>
+        </div>`;
+      }
+    }
+  });
+
+  const isLand = orient === 'landscape';
+  const labelCSS = isLand
+    ? `width:auto;min-height:62mm;padding:4mm;display:flex;flex-direction:row;gap:4mm;align-items:flex-start;`
+    : `width:62mm;padding:4mm;display:flex;flex-direction:column;gap:1.5mm;`;
+
+  const w = window.open('','_blank','width=600,height=750');
+  if(!w){alert('⚠ Activa las ventanas emergentes en el navegador para imprimir');return;}
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{font-family:Arial,Helvetica,sans-serif;background:#f0f0f0}
+    @page{size:62mm auto;margin:0}
+    @media print{
+      html,body{background:#fff}
+      .no-print{display:none!important}
+      .label{page-break-after:always;margin:0!important;border:none!important;box-shadow:none!important}
+      @page{size:62mm auto;margin:0}
+    }
+    .label{${labelCSS}background:#fff;border:0.5mm solid #ddd;margin:4mm auto;box-shadow:0 2px 8px rgba(0,0,0,.12);page-break-after:always;}
+    .label-left{flex:1;display:flex;flex-direction:column;gap:1.5mm}
+    .label-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2mm;flex-shrink:0}
+    .f-emp{font-size:${fEmp};font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.5px}
+    .f-title{font-size:${fTitle};font-weight:900;color:#000;line-height:1.1;word-break:break-word}
+    .f-fecha{font-size:${fDate};color:#555}
+    .f-dest{font-size:${fDest};font-weight:900;padding:1.5mm 3mm;border-radius:1.5mm;text-align:center;letter-spacing:.5px}
+    .f-lote{font-size:${fDate};font-family:monospace;font-weight:700;color:#333;background:#f5f5f5;padding:1mm 2mm;border-radius:1mm}
+    .f-dlc-label{font-size:${fSmall};color:#999;text-transform:uppercase;letter-spacing:.5px}
+    .f-dlc{font-size:${fDlc};font-weight:900;color:#c0392b;line-height:1.1}
+    .sep{height:.3mm;background:#e8e8e8;flex-shrink:0}
+    .qr-wrap{display:flex;flex-direction:column;align-items:center;gap:1.5mm;padding-top:1mm}
+    .f-proc{font-size:${fSmall};color:#aaa;text-align:center;line-height:1.4;max-width:54mm;word-break:break-word}
+    .no-print{position:sticky;bottom:0;display:flex;gap:8px;justify-content:center;align-items:center;padding:12px 16px;background:#fff;border-top:1px solid #ddd;}
+    .btn-print{padding:10px 32px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+    .btn-close{padding:10px 20px;background:#f0f0f0;color:#333;border:1.5px solid #ccc;border-radius:8px;font-size:15px;cursor:pointer}
+  </style></head><body>
+    ${labelsHtml}
+    <div class="no-print">
+      <span style="font-size:13px;color:#888">${allItems.reduce((s,x)=>s+x.cop,0)} etiqueta${allItems.reduce((s,x)=>s+x.cop,0)===1?'':'s'}</span>
+      <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
+      <button class="btn-close" onclick="window.close()">✕ Cerrar</button>
+    </div>
+  </body></html>`);
+  w.document.close();
+}
+
+
 function printElabLabelSelected(){
   const id=document.getElementById('lbl-elab-sel').value;
   if(!id){alert('Selecciona una elaboración');return}
@@ -5117,7 +6258,7 @@ function abrirDiseñador(plantillaId){
   const sizes=Object.keys(LBL_SIZES);
   openModal(`<div class="modal-title">🏷 ${p.nombre}</div>
     <div class="fc-group"><label class="fc-label">Tamaño de etiqueta</label>
-      <select class="fc" id="lbl-size">${sizes.map(s=>`<option ${s==='QL-62x100mm'?'selected':''}>${s}</option>`).join('')}</select>
+      <select class="fc" id="lbl-size">${sizes.map(s=>`<option ${s==='QL-62mm-cont'?'selected':''}>${s}</option>`).join('')}</select>
     </div>
     ${p.campos.includes('empresa')?`<div class="fc-group"><label class="fc-label">Empresa</label><input class="fc" id="lbl-empresa" value="${emp.razon||'ALBARABA SL'}"></div>`:''}
     ${p.campos.includes('producto')?`<div class="fc-group"><label class="fc-label">Producto / Elaboración</label>
@@ -5166,7 +6307,7 @@ function rellenarEtiquetaDesdeElab(elabId,plantillaId){
 }
 function getVal(id,def=''){const el=document.getElementById(id);return el?el.value:def}
 function imprimirDiseño(pid){
-  const size=LBL_SIZES[getVal('lbl-size','QL-62x100mm')]||LBL_SIZES['QL-62x100mm'];
+  const size=LBL_SIZES[getVal('lbl-size','QL-29x90mm')]||LBL_SIZES['QL-29x90mm'];
   const empresa=getVal('lbl-empresa','ALBARABA SL');
   const producto=getVal('lbl-producto')||getVal('lbl-pro','');
   const lote=getVal('lbl-lote');
@@ -5180,47 +6321,156 @@ function imprimirDiseño(pid){
     const btn=document.getElementById('lbla-'+a.replace(/ /g,'_'));
     return btn&&btn.classList.contains('sel');
   });
-  const alrgHtml=alrgs.length?`<div style="font-size:7px;font-weight:900;color:#c0392b;margin-top:2px">⚠ ALÉRGENOS: ${alrgs.map(a=>`<strong>${a}</strong>`).join(', ')}</div>`:'';
-  const w=window.open('','_blank',`width=${size.wpx+40},height=${size.hpx+80}`);
+
+  // Tamaños proporcionales al ancho
+  const wMm=parseFloat(size.w);
+  const hMm=parseFloat(size.h);
+  const isNarrow=wMm<40;
+  const fTitle=Math.max(3.5,wMm*0.165)+'mm';
+  const fLot  =Math.max(2.8,wMm*0.12)+'mm';
+  const fDate =Math.max(2.8,wMm*0.115)+'mm';
+  const fSmall=Math.max(1.8,wMm*0.075)+'mm';
+  const fAlrg =Math.max(2.0,wMm*0.085)+'mm';
+  const pad   =Math.max(1.5,wMm*0.05)+'mm';
+  // QR: tamaño según espacio disponible
+  const qrMm = isNarrow ? Math.min(wMm-4, 22) : Math.min(wMm*0.28, 20);
+  const qrPx = Math.round(qrMm*3.78);  // mm → px aprox
+
+  // Código QR de trazabilidad: ALB|producto|lote|caducidad|responsable
+  const qrData='ALB|'+(producto||'')+'|'+(lote||'')+'|'+(dlc||'')+'|'+(emp||'');
+  const hasQr=pid!=='libre'&&(producto||lote)&&qrData.replace(/[|]/g,'').length>2;
+
+  const w=window.open('','_blank','width='+(size.wpx+60)+',height='+(size.hpx+120));
   if(!w){alert('Permite las ventanas emergentes para imprimir etiquetas');return;}
-  const contenido=pid==='libre'
-    ?`${t1?`<div style="font-size:14px;font-weight:900">${t1}</div>`:''}${t2?`<div style="font-size:8px;color:#333">${t2}</div>`:''}${t3?`<div style="font-size:7px;color:#888">${t3}</div>`:''}`
-    :`${producto?`<div style="font-size:${pid==='alergeno'?'11px':'14px'};font-weight:900;color:#000;line-height:1.1;margin:2px 0">${producto}</div>`:''}${proveedor?`<div style="font-size:8px;color:#333">Prov: ${proveedor}</div>`:''}${lote?`<div style="margin:2px 0"><span style="font-family:monospace;font-size:9px;font-weight:700;background:#e8f2ec;padding:2px 5px;border-radius:3px">LOTE: ${lote}</span></div>`:''}${fecha?`<div style="font-size:8px;color:#333">Fecha: ${fecha}</div>`:''}${dlc?`<div style="font-size:10px;font-weight:900;color:#c0392b;margin-top:2px">⏱ Consumir antes: ${dlc}</div>`:''}${alrgHtml}${txt1?`<div style="font-size:8px;font-weight:600;text-transform:uppercase">${txt1}</div>`:''}${emp?`<div style="font-size:7px;color:#888;margin-top:3px">Resp: ${emp}</div>`:''}`;
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
-    *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;background:#fff}
-    @page{size:${size.w} ${size.h};margin:0}@media print{body{width:${size.w};height:${size.h}}}
-    .lb{width:${size.w};height:${size.h};padding:3mm;display:flex;flex-direction:column;border:1px solid #000;overflow:hidden;position:relative}
-    .lb-co{font-size:7px;font-weight:900;color:#1a4fa8;text-transform:uppercase;letter-spacing:.5px}
-    .lb-qr{position:absolute;bottom:3mm;right:3mm}
-    .lb-content{flex:1;padding-right:18mm}
-    .btn-p{margin:8px;padding:6px 16px;background:#1a4fa8;color:#fff;border:none;border-radius:4px;cursor:pointer;display:block}
-    @media print{.btn-p{display:none}}
-  </style><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">${'<'+'/script>'}
+
+  let bodyHtml='';
+  if(pid==='libre'){
+    bodyHtml=`
+      ${t1?`<div class="f-title">${t1}</div>`:''}
+      ${t2?`<div class="f-body">${t2}</div>`:''}
+      ${t3?`<div class="f-small" style="color:#888">${t3}</div>`:''}`;
+  } else {
+    bodyHtml=`
+      ${producto?`<div class="f-title">${producto}</div>`:''}
+      ${proveedor?`<div class="f-body" style="color:#555">📦 ${proveedor}</div>`:''}
+      ${lote?`<div class="f-lot">LOTE: ${lote}</div>`:''}
+      ${fecha?`<div class="f-date">Entrada: ${fecha}</div>`:''}
+      ${dlc?`<div class="f-dlc">⏱ Consumir antes: ${dlc}</div>`:''}
+      ${alrgs.length?`<div class="f-alrg">⚠ ${alrgs.join(' · ')}</div>`:''}
+      ${txt1?`<div class="f-body" style="font-weight:800;text-transform:uppercase">${txt1}</div>`:''}
+      ${emp?`<div class="f-small" style="margin-top:auto">Resp: ${emp}</div>`:''}
+      ${hasQr?`<div class="qr-wrap"><div id="lbl-qr"></div><div class="qr-label">Trazabilidad</div></div>`:''}`;
+  }
+
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">${String.fromCharCode(60)+'/script>'}
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{width:${size.w};${size.cont?'':'height:'+size.h+';'}background:#fff;font-family:Arial,Helvetica,sans-serif}
+    @page{size:${size.w} ${size.cont?'auto':size.h};margin:0}
+    @media print{html,body{width:${size.w};${size.cont?'':'height:'+size.h+';'}}.no-print{display:none!important}}
+    .label{width:${size.w};${size.cont?'height:auto;min-height:20mm;':'height:'+size.h+';overflow:hidden;'}padding:${pad};display:flex;flex-direction:column;gap:0.8mm;border:0.3mm solid #000}
+    .f-co{font-size:${fSmall};font-weight:900;color:#1a4fa8;text-transform:uppercase;letter-spacing:0.3px;line-height:1.1}
+    .f-title{font-size:${fTitle};font-weight:900;color:#000;line-height:1.15;word-break:break-word}
+    .f-lot{font-size:${fLot};font-weight:900;font-family:monospace;background:#e3efff;padding:0.5mm 1mm;border-radius:0.8mm;line-height:1.2;word-break:break-all}
+    .f-dlc{font-size:${fDate};font-weight:900;color:#c0392b;line-height:1.2}
+    .f-date{font-size:${fDate};color:#333;line-height:1.2}
+    .f-body{font-size:${fDate};color:#333;line-height:1.2}
+    .f-alrg{font-size:${fAlrg};font-weight:900;color:#c0392b;line-height:1.2;word-break:break-word}
+    .f-small{font-size:${fSmall};color:#888;line-height:1.1}
+    .sep{height:0.3mm;background:#ddd;margin:0.4mm 0;flex-shrink:0}
+    .qr-wrap{${size.cont?'':'margin-top:auto;'}display:flex;flex-direction:column;align-items:center;padding-top:1mm}
+    .qr-label{font-size:${fSmall};color:#aaa;margin-top:0.3mm;text-align:center}
+    .qr-wrap img,.qr-wrap canvas{width:${qrMm}mm!important;height:${qrMm}mm!important}
+    .no-print{margin:4px;padding:6px 16px;background:#1a4fa8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+  </style>
   </head><body>
-    <div class="lb">
-      <div class="lb-content">
-        ${empresa?`<div class="lb-co">${empresa}</div>`:''}
-        ${contenido}
-      </div>
-      ${pid!=='libre'&&producto?`<div id="alb-qr-dis" class="lb-qr"></div>`:''}
+    <div class="label">
+      ${empresa?`<div class="f-co">${empresa}</div><div class="sep"></div>`:''}
+      ${bodyHtml}
     </div>
-    <button class="btn-p" onclick="window.print()">🖨 Imprimir</button>
-    <script>window.addEventListener('load',function(){
-      var qrEl=document.getElementById('alb-qr-dis');
-      var qrCode='ALB|'+(producto||'')+'|'+(lote||'')+'|'+(dlc||'')+'|'+(emp||'');
-      if(qrEl&&qrCode.replace(/[|]/g,'').length>2){
-        new QRCode(qrEl,{text:qrCode,width:40,height:40,correctLevel:QRCode.CorrectLevel.M});
-      }
-    })${'<'+'/script>'}
+    <button class="no-print" onclick="window.print()">🖨 Imprimir</button>
+    <script>
+      window.addEventListener('load',function(){
+        var el=document.getElementById('lbl-qr');
+        if(el){
+          new QRCode(el,{text:'${qrData.replace(/'/g,"\\'")}',width:${qrPx},height:${qrPx},correctLevel:QRCode.CorrectLevel.M});
+        }
+        setTimeout(function(){window.print();},600);
+      });
+    ${String.fromCharCode(60)+'/script>'}
   </body></html>`);
   w.document.close();
 }
 
-// ── STARTUP ──────────────────────────────────────────────────
-window.addEventListener('load', function(){
-  initWorkerPicker();
-  showHome();
-});
+// ── ENTREGA DIRECTA (sin regeneración — productos fríos) ────
+function openEntregaDirecta(elabId){
+  const elabs=ld(K.elab)||[];
+  const elab=elabs.find(e=>e.id===elabId);
+  if(!elab){alert('Elaboración no encontrada');return;}
+  openModal(`<div class="modal-title">🍽 Entrega directa — frío</div>
+    <div style="background:#f0fff4;border-radius:10px;padding:10px 14px;margin-bottom:12px;border-left:4px solid #27ae60">
+      <div style="font-size:16px;font-weight:900;color:#111">${elab.producto}</div>
+      ${elab.lote?`<div style="font-size:12px;color:#1a4fa8;font-family:monospace">L: ${elab.lote}</div>`:''}
+      <div style="font-size:12px;color:#888;margin-top:2px">Sin regeneración — se entrega en frío</div>
+    </div>
+    <div class="fc-group"><label class="fc-label">T° de servicio (°C)</label>
+      <input class="fc" id="ed-temp" type="number" step="0.1" placeholder="ej: 4°C" value="4">
+    </div>
+    <div class="fc-group" style="margin-top:8px"><label class="fc-label">Observaciones</label>
+      <input class="fc" id="ed-obs" placeholder="Notas...">
+    </div>
+    <div style="margin-top:10px;padding:8px 10px;background:#fff9e6;border-radius:8px;font-size:12px;color:#856404">
+      ⚠ T° de servicio debe ser ≤8°C para productos fríos sin regenerar.
+    </div>
+    <div class="modal-row" style="margin-top:14px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="saveEntregaDirecta('${elabId}')">✓ Registrar entrega</button>
+    </div>`);
+}
+
+function saveEntregaDirecta(elabId){
+  const elabs=ld(K.elab)||[];
+  const idx=elabs.findIndex(e=>e.id===elabId);
+  if(idx<0){closeModal();return;}
+  const elab=elabs[idx];
+  const temp=parseFloat(document.getElementById('ed-temp').value)||null;
+  const obs=(document.getElementById('ed-obs')||{}).value||'';
+  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
+  const now=new Date();
+  const tempOk=temp===null||temp<=8;
+  const tservRecs=ld(K.tserv)||[];
+  tservRecs.push({id:genId(),ts:now.toISOString(),date:today(),
+    producto:elab.producto,lote:elab.lote||'',temp,emp,obs,
+    tipo:'entrega_fria',conforme:tempOk});
+  sv(K.tserv,tservRecs);
+  elabs[idx]=Object.assign({},elab,{estado:'servido',fecha_servicio:today()});
+  sv(K.elab,elabs);
+  if(!tempOk){
+    const ncs=ld(K.noconf)||[];
+    ncs.push({id:genId(),ts:now.toISOString(),tipo:'Entrega fría',
+      descripcion:'T° '+temp+'°C en entrega de '+elab.producto+' — supera 8°C',estado:'Abierta',emp});
+    sv(K.noconf,ncs);
+    alert('⚠ T° fuera de rango. Registrado como no conformidad.');
+  }
+  closeModal();renderElab();updateScoreChip();
+  const proceso=[...(elab.proceso||['🍳 Elaborado · '+elab.date]),'🍽 Entregado en frío · '+today()];
+  setTimeout(()=>addToLabelQueue({tipo:'🍽 ENTREGA',producto:elab.producto,lote:elab.lote||'',
+    dlc:elab.dlc||'',ts:now.toISOString(),destino:'hoy',proceso}),300);
+}
 </script>
+<!-- FLOATING PRINT BADGE -->
+<div id="print-badge" style="display:none;position:fixed;bottom:72px;right:14px;z-index:9999;
+  background:#27ae60;color:#fff;border-radius:50px;padding:10px 18px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);cursor:pointer;
+  display:none;align-items:center;gap:8px;font-weight:700;font-size:15px"
+  onclick="_showLabelQueuePopup()">
+  <span style="font-size:20px">🖨</span>
+  <span id="print-badge-count">0 etiquetas</span>
+  <span style="background:rgba(255,255,255,.25);border-radius:20px;padding:2px 8px;font-size:12px">Ver cola</span>
+</div>
+
+
 </body>
 </html>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         

@@ -1629,14 +1629,21 @@ function renderAlbaranPaso0(){
                 onchange="previewAlbaranImg(this)" style="display:none">
               <div style="background:#f5f7fa;color:#1a4fa8;border-radius:10px;border:2px dashed #1a4fa8;
                 padding:14px;text-align:center;font-size:13px;font-weight:700">
-                📁 Subir archivo / PDF
+                📁 Subir archivo
               </div>
             </label>
           </div>
           <div id="alb-img-prev" style="margin-top:4px"></div>
+          <div id="alb-ocr-area" style="display:none;margin-top:10px">
+            <button id="alb-ocr-btn" class="btn" style="width:100%;background:linear-gradient(135deg,#8e44ad,#6c3483);color:#fff;font-size:14px;padding:14px"
+              onclick="procesarOCRAlbaran()">
+              🔍 Leer albarán con OCR automático
+            </button>
+            <div id="alb-ocr-status" style="display:none;margin-top:8px;padding:10px;background:#f0f4ff;border-radius:8px;font-size:13px;color:#1a4fa8;text-align:center"></div>
+          </div>
           <div style="font-size:11px;color:#888;margin-top:6px;background:#f5f5f5;border-radius:6px;padding:8px">
-            💡 La foto del albarán queda guardada y visible para todo el equipo.<br>
-            En el paso siguiente introduces las líneas manualmente.
+            💡 Fotografía el albarán y pulsa <b>Leer con OCR</b> para extraer los productos automáticamente.<br>
+            O introduce las líneas manualmente en el siguiente paso.
           </div>
         </div>
         <div style="display:flex;gap:10px;margin-top:16px">
@@ -1667,6 +1674,9 @@ function _orig_previewAlbaranImg(inp){
         prev.innerHTML = `<div style="padding:8px;background:#f5f5f5;border-radius:6px;font-size:12px">📄 ${esc(file.name)} adjunto</div>`;
       }
     }
+    // Show OCR button only for images
+    const ocrArea = document.getElementById('alb-ocr-area');
+    if(ocrArea) ocrArea.style.display = file.type.startsWith('image/') ? 'block' : 'none';
   };
   reader.readAsDataURL(file);
 }
@@ -1677,6 +1687,164 @@ function albaranPaso1(){
   _alb.proveedor = prov;
   _alb.fecha = (document.getElementById('alb-fecha')||{}).value || new Date().toISOString().slice(0,10);
   renderAlbaranPaso1();
+}
+
+// ── OCR: Lectura automática de albarán ───────────────────────────────────
+let _ocrWorker = null;
+
+async function procesarOCRAlbaran(){
+  const btn = document.getElementById('alb-ocr-btn');
+  const statusEl = document.getElementById('alb-ocr-status');
+  if(!_alb.imagen || !_alb.imagenType?.startsWith('image/')){
+    alert('Primero adjunta una imagen del albarán'); return;
+  }
+  // sync proveedor/fecha
+  const provEl = document.getElementById('alb-prov');
+  const fechaEl = document.getElementById('alb-fecha');
+  if(provEl) _alb.proveedor = provEl.value.trim() || _alb.proveedor;
+  if(fechaEl) _alb.fecha = fechaEl.value || _alb.fecha;
+
+  if(btn) btn.disabled = true;
+  if(statusEl){ statusEl.style.display='block'; statusEl.innerHTML='⏳ Cargando motor OCR…'; }
+
+  try {
+    // Load Tesseract if needed
+    if(typeof Tesseract === 'undefined'){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
+        s.onload=res; s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+
+    if(statusEl) statusEl.innerHTML='🔍 Analizando imagen… (puede tardar 20-40s)';
+
+    const result = await Tesseract.recognize(_alb.imagen, 'spa+eng', {
+      logger: m => {
+        if(m.status==='recognizing text' && statusEl){
+          statusEl.innerHTML = `🔍 Leyendo… ${Math.round((m.progress||0)*100)}%`;
+        }
+      }
+    });
+
+    const text = result.data.text;
+    if(statusEl) statusEl.innerHTML = '🧠 Interpretando líneas del albarán…';
+
+    const lineas = _parseAlbaranText(text);
+
+    if(!lineas.length){
+      if(statusEl) statusEl.innerHTML = '⚠️ No se detectaron líneas de producto. Introduce manualmente.';
+      if(btn){ btn.disabled=false; btn.textContent='🔍 Reintentar OCR'; }
+      return;
+    }
+
+    // Merge with existing lineas (don't overwrite manual ones)
+    if(_alb.lineas.length === 0){
+      _alb.lineas = lineas;
+    } else {
+      _alb.lineas = [..._alb.lineas, ...lineas];
+    }
+
+    if(statusEl) statusEl.innerHTML = `✅ ${lineas.length} producto${lineas.length!==1?'s':''} detectado${lineas.length!==1?'s':''}. Revisa en el siguiente paso.`;
+
+    setTimeout(()=>{
+      // Sync proveedor/fecha again
+      const pv = document.getElementById('alb-prov');
+      const fe = document.getElementById('alb-fecha');
+      if(pv && pv.value.trim()) _alb.proveedor = pv.value.trim();
+      if(fe && fe.value) _alb.fecha = fe.value;
+      renderAlbaranPaso1();
+    }, 900);
+
+  } catch(err){
+    console.error('OCR error', err);
+    if(statusEl) statusEl.innerHTML = '❌ Error al leer la imagen. Prueba con mejor iluminación o introduce manualmente.';
+    if(btn){ btn.disabled=false; }
+  }
+}
+
+function _parseAlbaranText(rawText){
+  const lines = rawText.split('\n').map(l=>l.trim()).filter(l=>l.length > 3);
+
+  // Noise words to skip (headers, totals, etc)
+  const skipWords = ['total','subtotal','iva','base imponible','albarán','albaran',
+    'factura','proveedor','cliente','cif','nif','fecha','codigo','referencia',
+    'descripcion','precio','importe','cantidad','unidades','num','nº','page',
+    'pagina','www','http','tel','fax','email','dirección','direccion'];
+
+  const results = [];
+
+  for(const line of lines){
+    const lo = line.toLowerCase();
+    // Skip obvious headers/footers
+    if(skipWords.some(w => lo === w || lo.startsWith(w+' ') || lo.startsWith(w+':'))) continue;
+    if(lo.match(/^(total|subtotal|iva|base)/)) continue;
+    if(line.length < 4) continue;
+
+    // Extract all numbers from the line
+    // Accept both . and , as decimal separators: 12,50 or 12.50
+    const numMatches = [...line.matchAll(/\b(\d{1,6}[.,]\d{1,4}|\d{1,6})\b/g)]
+      .map(m => parseFloat(m[0].replace(',','.')))
+      .filter(n => !isNaN(n) && n >= 0);
+
+    if(!numMatches.length) continue; // no numbers = probably a header line
+
+    // Remove all numbers from line to get the product name
+    let nombre = line
+      .replace(/\b\d{1,6}[.,]\d{1,4}\b/g, '')
+      .replace(/\b\d{1,6}\b/g, '')
+      .replace(/[€$%*#|\\/_]/g,'')
+      .replace(/\s{2,}/g,' ')
+      .trim();
+
+    // Name must have at least 3 chars after cleaning
+    if(nombre.length < 3) continue;
+
+    // Price heuristic: numbers with decimals are prices, integers are quantities
+    const decimals = numMatches.filter(n => !Number.isInteger(n) || n > 100);
+    const integers = numMatches.filter(n => Number.isInteger(n) && n > 0 && n <= 9999);
+
+    let precio = 0, uds = 1;
+
+    if(decimals.length >= 2){
+      // Two prices → first is unit price, second is total
+      precio = decimals[0];
+    } else if(decimals.length === 1){
+      precio = decimals[0];
+    }
+
+    if(integers.length >= 1){
+      // Take smallest positive integer as quantity (usually 1-999)
+      const qty = integers.filter(n=>n>=1&&n<=9999).sort((a,b)=>a-b)[0];
+      if(qty) uds = qty;
+    }
+
+    // Skip if name is just punctuation or very generic
+    if(/^[\W\d]+$/.test(nombre)) continue;
+    // Skip lines that are just a date pattern
+    if(/^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(nombre.trim())) continue;
+
+    results.push({
+      nombreAlb: _capitalizeAlb(nombre),
+      precio: precio,
+      uds: uds
+    });
+  }
+
+  // Deduplicate by very similar names
+  const deduped = [];
+  for(const r of results){
+    const norm = s=>s.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
+    const already = deduped.some(d=>calcSimilitud(norm(d.nombreAlb), norm(r.nombreAlb)) > 85);
+    if(!already) deduped.push(r);
+  }
+
+  return deduped;
+}
+
+function _capitalizeAlb(s){
+  return s.toLowerCase().replace(/(^|\s)[a-záéíóúüñ]/g, c=>c.toUpperCase()).trim();
 }
 
 // ── PASO 1: Entrada rápida de líneas ─────────────────────────────────────
