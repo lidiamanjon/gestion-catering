@@ -1,7 +1,11 @@
 <!DOCTYPE html>
+<!-- VERSION: v20260628-1921 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1353,31 +1357,33 @@ function openRecepMenu(){
   renderRecep();
 }
 // ── OCR ALBARÁN RECEPCIÓN ────────────────────────────────────────────────
+// Memory: {normKey → ourName}  stored in localStorage 'a_alb_mem'
+function _albMemGet(){ try{return JSON.parse(localStorage.getItem('a_alb_mem')||'{}')}catch(e){return{}} }
+function _albMemSave(m){ localStorage.setItem('a_alb_mem', JSON.stringify(m)); }
+function _albMemKey(s){ return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,'').replace(/\s+/g,' ').trim(); }
+
 let _recepAlbOCRLines = [];
 
 function openRecepAlbaranOCR(){
+  window._albRecepImgData = null;
+  _recepAlbOCRLines = [];
   openModal(`<div class="modal-title">🧾 Leer albarán del proveedor</div>
     <div style="padding:4px 0 10px">
-      <div style="font-size:13px;color:#555;margin-bottom:12px">
-        Fotografía el albarán y el sistema detectará los productos automáticamente.
-        Podrás revisar y confirmar cada uno.
+      <div style="font-size:12px;color:#555;margin-bottom:10px">
+        Fotografía el albarán. La app detecta productos, lotes y cantidades.<br>
+        <span style="color:#1a4fa8;font-weight:700">Recuerda los nombres la primera vez — los siguientes se auto-rellenan.</span>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
         <label style="flex:1;min-width:130px;cursor:pointer">
           <input type="file" id="albrecep-img" accept="image/*" capture="environment"
             onchange="prevAlbRecepImg(this)" style="display:none">
           <div style="background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;border-radius:10px;
-            padding:14px;text-align:center;font-size:13px;font-weight:700">
-            📷 Fotografiar albarán
-          </div>
+            padding:14px;text-align:center;font-size:13px;font-weight:700">📷 Fotografiar albarán</div>
         </label>
         <label style="flex:1;min-width:130px;cursor:pointer">
-          <input type="file" id="albrecep-img2" accept="image/*"
-            onchange="prevAlbRecepImg(this)" style="display:none">
+          <input type="file" id="albrecep-img2" accept="image/*" onchange="prevAlbRecepImg(this)" style="display:none">
           <div style="background:#f5f7fa;color:#1a4fa8;border-radius:10px;border:2px dashed #1a4fa8;
-            padding:14px;text-align:center;font-size:13px;font-weight:700">
-            📁 Subir imagen
-          </div>
+            padding:14px;text-align:center;font-size:13px;font-weight:700">📁 Subir imagen</div>
         </label>
       </div>
       <div id="albrecep-prev" style="margin-bottom:8px"></div>
@@ -1395,218 +1401,253 @@ function openRecepAlbaranOCR(){
     <div class="modal-row" style="margin-top:4px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
     </div>`);
-  _recepAlbOCRLines = [];
 }
 
 function prevAlbRecepImg(inp){
-  const file = inp.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const prev = document.getElementById('albrecep-prev');
-    if(prev && file.type.startsWith('image/')){
-      prev.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid #ddd">`;
-    }
-    const area = document.getElementById('albrecep-ocr-area');
-    if(area) area.style.display = 'block';
-    window._albRecepImgData = e.target.result;
+  const file=inp.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('albrecep-prev');
+    if(prev&&file.type.startsWith('image/'))
+      prev.innerHTML=`<img src="${e.target.result}" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #ddd">`;
+    const area=document.getElementById('albrecep-ocr-area');
+    if(area) area.style.display='block';
+    window._albRecepImgData=e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
 async function runRecepOCR(){
-  const btn = document.getElementById('albrecep-ocr-btn');
-  const statusEl = document.getElementById('albrecep-status');
-  if(!window._albRecepImgData){ alert('Primero selecciona una imagen'); return; }
-  if(btn) btn.disabled = true;
-  if(statusEl){ statusEl.style.display='block'; statusEl.innerHTML='⏳ Cargando motor OCR…'; }
-
-  try {
-    if(typeof Tesseract === 'undefined'){
+  const btn=document.getElementById('albrecep-ocr-btn');
+  const statusEl=document.getElementById('albrecep-status');
+  if(!window._albRecepImgData){alert('Primero selecciona una imagen');return;}
+  if(btn) btn.disabled=true;
+  if(statusEl){statusEl.style.display='block';statusEl.innerHTML='⏳ Cargando OCR…';}
+  try{
+    if(typeof Tesseract==='undefined'){
       await new Promise((res,rej)=>{
         const s=document.createElement('script');
         s.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
-        s.onload=res; s.onerror=rej;
-        document.head.appendChild(s);
+        s.onload=res;s.onerror=rej;document.head.appendChild(s);
       });
     }
-    if(statusEl) statusEl.innerHTML='🔍 Analizando imagen… (20-40s)';
-    const result = await Tesseract.recognize(window._albRecepImgData, 'spa+eng', {
-      logger: m => {
-        if(m.status==='recognizing text'&&statusEl)
-          statusEl.innerHTML=`🔍 Leyendo… ${Math.round((m.progress||0)*100)}%`;
-      }
+    if(statusEl) statusEl.innerHTML='🔍 Leyendo imagen…';
+    const result=await Tesseract.recognize(window._albRecepImgData,'spa',{
+      logger:m=>{if(m.status==='recognizing text'&&statusEl)
+        statusEl.innerHTML=`🔍 Leyendo… ${Math.round((m.progress||0)*100)}%`;}
     });
-    if(statusEl) statusEl.innerHTML='🧠 Interpretando productos…';
-    const lines = _parseRecepOCRText(result.data.text);
-    if(!lines.length){
-      if(statusEl) statusEl.innerHTML='⚠️ No se detectaron productos. Prueba con mejor iluminación o introduce manualmente.';
-      if(btn){btn.disabled=false;}
-      return;
-    }
-    _recepAlbOCRLines = lines;
+    if(statusEl) statusEl.innerHTML='🧠 Detectando productos…';
+    const lines=_parseAlbRecepText(result.data.text);
+    _recepAlbOCRLines=lines;
     if(statusEl) statusEl.style.display='none';
-    _showRecepOCRConfirm();
-  } catch(err){
+    _showRecepOCRConfirm(lines.length===0);
+  }catch(err){
     console.error(err);
-    if(statusEl) statusEl.innerHTML='❌ Error al leer la imagen. Introduce manualmente.';
+    if(statusEl) statusEl.innerHTML='❌ Error OCR. Introduce manualmente.';
     if(btn) btn.disabled=false;
+    setTimeout(()=>_showRecepOCRConfirm(true),1500);
   }
 }
 
-function _parseRecepOCRText(rawText){
-  // Reuse same logic as ALBARABA_GESTION parser
-  const gestorProds=(()=>{try{const g=localStorage.getItem('g_productos');return g?JSON.parse(g):[];}catch(e){return[];}})();
-  const lines = rawText.split('\n').map(l=>l.trim()).filter(l=>l.length>3);
-  const skipWords=['total','subtotal','iva','base imponible','albarán','albaran',
-    'factura','proveedor','cliente','cif','nif','fecha','codigo','referencia',
-    'descripcion','precio','importe','cantidad','unidades','num','nº','page',
-    'pagina','www','http','tel','fax','email','dirección','direccion'];
+function _parseAlbRecepText(rawText){
+  const mem=_albMemGet();
+  const lines=rawText.split('\n').map(l=>l.trim()).filter(l=>l.length>=3);
+
+  // Words/patterns that identify non-product lines
+  const skipExact=['total','subtotal','iva','base imponible','albarán','albaran',
+    'factura','proveedor','cliente','cif','nif','fecha','código','codigo',
+    'descripcion','descripción','precio','importe','unidades','pagina','página',
+    'forma de pago','vencimiento','banco','cuenta','iban','swift','bic',
+    'gracias','observaciones','firma','recibido','conforme'];
+  const skipStart=['total','subtotal','iva ','base ','s.l','s.a','s.l.u','cif:','nif:',
+    'tel','fax','www.','http','email','c/','calle','avda','av.','pol.','polígono',
+    'nave ','local ','piso','p.o.','apdo','cp '];
+
   const results=[];
+
   for(const line of lines){
-    const lo=line.toLowerCase();
-    if(skipWords.some(w=>lo===w||lo.startsWith(w+' ')||lo.startsWith(w+':'))) continue;
-    if(lo.match(/^(total|subtotal|iva|base)/)) continue;
-    if(line.length<4) continue;
-    const numMatches=[...line.matchAll(/\b(\d{1,6}[.,]\d{1,4}|\d{1,6})\b/g)]
-      .map(m=>parseFloat(m[0].replace(',','.'))).filter(n=>!isNaN(n)&&n>=0);
-    if(!numMatches.length) continue;
+    const lo=line.toLowerCase().trim();
+    // Skip exact matches
+    if(skipExact.includes(lo)) continue;
+    // Skip lines starting with known non-product prefixes
+    if(skipStart.some(w=>lo.startsWith(w))) continue;
+    // Skip lines that look like phone numbers (≥9 digits grouped)
+    if(/^[\d\s\-\+\(\)]{9,}$/.test(line.trim())) continue;
+    // Skip postal codes / pure numeric lines
+    if(/^\d{5}(\s+\w+)?$/.test(line.trim())) continue;
+    // Skip lines with @ (email)
+    if(line.includes('@')) continue;
+    // Skip lines that are mostly punctuation/symbols
+    if(/^[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]{0,2}[^a-zA-ZáéíóúüñÁÉÍÓÚÜÑ\d]*$/.test(line)) continue;
+    // Skip short lines that are just codes (all caps + digits, ≤8 chars)
+    if(/^[A-Z0-9\-\/]{2,8}$/.test(line.trim())) continue;
+    // Must have at least one proper word (≥3 letters)
+    if(!/[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]{3,}/.test(line)) continue;
+    // Skip date-only lines
+    if(/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(line.trim())) continue;
+
+    // Extract numbers for quantity detection
+    // Spanish format: 1.234,56 or simple 12,5
+    const nums=[];
+    for(const m of line.matchAll(/\b\d{1,3}(?:\.\d{3})*,\d{1,4}\b/g)) nums.push(parseFloat(m[0].replace(/\./g,'').replace(',','.')));
+    for(const m of line.matchAll(/\b\d{1,6}\.\d{1,4}\b/g)) nums.push(parseFloat(m[0]));
+    for(const m of line.matchAll(/\b(\d{1,4})\b/g)) nums.push(parseInt(m[0]));
+    const uniqueNums=[...new Set(nums.filter(n=>!isNaN(n)&&n>=0))];
+
+    // Clean product name
     let nombre=line
-      .replace(/\b\d{1,6}[.,]\d{1,4}\b/g,'').replace(/\b\d{1,6}\b/g,'')
-      .replace(/[€$%*#|\\_\/]/g,'').replace(/\s{2,}/g,' ').trim();
+      .replace(/\b\d{1,3}(?:\.\d{3})*,\d{1,4}\b/g,'')
+      .replace(/\b\d{1,6}\.\d{1,4}\b/g,'')
+      .replace(/\b\d{1,4}\b/g,'')
+      .replace(/[€$%*|\\/_\[\]{}()]/g,' ')
+      .replace(/\s{2,}/g,' ').trim();
+
     if(nombre.length<3) continue;
-    const decimals=numMatches.filter(n=>!Number.isInteger(n)||n>100);
-    const integers=numMatches.filter(n=>Number.isInteger(n)&&n>0&&n<=9999);
-    let precio=decimals.length?decimals[0]:0;
-    let cajas=integers.length?integers.filter(n=>n>=1&&n<=9999).sort((a,b)=>a-b)[0]:1;
-    if(/^[\W\d]+$/.test(nombre)) continue;
-    if(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(nombre.trim())) continue;
-    // Match against gestor productos
-    const normS=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,'').trim();
-    const n=normS(nombre);
-    let bestMatch=null, bestScore=0;
-    gestorProds.forEach(p=>{
-      const pn=normS(p.nombre||'');
-      if(pn===n){bestMatch=p;bestScore=100;return;}
-      const score=_simScore(n,pn);
-      if(score>bestScore&&score>=45){bestScore=score;bestMatch=p;}
-    });
+    if(!/[a-zA-ZáéíóúüñÁÉÍÓÚÜÑ]{3,}/.test(nombre)) continue;
+
+    // Quantity: prefer small integers (1-999 = boxes/units)
+    const intNums=uniqueNums.filter(n=>Number.isInteger(n)&&n>=1&&n<=999);
+    const cant=intNums.sort((a,b)=>a-b)[0]||1;
+
+    // Lot number: look for patterns like L-XXXX, LOT:XXXX, or long alphanumeric codes
+    let lote='';
+    const loteMatch=line.match(/\b(L[-:]?\s*[\dA-Z]{3,12}|LOT[E:]?\s*[\dA-Z]{3,12}|\d{6,})\b/i);
+    if(loteMatch) lote=loteMatch[0].replace(/\s/g,'');
+
+    // Check memory for this supplier name
+    const key=_albMemKey(nombre);
+    const memName=mem[key]||null;
+    const nombreInterno=memName||_capAlb(nombre);
+    const isKnown=!!memName;
+
     results.push({
-      nombreAlb:_capAlb(nombre),
-      precio,cajas:cajas||1,
-      _match:bestMatch,_score:bestScore,
-      _nombreInterno:bestMatch?bestMatch.nombre:nombre,
-      _confirmed:bestScore>=70, // auto-confirm high-confidence matches
+      nombreAlb:_capAlb(nombre), lote, cant,
+      _nombreInterno:nombreInterno,
+      _isKnown:isKnown,
+      _confirmed:isKnown // auto-confirm known products
     });
   }
-  // Deduplicate
+
+  // Deduplicate by similar supplier name
   const deduped=[];
   for(const r of results){
     const norm=s=>s.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
-    const already=deduped.some(d=>_simScore(norm(d.nombreAlb),norm(r.nombreAlb))>85);
-    if(!already) deduped.push(r);
+    const dup=deduped.some(d=>_simScore(norm(d.nombreAlb),norm(r.nombreAlb))>85);
+    if(!dup) deduped.push(r);
   }
   return deduped;
 }
 
-function _simScore(a,b){
-  if(a===b) return 100;
-  const wa=a.split(' ').filter(Boolean), wb=b.split(' ').filter(Boolean);
-  let m=0;
-  wa.forEach(w=>{if(wb.some(ww=>ww.includes(w)||w.includes(ww)))m++;});
-  const base=m/Math.max(wa.length,wb.length)*100;
-  if(wa[0]&&wb[0]&&(wa[0]===wb[0]||wa[0].startsWith(wb[0])||wb[0].startsWith(wa[0]))) return Math.min(100,base+20);
-  return base;
-}
-
-function _capAlb(s){
-  return s.toLowerCase().replace(/(^|\s)[a-záéíóúüñ]/g,c=>c.toUpperCase()).trim();
-}
-
-function _showRecepOCRConfirm(){
-  const area = document.getElementById('albrecep-confirm-area');
+function _showRecepOCRConfirm(empty){
+  const area=document.getElementById('albrecep-confirm-area');
   if(!area) return;
-  const ocrArea = document.getElementById('albrecep-ocr-area');
+  const ocrArea=document.getElementById('albrecep-ocr-area');
   if(ocrArea) ocrArea.style.display='none';
+  area.style.display='block';
 
-  const rowsHtml = _recepAlbOCRLines.map((l,i)=>{
-    const scoreColor = l._score>=70?'#065f46':l._score>=45?'#92400e':'#991b1b';
-    const scoreBg = l._score>=70?'#d1fae5':l._score>=45?'#fef3c7':'#fee2e2';
-    const scoreLabel = l._score>=70?'✓ Alta':'~Media';
-    return `<div style="border:1px solid #e5e7eb;border-radius:8px;padding:10px;margin-bottom:8px;
-      background:${l._confirmed?'#f0fdf4':'#fff'}" id="ocrl-${i}">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <input type="checkbox" id="ocrl-chk-${i}" ${l._confirmed?'checked':''} onchange="_recepAlbOCRLines[${i}]._confirmed=this.checked;document.getElementById('ocrl-${i}').style.background=this.checked?'#f0fdf4':'#fff'">
-        <div style="flex:1;font-size:13px;font-weight:700">${l.nombreAlb}</div>
-        <span style="font-size:10px;background:${scoreBg};color:${scoreColor};border-radius:4px;padding:2px 6px">${scoreLabel}</span>
+  const unknownCount=_recepAlbOCRLines.filter(l=>!l._isKnown).length;
+  const knownCount=_recepAlbOCRLines.filter(l=>l._isKnown).length;
+
+  const rowsHtml=_recepAlbOCRLines.map((l,i)=>`
+    <div style="border:1.5px solid ${l._isKnown?'#a7f3d0':'#fde68a'};border-radius:8px;padding:10px;margin-bottom:8px;
+      background:${l._isKnown?'#f0fdf4':'#fffbeb'}" id="ocrl-${i}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <input type="checkbox" id="ocrl-chk-${i}" ${l._confirmed?'checked':''}
+          onchange="_recepAlbOCRLines[${i}]._confirmed=this.checked">
+        <div style="flex:1">
+          <div style="font-size:11px;color:#888">En el albarán:</div>
+          <div style="font-size:13px;font-weight:700;color:#374151">${l.nombreAlb}</div>
+        </div>
+        <span style="font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;
+          background:${l._isKnown?'#d1fae5':'#fef9c3'};color:${l._isKnown?'#065f46':'#78350f'}">
+          ${l._isKnown?'✓ Conocido':'¿Nuevo?'}
+        </span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:12px">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:6px">
         <div>
-          <div style="color:#888;margin-bottom:2px">Nombre en tu catálogo</div>
-          <input class="fc" style="font-size:12px" id="ocrl-int-${i}" 
-            value="${l._nombreInterno||l.nombreAlb}" 
+          <div style="font-size:10px;color:#888;margin-bottom:2px">Nuestro nombre</div>
+          <input class="fc" style="font-size:12px;font-weight:700" id="ocrl-int-${i}"
+            value="${l._nombreInterno}"
             onchange="_recepAlbOCRLines[${i}]._nombreInterno=this.value">
         </div>
         <div>
-          <div style="color:#888;margin-bottom:2px">Cajas / Bolsas</div>
-          <input class="fc" style="font-size:12px" type="number" min="1" id="ocrl-cajas-${i}"
-            value="${l.cajas||1}"
-            onchange="_recepAlbOCRLines[${i}].cajas=parseInt(this.value)||1">
+          <div style="font-size:10px;color:#888;margin-bottom:2px">Lote</div>
+          <input class="fc" style="font-size:12px;font-family:monospace" id="ocrl-lote-${i}"
+            value="${l.lote||''}" placeholder="—"
+            onchange="_recepAlbOCRLines[${i}].lote=this.value">
+        </div>
+        <div>
+          <div style="font-size:10px;color:#888;margin-bottom:2px">Cantidad</div>
+          <input class="fc" style="font-size:12px" type="number" min="1" id="ocrl-cant-${i}"
+            value="${l.cant||1}"
+            onchange="_recepAlbOCRLines[${i}].cant=parseInt(this.value)||1">
         </div>
       </div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 
-  area.style.display='block';
   area.innerHTML=`
-    <div style="font-size:13px;font-weight:700;color:#1a4fa8;margin-bottom:8px">
-      📋 ${_recepAlbOCRLines.length} productos detectados — revisa y confirma
-    </div>
-    <div style="max-height:300px;overflow-y:auto;padding-right:4px">${rowsHtml}</div>
-    <div style="margin-top:12px;display:flex;gap:8px">
+    ${_recepAlbOCRLines.length?`
+      <div style="font-size:12px;margin-bottom:8px;padding:8px 10px;background:#f0f9ff;border-radius:8px;color:#1e40af">
+        📋 <strong>${_recepAlbOCRLines.length}</strong> productos detectados
+        ${knownCount?` · <span style="color:#065f46">✓ ${knownCount} conocidos</span>`:''}
+        ${unknownCount?` · <span style="color:#92400e">⚠ ${unknownCount} nuevos — confirma el nombre</span>`:''}
+      </div>`:'<div style="font-size:12px;color:#888;padding:8px;background:#f9f9f9;border-radius:8px;margin-bottom:8px">No se detectaron productos automáticamente — añade manualmente.</div>'}
+    <div style="max-height:340px;overflow-y:auto;padding-right:2px">${rowsHtml}</div>
+    <div style="margin-top:10px;display:flex;gap:8px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-green" style="flex:2" onclick="confirmarRecepOCR()">
-        ✓ Registrar productos confirmados
-      </button>
+      <button class="btn btn-green" style="flex:2" onclick="confirmarRecepOCR()">✓ Guardar y memorizar</button>
     </div>`;
 }
 
 function confirmarRecepOCR(){
-  // Sync checkbox + fields from DOM
+  // Sync from DOM
   _recepAlbOCRLines.forEach((l,i)=>{
     const chk=document.getElementById('ocrl-chk-'+i);
     const int=document.getElementById('ocrl-int-'+i);
-    const caj=document.getElementById('ocrl-cajas-'+i);
+    const lot=document.getElementById('ocrl-lote-'+i);
+    const cnt=document.getElementById('ocrl-cant-'+i);
     if(chk) l._confirmed=chk.checked;
-    if(int) l._nombreInterno=int.value.trim()||l._nombreInterno;
-    if(caj) l.cajas=parseInt(caj.value)||1;
+    if(int) l._nombreInterno=(int.value||'').trim()||l._nombreInterno;
+    if(lot) l.lote=(lot.value||'').trim();
+    if(cnt) l.cant=parseInt(cnt.value)||1;
   });
 
   const confirmed=_recepAlbOCRLines.filter(l=>l._confirmed);
   if(!confirmed.length){alert('Marca al menos un producto');return;}
 
+  // Save new mappings to memory
+  const mem=_albMemGet();
+  confirmed.forEach(l=>{
+    const key=_albMemKey(l.nombreAlb);
+    if(l._nombreInterno && l._nombreInterno!==l.nombreAlb)
+      mem[key]=l._nombreInterno;
+  });
+  _albMemSave(mem);
+
+  // Create reception records
   const emp=localStorage.getItem('a_worker_active')||ld(K.emp)?.[0]||'';
   const recs=ld(K.recep)||[];
-  const fecha=today();
   let added=0;
 
   confirmed.forEach(l=>{
     const rec={
-      id:genId(), ts:new Date().toISOString(), date:fecha,
+      id:genId(), ts:new Date().toISOString(), date:today(),
       proveedor:'', producto:l._nombreInterno||l.nombreAlb,
-      cantidad:l.cajas, unidad:'cj',
-      cajas:l.cajas,
-      lote:'', caducidad:'', emp,
-      obs:`Del albarán: "${l.nombreAlb}"`,
+      cantidad:l.cant, unidad:'u',
+      cajas:l.cant, lote:l.lote||'',
+      caducidad:'', emp,
+      obs:l.nombreAlb!==l._nombreInterno?`Albarán: "${l.nombreAlb}"`:'',
       conforme:true
     };
     recs.push(rec);
-    addToLabelQueue({
-      tipo:'📦 RECEPCIÓN',
-      producto:rec.producto, lote:rec.lote,
-      proveedor:rec.proveedor, emp,
-      ts:rec.ts, destino:'nevera',
-      proceso:['📦 Recibido (albarán OCR) · '+new Date().toLocaleDateString('es-ES')]
-    });
+    if(l.lote||l.cant){
+      addToLabelQueue({
+        tipo:'📦 RECEPCIÓN', producto:rec.producto,
+        lote:rec.lote, proveedor:rec.proveedor, emp,
+        ts:rec.ts, destino:'nevera',
+        proceso:['📦 Recibido · '+new Date().toLocaleDateString('es-ES')]
+      });
+    }
     added++;
   });
 
@@ -1617,9 +1658,8 @@ function confirmarRecepOCR(){
   setTimeout(()=>{
     const t=document.createElement('div');
     t.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#27ae60;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999';
-    t.textContent=`✓ ${added} producto${added!==1?'s':''} registrado${added!==1?'s':''} desde albarán`;
-    document.body.appendChild(t);
-    setTimeout(()=>t.remove(),2500);
+    t.textContent=`✓ ${added} producto${added!==1?'s':''} registrados · memoria actualizada`;
+    document.body.appendChild(t);setTimeout(()=>t.remove(),2800);
   },200);
 }
 
@@ -2570,10 +2610,10 @@ function _extraerCandidatosCaducidad(text){
   const patterns=[
     [/(?:cad|caducidad|consum[a-z]*\s+antes|best\s+before|bbd|bb|use\s+by)[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/gi,1],
     [/(?:cad|caducidad|bbd|bb)[:\s]*(\d{2}[\/-]\d{4})/gi,1],
-    [/(\d{2}[\/-]\d{2}[\/-]\d{4})/g,1],
-    [/(\d{2}[\/-]\d{2}[\/-]\d{2})/g,1],
-    [/(\d{4}-\d{2}-\d{2})/g,1],
-    [/(\d{2}[\/-]\d{4})/g,1]
+    [/(\d{2}[\/-]\d{2}[\/-]\d{4})/g,1],
+    [/(\d{2}[\/-]\d{2}[\/-]\d{2})/g,1],
+    [/(\d{4}-\d{2}-\d{2})/g,1],
+    [/(\d{2}[\/-]\d{4})/g,1]
   ];
   patterns.forEach(([re,g])=>{let m;const r=new RegExp(re.source,re.flags);while((m=r.exec(text))!==null){
     const raw=(m[g]||m[0]).trim();
@@ -3462,14 +3502,70 @@ function openRegenForDescongel(descongelId){
   window._regenRef={producto:r.producto||'',lote:r.lote_ref||'',descongelId:r.id,origen:'descongel'};
   _showRegenForm(r.producto||'',r.lote_ref||'');
 }
-function openRegenModal(){window._regenRef={origen:'manual'};_showRegenForm('','');}
-function _showRegenForm(producto,lote){
+function openRegenModal(){
+  window._regenRef={origen:'manual'};
+  // Build list of available elaborations: nevera + congelador + descongeladas
+  const elabs=(ld(K.elab)||[]).filter(x=>x.estado!=='servido'&&(x.destino==='nevera'||x.destino==='congelador'));
+  const descs=(ld(K.descongel)||[]).filter(x=>!x.estado||x.estado!=='servido');
+  const items=[
+    ...elabs.map(e=>({id:e.id,tipo:'elab',prod:e.producto,lote:e.lote||'',origen:e.destino,
+      badge:e.destino==='nevera'?'❄ Nevera':'🧊 Congelador',
+      color:e.destino==='nevera'?'#0ea5e9':'#6366f1'})),
+    ...descs.map(d=>({id:d.id,tipo:'desc',prod:d.producto,lote:d.lote_ref||'',origen:'descongelado',
+      badge:'💧 Descongelado',color:'#f59e0b'}))
+  ];
+  const listHtml=items.length?items.map(it=>`
+    <div onclick="selRegenItem(${JSON.stringify(it).replace(/"/g,'&quot;')})"
+      style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+      margin-bottom:6px;border:1.5px solid #e5e7eb;cursor:pointer;background:#fafafa"
+      onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='#fafafa'">
+      <span style="background:${it.color};color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap">${it.badge}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.prod}</div>
+        ${it.lote?`<div style="font-size:11px;color:#888;font-family:monospace">${it.lote}</div>`:''}
+      </div>
+      <span style="font-size:18px;color:#1a4fa8">›</span>
+    </div>`).join('')
+  :`<div style="padding:14px;text-align:center;color:#aaa;font-size:13px">No hay elaboraciones en nevera, congelador o descongelado</div>`;
+  openModal(`<div class="modal-title">🍽 Regeneración / Entrega</div>
+    <div style="font-size:12px;color:#555;margin-bottom:10px">Selecciona el producto a entregar o regenerar:</div>
+    <div style="max-height:320px;overflow-y:auto;margin-bottom:10px">${listHtml}</div>
+    <div style="border-top:1px solid #eee;padding-top:10px;margin-top:4px">
+      <button onclick="window._regenRef={origen:'manual'};_showRegenForm('','')" 
+        style="width:100%;background:#f1f5f9;color:#374151;border:none;border-radius:8px;padding:10px;font-size:13px;cursor:pointer">
+        ✏️ Introducir manualmente
+      </button>
+    </div>
+    <div class="modal-row" style="margin-top:8px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
+    </div>`);
+}
+function selRegenItem(it){
+  if(it.tipo==='elab') window._regenRef={origen:'elab',elabId:it.id};
+  else window._regenRef={origen:'descongelado',descongelId:it.id};
+  _showRegenForm(it.prod,it.lote,it.badge);
+}
+function _showRegenForm(producto,lote,origenBadge){
+  const badge=origenBadge||'';
   openModal(`<div class="modal-title">🔥 Registro de Regeneración</div>
-    ${producto?`<div style="background:#fff3e0;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px">📦 <strong>${producto}</strong>${lote?' · Lote: '+lote:''}</div>`:''}
+    ${producto?`<div style="background:#fff3e0;border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px">
+      ${badge?`<span style="font-size:11px;font-weight:700;margin-right:6px">${badge}</span>`:''}
+      <strong>${producto}</strong>${lote?' · Lote: '+lote:''}</div>`:''}
     <div class="form-row"><label class="form-label">Producto *</label><input class="fc" id="rg2-prod" value="${producto}" placeholder="Nombre del producto"></div>
     <div class="form-row"><label class="form-label">Lote de referencia</label><input class="fc" id="rg2-lote" value="${lote}" placeholder="Lote" style="font-family:monospace"></div>
+    <div class="form-row"><label class="form-label">Tipo de entrega *</label>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button id="rg2-tipo-cal" onclick="selRegenTipo('caliente')"
+          style="flex:1;padding:10px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:#374151">
+          🔥 Caliente<br><small style="font-weight:400;color:#888">T° ≥70°C</small></button>
+        <button id="rg2-tipo-fri" onclick="selRegenTipo('frio')"
+          style="flex:1;padding:10px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:13px;font-weight:700;color:#374151">
+          ❄ Frío<br><small style="font-weight:400;color:#888">T° ≤8°C</small></button>
+      </div>
+      <input type="hidden" id="rg2-tipo" value="caliente">
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="form-row"><label class="form-label">T° centro * <small style="color:#888">(mín 70°C)</small></label>
+      <div class="form-row"><label class="form-label" id="rg2-temp-lbl">T° centro * <small style="color:#888">(mín 70°C)</small></label>
         <div style="display:flex;align-items:center;gap:6px">
           <input class="fc" id="rg2-temp" type="number" step="0.1" placeholder="°C" oninput="checkRegenTemp(this)">
           <span id="rg2-temp-ok" style="font-size:18px"></span>
@@ -3478,39 +3574,104 @@ function _showRegenForm(producto,lote){
     </div>
     <div class="form-row"><label class="form-label">Observaciones</label><textarea class="fc" id="rg2-obs" rows="2" placeholder="Incidencias..."></textarea></div>
     <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button><button class="btn btn-green" style="flex:1" onclick="saveRegen2()">✓ Guardar</button></div>`);
-  setTimeout(()=>{const t=document.getElementById('rg2-temp');if(t)t.focus();},150);
+  setTimeout(()=>{selRegenTipo('caliente');const t=document.getElementById('rg2-temp');if(t)t.focus();},150);
+}
+function selRegenTipo(tipo){
+  document.getElementById('rg2-tipo').value=tipo;
+  const cal=document.getElementById('rg2-tipo-cal');
+  const fri=document.getElementById('rg2-tipo-fri');
+  const lbl=document.getElementById('rg2-temp-lbl');
+  if(cal){if(tipo==='caliente'){cal.style.border='2px solid #ef4444';cal.style.background='#fff5f5';}else{cal.style.border='2px solid #e5e7eb';cal.style.background='#fff';}}
+  if(fri){if(tipo==='frio'){fri.style.border='2px solid #0ea5e9';fri.style.background='#f0f9ff';}else{fri.style.border='2px solid #e5e7eb';fri.style.background='#fff';}}
+  if(lbl) lbl.innerHTML=tipo==='caliente'?'T° centro * <small style="color:#888">(mín 70°C)</small>':'T° servicio * <small style="color:#888">(máx 8°C)</small>';
+  checkRegenTemp(document.getElementById('rg2-temp'));
 }
 function checkRegenTemp(inp){
   const el=document.getElementById('rg2-temp-ok');if(!el)return;
-  const v=parseFloat(inp.value);el.textContent=isNaN(v)?'':v>=70?'✅':'⚠️';
+  const tipo=(document.getElementById('rg2-tipo')||{}).value||'caliente';
+  const v=parseFloat((inp||{}).value);
+  if(isNaN(v)){el.textContent='';return;}
+  el.textContent=(tipo==='caliente'?v>=70:v<=8)?'✅':'⚠️';
 }
 function saveRegen2(){
   const prod=(document.getElementById('rg2-prod')||{}).value||'';
   const lote=(document.getElementById('rg2-lote')||{}).value||'';
   const temp=parseFloat((document.getElementById('rg2-temp')||{}).value);
+  const tipo=(document.getElementById('rg2-tipo')||{}).value||'caliente';
   const porc=(document.getElementById('rg2-porc')||{}).value||'';
   const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   const obs=(document.getElementById('rg2-obs')||{}).value||'';
   if(!prod){alert('Indica el producto');return;}
-  if(isNaN(temp)){alert('Indica la temperatura de centro');return;}
-  if(!emp){alert('Selecciona el trabajador');return;}
+  if(isNaN(temp)){alert('Indica la temperatura de '+( tipo==='caliente'?'centro':'servicio'));return;}
+  if(!emp){alert('No hay trabajador activo');return;}
+  const tempOk=tipo==='caliente'?temp>=70:temp<=8;
   const ref=window._regenRef||{};
   const rec={id:genId(),ts:new Date().toISOString(),producto:prod,lote_ref:lote,temp_centro:temp,
-    porciones:porc,emp,obs,date:today(),elabId:ref.elabId||null,descongelId:ref.descongelId||null,origen:ref.origen||'manual'};
-  if(temp<70){
+    tipo_entrega:tipo,porciones:porc,emp,obs,date:today(),
+    elabId:ref.elabId||null,descongelId:ref.descongelId||null,origen:ref.origen||'manual'};
+  if(!tempOk){
     const ncs=ld(K.noconf)||[];
-    ncs.push({id:genId(),ts:rec.ts,tipo:'Regeneración',descripcion:'T° centro '+temp+'°C — no alcanzó 70°C en '+prod+' (lote '+(lote||'—')+')',estado:'Abierta',emp});
+    const msg=tipo==='caliente'
+      ?'T° centro '+temp+'°C — no alcanzó 70°C en '+prod+' (lote '+(lote||'—')+')'
+      :'T° servicio frío '+temp+'°C — supera 8°C en '+prod+' (lote '+(lote||'—')+')';
+    ncs.push({id:genId(),ts:rec.ts,tipo:'Regeneración',descripcion:msg,estado:'Abierta',emp});
     sv(K.noconf,ncs);
   }
-  if(ref.elabId){const elabs=ld(K.elab)||[];const i=elabs.findIndex(x=>x.id===ref.elabId);if(i!==-1){elabs[i].estado='servido';sv(K.elab,elabs);}}
-  if(ref.descongelId){const descs=ld(K.descongel)||[];const i=descs.findIndex(x=>x.id===ref.descongelId);if(i!==-1){descs[i].estado='servido';sv(K.descongel,descs);}}
+  let _stockMsg='';
+  if(ref.elabId){
+    const elabs=ld(K.elab)||[];const i=elabs.findIndex(x=>x.id===ref.elabId);
+    if(i!==-1){
+      const elab=elabs[i];
+      elabs[i].estado='servido';sv(K.elab,elabs);
+      // Decrement linked reception stock
+      if(elab.recep_id){
+        const rs=ld(K.recep)||[];const ri=rs.findIndex(x=>x.id===elab.recep_id);
+        if(ri!==-1&&rs[ri].cajas>0){
+          rs[ri].cajas=Math.max(0,(parseInt(rs[ri].cajas)||1)-1);
+          sv(K.recep,rs);
+          _stockMsg=' · Stock: '+(rs[ri].cajas)+' cajas restantes de '+rs[ri].producto;
+        }
+      }
+    }
+  }
+  if(ref.descongelId){
+    const descs=ld(K.descongel)||[];const i=descs.findIndex(x=>x.id===ref.descongelId);
+    if(i!==-1){
+      const desc=descs[i];descs[i].estado='servido';sv(K.descongel,descs);
+      // If descongel linked to elab, also mark elab and decrement stock
+      if(desc.elab_id){
+        const elabs=ld(K.elab)||[];const ei=elabs.findIndex(x=>x.id===desc.elab_id);
+        if(ei!==-1){
+          const elab=elabs[ei];elabs[ei].estado='servido';sv(K.elab,elabs);
+          if(elab.recep_id){
+            const rs=ld(K.recep)||[];const ri=rs.findIndex(x=>x.id===elab.recep_id);
+            if(ri!==-1&&rs[ri].cajas>0){
+              rs[ri].cajas=Math.max(0,(parseInt(rs[ri].cajas)||1)-1);
+              sv(K.recep,rs);
+              _stockMsg=' · Stock: '+(rs[ri].cajas)+' cajas restantes de '+rs[ri].producto;
+            }
+          }
+        }
+      }
+    }
+  }
   const regens=ld(K.regen)||[];regens.push(rec);sv(K.regen,regens);
   const regenDate=new Date().toLocaleDateString('es-ES');
-  const regenOk=temp>=70;
-  setTimeout(()=>autoLabel({tipo:'🔥 REGENERACIÓN'+(regenOk?' ✓':'⚠ NOK'),producto:prod,lote:lote||'—',
-    emp,dlc:null,ts:rec.ts,
-    proceso:['❄ Congelado/Nevera','🔥 Regenerado · '+regenDate+' · '+temp+'°C'+(regenOk?' ✓':'⚠ <70°C')]}),300);
+  const entregaLabel=tipo==='caliente'?'🔥 Regenerado caliente':'❄ Entrega fría directa';
+  setTimeout(()=>autoLabel({
+    tipo:tipo==='caliente'?'🔥 REGENERACIÓN'+(tempOk?' ✓':'⚠ NOK'):'❄ ENTREGA FRÍA'+(tempOk?' ✓':'⚠ NOK'),
+    producto:prod,lote:lote||'—',emp,dlc:null,ts:rec.ts,
+    proceso:[ref.origen==='descongelado'?'💧 Descongelado':ref.origen==='elab'?'📦 Elaboración':'📦 Almacén',
+      entregaLabel+' · '+regenDate+' · '+temp+'°C'+(tempOk?' ✓':'⚠')]}),300);
   closeModal();renderRegen();
+  if(_stockMsg){
+    setTimeout(()=>{
+      const t=document.createElement('div');
+      t.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#1a4fa8;color:#fff;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999';
+      t.textContent='📦'+_stockMsg;
+      document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
+    },400);
+  }
 }
 
 function renderTserv(){
@@ -6121,356 +6282,169 @@ function _generateQRDataURL(text, sizePx){
 }
 
 async function _batchPrint(items, orient){
-  orient = orient || localStorage.getItem('a_lbl_orient') || 'portrait';
-  const wMm = 62;
-  const empresa = getCfgEmp().razon || 'ALBARABA SL';
+  // ── OPEN POPUP FIRST (must be synchronous, before any await) ──────────
+  const w = window.open('','_blank','width=600,height=800');
+  if(!w){alert('⚠ Activa las ventanas emergentes en el navegador para imprimir');return;}
 
-  const fTitle  = '11mm';
-  const fDlc    = '13mm';
-  const fDate   = '5.5mm';
-  const fDest   = '7mm';
-  const fSmall  = '4mm';
-  const fEmp    = '3.5mm';
+  const empresa = getCfgEmp().razon || 'ALBARABA SL';
+  orient = orient || localStorage.getItem('a_lbl_orient') || 'portrait';
+  const isLand = orient === 'landscape';
+  const PAGE_W = isLand ? '100mm' : '62mm';
+  const PAGE_H = isLand ? '62mm'  : '100mm';
+  const QR_MM  = isLand ? 22 : 20;
+  const qrPx   = isLand ? 110 : 100;
+
+  // Loading screen while we generate QR codes
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>body{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f5f5}
+    .ld{text-align:center;color:#555}.sp{font-size:40px;animation:spin 1s linear infinite;display:block;margin-bottom:12px}
+    @keyframes spin{to{transform:rotate(360deg)}}</style></head>
+    <body><div class="ld"><span class="sp">⏳</span><div style="font-size:16px">Generando etiquetas…</div></div></body></html>`);
+  w.document.close();
 
   const DEST_STYLES = {
-    nevera:     {icon:'🧊', label:'NEVERA',      bg:'#e3f0ff', col:'#1a4fa8'},
-    congelador: {icon:'❄️',  label:'CONGELADOR',  bg:'#cce5ff', col:'#0d6efd'},
-    hoy:        {icon:'🍽',  label:'CONSUMO HOY', bg:'#fff3cd', col:'#856404'},
+    nevera:     {icon:'🧊', label:'NEVERA',      bg:'#dbeafe', col:'#1e40af'},
+    congelador: {icon:'❄',  label:'CONGELADOR',  bg:'#bfdbfe', col:'#1d4ed8'},
+    hoy:        {icon:'🍽', label:'CONSUMO HOY', bg:'#fef9c3', col:'#854d0e'},
+    regen:      {icon:'🔥', label:'REGENERADO',  bg:'#fef3c7', col:'#92400e'},
   };
 
-  const qrSize = orient==='landscape' ? 140 : 160;
-
-  // Pre-generate all QR codes in the main app before opening popup
+  // Pre-generate QR codes (async)
   const allItems = [];
   for(const {r, cop, tipo} of items){
     const producto = r.producto || '';
     const lote     = r.lote     || '';
     const dlc      = r.dlc      || r.caducidad || '';
+    const fecha    = r.ts ? new Date(r.ts).toLocaleDateString('es-ES') : (r.date || today());
     const proceso  = r.proceso  || [];
-    const qrData   = 'ALB|'+producto+'|'+lote+'|'+dlc+'|'+(r.emp||'')+'|'+proceso.join(';');
-    const qrUrl    = await _generateQRDataURL(qrData, qrSize);
-    allItems.push({r, cop, tipo, qrUrl});
+    const qrParts  = ['PRODUCTO: '+producto];
+    if(lote)        qrParts.push('LOTE: '+lote);
+    if(dlc)         qrParts.push('CADUCIDAD: '+dlc);
+    if(r.proveedor) qrParts.push('PROVEEDOR: '+r.proveedor);
+    qrParts.push('EMPRESA: '+empresa);
+    qrParts.push('FECHA: '+fecha);
+    if(proceso.length) qrParts.push('PROCESO: '+proceso.join(' > '));
+    const qrUrl = await _generateQRDataURL(qrParts.join('\n'), qrPx);
+    allItems.push({r, cop:cop||1, tipo, qrUrl, fecha});
   }
 
   let labelsHtml = '';
-
-  allItems.forEach(({r, cop, tipo, qrUrl}) => {
+  allItems.forEach(({r, cop, tipo, qrUrl, fecha}) => {
     const producto = r.producto || '';
     const lote     = r.lote     || '';
     const dlc      = r.dlc      || r.caducidad || '';
-    const fecha    = r.ts ? new Date(r.ts).toLocaleDateString('es-ES') : (r.date || today());
     const destino  = r.destino  || 'nevera';
     const ds       = DEST_STYLES[destino] || DEST_STYLES.nevera;
     const proceso  = r.proceso  || [];
-    const dlcFmt   = dlc ? (tipo==='recep' ? fmtExpiryDisplay(dlc) : fmtDate(dlc)) : '—';
-    const qrImg    = qrUrl ? `<img src="${qrUrl}" style="width:${qrSize*0.264}mm;height:${qrSize*0.264}mm">` : '';
-
-    for(let i = 0; i < cop; i++){
-      if(orient === 'landscape'){
-        labelsHtml += `<div class="label">
-          <div class="label-left">
-            <div class="f-emp">${empresa}</div>
-            <div class="f-title">${producto}</div>
-            <div class="f-fecha">📅 ${fecha}</div>
-            <div class="f-dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
-            ${lote ? `<div class="f-lote">LOTE: ${lote}</div>` : ''}
-            <div class="f-dlc-label">CONSUMIR ANTES DE:</div>
-            <div class="f-dlc">${dlcFmt}</div>
-          </div>
-          <div class="label-right">
-            ${qrImg}
-            ${proceso.length ? `<div class="f-proc">${proceso.join(' → ')}</div>` : ''}
-          </div>
-        </div>`;
+    const dlcFmt   = dlc ? fmtDate(dlc) : '—';
+    const qrImg    = qrUrl ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm">` : '';
+    for(let i=0;i<cop;i++){
+      if(isLand){
+        labelsHtml += `<div class="label"><div class="col-left">
+          <div class="emp">${empresa}</div>
+          <div class="title">${producto}</div>
+          <div class="dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
+          ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
+          <div class="small-lbl">ELABORADO: ${fecha}</div>
+          <div class="cad-lbl">CONSUMIR ANTES DE:</div>
+          <div class="cad">${dlcFmt}</div>
+        </div><div class="col-right">${qrImg}
+          ${lote?`<div class="qr-lote">${lote}</div>`:''}
+        </div></div>`;
       } else {
         labelsHtml += `<div class="label">
-          <div class="f-emp">${empresa}</div>
+          <div class="emp">${empresa}</div>
           <div class="sep"></div>
-          <div class="f-title">${producto}</div>
-          <div class="f-fecha">📅 ${fecha}</div>
-          <div class="f-dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
-          ${lote ? `<div class="f-lote">LOTE: ${lote}</div>` : ''}
+          <div class="title">${producto}</div>
+          <div class="dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
+          ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
+          <div class="small-lbl">ELABORADO: ${fecha}</div>
           <div class="sep"></div>
-          <div class="f-dlc-label">CONSUMIR ANTES DE:</div>
-          <div class="f-dlc">${dlcFmt}</div>
+          <div class="cad-lbl">CONSUMIR ANTES DE:</div>
+          <div class="cad">${dlcFmt}</div>
           <div class="sep"></div>
-          <div class="qr-wrap">${qrImg}${proceso.length ? `<div class="f-proc">${proceso.join(' → ')}</div>` : ''}</div>
+          <div class="qr-row">${qrImg}
+            ${proceso.length?`<div class="proc">${proceso.slice(0,2).join('\n→ ')}</div>`:''}
+          </div>
         </div>`;
       }
     }
   });
 
-  const isLand = orient === 'landscape';
-  const labelCSS = isLand
-    ? `width:auto;min-height:62mm;padding:4mm;display:flex;flex-direction:row;gap:4mm;align-items:flex-start;`
-    : `width:62mm;padding:4mm;display:flex;flex-direction:column;gap:1.5mm;`;
-
-  const w = window.open('','_blank','width=600,height=750');
-  if(!w){alert('⚠ Activa las ventanas emergentes en el navegador para imprimir');return;}
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <style>
+  const css = `
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{font-family:Arial,Helvetica,sans-serif;background:#f0f0f0}
-    @page{size:62mm auto;margin:0}
+    html,body{font-family:Arial,Helvetica,sans-serif;background:#e8e8e8}
+    @page{size:${PAGE_W} ${PAGE_H};margin:0}
     @media print{
       html,body{background:#fff}
       .no-print{display:none!important}
-      .label{page-break-after:always;margin:0!important;border:none!important;box-shadow:none!important}
-      @page{size:62mm auto;margin:0}
+      .label{box-shadow:none!important;border:none!important;margin:0!important}
     }
-    .label{${labelCSS}background:#fff;border:0.5mm solid #ddd;margin:4mm auto;box-shadow:0 2px 8px rgba(0,0,0,.12);page-break-after:always;}
-    .label-left{flex:1;display:flex;flex-direction:column;gap:1.5mm}
-    .label-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2mm;flex-shrink:0}
-    .f-emp{font-size:${fEmp};font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.5px}
-    .f-title{font-size:${fTitle};font-weight:900;color:#000;line-height:1.1;word-break:break-word}
-    .f-fecha{font-size:${fDate};color:#555}
-    .f-dest{font-size:${fDest};font-weight:900;padding:1.5mm 3mm;border-radius:1.5mm;text-align:center;letter-spacing:.5px}
-    .f-lote{font-size:${fDate};font-family:monospace;font-weight:700;color:#333;background:#f5f5f5;padding:1mm 2mm;border-radius:1mm}
-    .f-dlc-label{font-size:${fSmall};color:#999;text-transform:uppercase;letter-spacing:.5px}
-    .f-dlc{font-size:${fDlc};font-weight:900;color:#c0392b;line-height:1.1}
-    .sep{height:.3mm;background:#e8e8e8;flex-shrink:0}
-    .qr-wrap{display:flex;flex-direction:column;align-items:center;gap:1.5mm;padding-top:1mm}
-    .f-proc{font-size:${fSmall};color:#aaa;text-align:center;line-height:1.4;max-width:54mm;word-break:break-word}
-    .no-print{position:sticky;bottom:0;display:flex;gap:8px;justify-content:center;align-items:center;padding:12px 16px;background:#fff;border-top:1px solid #ddd;}
-    .btn-print{padding:10px 32px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
-    .btn-close{padding:10px 20px;background:#f0f0f0;color:#333;border:1.5px solid #ccc;border-radius:8px;font-size:15px;cursor:pointer}
-  </style></head><body>
+    .label{
+      width:${PAGE_W};height:${PAGE_H};
+      padding:2.5mm;background:#fff;
+      border:0.5mm solid #bbb;
+      margin:4mm auto;
+      display:flex;
+      flex-direction:${isLand?'row':'column'};
+      gap:${isLand?'2mm':'1mm'};
+      overflow:hidden;
+      page-break-after:always;
+      break-after:page;
+      box-shadow:0 2px 8px rgba(0,0,0,.18);
+    }
+    .col-left{flex:1;display:flex;flex-direction:column;gap:1mm;min-width:0;overflow:hidden}
+    .col-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;flex-shrink:0}
+    .emp{font-size:2mm;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .title{font-size:${isLand?'5.5mm':'5mm'};font-weight:900;color:#111;line-height:1.2;word-break:break-word;max-height:${isLand?'14mm':'13mm'};overflow:hidden}
+    .dest{font-size:3.5mm;font-weight:900;padding:1mm 2mm;border-radius:1.5mm;text-align:center;letter-spacing:.3px;flex-shrink:0}
+    .lote{font-size:2.5mm;font-family:monospace;font-weight:700;color:#333;background:#f0f0f0;padding:.5mm 1.5mm;border-radius:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .small-lbl{font-size:2mm;color:#999}
+    .cad-lbl{font-size:2mm;color:#888;text-transform:uppercase;letter-spacing:.3px}
+    .cad{font-size:${isLand?'8mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:1;letter-spacing:.5px}
+    .sep{height:.3mm;background:#e8e8e8;flex-shrink:0;margin:0.5mm 0}
+    .qr-row{display:flex;flex-direction:row;align-items:center;gap:2mm;flex-shrink:0;margin-top:auto}
+    .proc{font-size:1.8mm;color:#888;line-height:1.4;white-space:pre-line;max-width:${isLand?'60mm':'28mm'}}
+    .qr-lote{font-size:1.8mm;font-family:monospace;color:#666;text-align:center;max-width:${QR_MM}mm;word-break:break-all}
+    .no-print{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:#fff;border-top:2px solid #ddd;z-index:999}
+    .btn-p{padding:12px 36px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+    .btn-c{padding:12px 20px;background:#f0f0f0;color:#333;border:1.5px solid #ccc;border-radius:8px;font-size:15px;cursor:pointer}
+  `;
+
+  const totalCopies = allItems.reduce((s,x)=>s+x.cop,0);
+
+  // Write final HTML and auto-print
+  const finalHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Etiquetas</title><style>${css}</style></head><body>
     ${labelsHtml}
     <div class="no-print">
-      <span style="font-size:13px;color:#888">${allItems.reduce((s,x)=>s+x.cop,0)} etiqueta${allItems.reduce((s,x)=>s+x.cop,0)===1?'':'s'}</span>
-      <button class="btn-print" onclick="window.print()">🖨 Imprimir</button>
-      <button class="btn-close" onclick="window.close()">✕ Cerrar</button>
+      <span style="font-size:12px;color:#888">${totalCopies} etiqueta${totalCopies===1?'':'s'} · ${PAGE_W}×${PAGE_H}</span>
+      <button class="btn-p" onclick="window.print()">🖨 Imprimir</button>
+      <button class="btn-c" onclick="window.close()">✕ Cerrar</button>
     </div>
-  </body></html>`);
-  w.document.close();
-}
-
-
-function printElabLabelSelected(){
-  const id=document.getElementById('lbl-elab-sel').value;
-  if(!id){alert('Selecciona una elaboración');return}
-  printElabLabel(id);
-}
-function abrirDiseñador(plantillaId){
-  const p=LBL_PLANTILLAS.find(x=>x.id===plantillaId);
-  const emp=getCfgEmp();
-  const emps=ld(K.emp);
-  const sizes=Object.keys(LBL_SIZES);
-  openModal(`<div class="modal-title">🏷 ${p.nombre}</div>
-    <div class="fc-group"><label class="fc-label">Tamaño de etiqueta</label>
-      <select class="fc" id="lbl-size">${sizes.map(s=>`<option ${s==='QL-62mm-cont'?'selected':''}>${s}</option>`).join('')}</select>
-    </div>
-    ${p.campos.includes('empresa')?`<div class="fc-group"><label class="fc-label">Empresa</label><input class="fc" id="lbl-empresa" value="${emp.razon||'ALBARABA SL'}"></div>`:''}
-    ${p.campos.includes('producto')?`<div class="fc-group"><label class="fc-label">Producto / Elaboración</label>
-      <select class="fc" id="lbl-elab-picker" onchange="rellenarEtiquetaDesdeElab(this.value,'${plantillaId}')">
-        <option value="">— Seleccionar elaboración existente —</option>
-        ${ld(K.elab).slice(0,40).map(e=>`<option value="${e.id}">${e.producto} · L:${e.lote} · ${fmtDate(e.ts)}</option>`).join('')}
-      </select>
-      <div style="text-align:center;font-size:11px;color:#aaa;margin:4px 0">— o escribe manualmente —</div>
-      <input class="fc" id="lbl-producto" list="lbl-prods-dl" placeholder="Nombre del producto...">
-      <datalist id="lbl-prods-dl">${getGestorElabs().map(e=>`<option>${e.nombre}</option>`).join('')}</datalist>
-    </div>`:''}
-    ${p.campos.includes('proveedor')?`<div class="fc-group"><label class="fc-label">Proveedor</label><input class="fc" id="lbl-proveedor" placeholder="Nombre proveedor..."></div>`:''}
-    ${p.campos.includes('lote')?`<div class="fc-group"><label class="fc-label">Nº Lote</label><input class="fc" id="lbl-lote" value="${genLot()}"></div>`:''}
-    ${p.campos.includes('fecha')?`<div class="fc-group"><label class="fc-label">Fecha elaboración</label><input class="fc" id="lbl-fecha" type="date" value="${today()}"></div>`:''}
-    ${p.campos.includes('dlc')?`<div class="fc-group"><label class="fc-label">Consumir antes de (DLC)</label><input class="fc" id="lbl-dlc" type="date" value="${addDays(today(),3)}"></div>`:''}
-    ${p.campos.includes('alergenos')?`<div class="fc-group"><label class="fc-label">Alérgenos</label>
-      <div style="display:flex;flex-wrap:wrap;gap:5px">${ALERGENOS14.map(a=>`<button type="button" class="moment-pill" id="lbla-${a.replace(/ /g,'_')}" onclick="this.classList.toggle('sel')" style="font-size:10px">${a}</button>`).join('')}</div>
-    </div>`:''}
-    ${p.campos.includes('emp')?`<div class="fc-group"><label class="fc-label">Responsable</label><select class="fc" id="lbl-emp"><option value="">—</option>${emps.map(e=>`<option>${e}</option>`).join('')}</select></div>`:''}
-    ${p.campos.includes('texto_libre')?`<div class="fc-group"><label class="fc-label">Texto libre</label><input class="fc" id="lbl-txt1" placeholder="ej: CONSERVAR EN FRÍO..."></div>`:''}
-    ${p.campos.includes('texto1')?`<input class="fc" id="lbl-t1" placeholder="Línea 1 (grande)" style="margin-bottom:6px">
-      <input class="fc" id="lbl-t2" placeholder="Línea 2" style="margin-bottom:6px">
-      <input class="fc" id="lbl-t3" placeholder="Línea 3 (pequeña)">`:''}
-    <div class="modal-row">
-      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-green" style="flex:1" onclick="imprimirDiseño('${plantillaId}')">🖨 Imprimir</button>
-    </div>`);
-}
-function rellenarEtiquetaDesdeElab(elabId,plantillaId){
-  if(!elabId)return;
-  const e=ld(K.elab).find(x=>x.id===elabId);
-  if(!e)return;
-  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
-  set('lbl-producto',e.producto);
-  set('lbl-lote',e.lote);
-  set('lbl-fecha',e.date||today());
-  set('lbl-dlc',e.dlc||addDays(today(),3));
-  if(e.emp){const emp=document.getElementById('lbl-emp');if(emp)[...emp.options].forEach(o=>{o.selected=o.text===e.emp;});}
-  // Auto-marcar alérgenos si los tiene
-  if(e.alergenos&&e.alergenos.length){
-    ALERGENOS14.forEach(a=>{
-      const btn=document.getElementById('lbla-'+a.replace(/ /g,'_'));
-      if(btn)btn.classList.toggle('sel',e.alergenos.includes(a));
-    });
-  }
-}
-function getVal(id,def=''){const el=document.getElementById(id);return el?el.value:def}
-function imprimirDiseño(pid){
-  const size=LBL_SIZES[getVal('lbl-size','QL-29x90mm')]||LBL_SIZES['QL-29x90mm'];
-  const empresa=getVal('lbl-empresa','ALBARABA SL');
-  const producto=getVal('lbl-producto')||getVal('lbl-pro','');
-  const lote=getVal('lbl-lote');
-  const fecha=getVal('lbl-fecha');
-  const dlc=getVal('lbl-dlc');
-  const emp=getVal('lbl-emp');
-  const txt1=getVal('lbl-txt1');
-  const t1=getVal('lbl-t1');const t2=getVal('lbl-t2');const t3=getVal('lbl-t3');
-  const proveedor=getVal('lbl-proveedor');
-  const alrgs=ALERGENOS14.filter(a=>{
-    const btn=document.getElementById('lbla-'+a.replace(/ /g,'_'));
-    return btn&&btn.classList.contains('sel');
-  });
-
-  // Tamaños proporcionales al ancho
-  const wMm=parseFloat(size.w);
-  const hMm=parseFloat(size.h);
-  const isNarrow=wMm<40;
-  const fTitle=Math.max(3.5,wMm*0.165)+'mm';
-  const fLot  =Math.max(2.8,wMm*0.12)+'mm';
-  const fDate =Math.max(2.8,wMm*0.115)+'mm';
-  const fSmall=Math.max(1.8,wMm*0.075)+'mm';
-  const fAlrg =Math.max(2.0,wMm*0.085)+'mm';
-  const pad   =Math.max(1.5,wMm*0.05)+'mm';
-  // QR: tamaño según espacio disponible
-  const qrMm = isNarrow ? Math.min(wMm-4, 22) : Math.min(wMm*0.28, 20);
-  const qrPx = Math.round(qrMm*3.78);  // mm → px aprox
-
-  // Código QR de trazabilidad: ALB|producto|lote|caducidad|responsable
-  const qrData='ALB|'+(producto||'')+'|'+(lote||'')+'|'+(dlc||'')+'|'+(emp||'');
-  const hasQr=pid!=='libre'&&(producto||lote)&&qrData.replace(/[|]/g,'').length>2;
-
-  const w=window.open('','_blank','width='+(size.wpx+60)+',height='+(size.hpx+120));
-  if(!w){alert('Permite las ventanas emergentes para imprimir etiquetas');return;}
-
-  let bodyHtml='';
-  if(pid==='libre'){
-    bodyHtml=`
-      ${t1?`<div class="f-title">${t1}</div>`:''}
-      ${t2?`<div class="f-body">${t2}</div>`:''}
-      ${t3?`<div class="f-small" style="color:#888">${t3}</div>`:''}`;
-  } else {
-    bodyHtml=`
-      ${producto?`<div class="f-title">${producto}</div>`:''}
-      ${proveedor?`<div class="f-body" style="color:#555">📦 ${proveedor}</div>`:''}
-      ${lote?`<div class="f-lot">LOTE: ${lote}</div>`:''}
-      ${fecha?`<div class="f-date">Entrada: ${fecha}</div>`:''}
-      ${dlc?`<div class="f-dlc">⏱ Consumir antes: ${dlc}</div>`:''}
-      ${alrgs.length?`<div class="f-alrg">⚠ ${alrgs.join(' · ')}</div>`:''}
-      ${txt1?`<div class="f-body" style="font-weight:800;text-transform:uppercase">${txt1}</div>`:''}
-      ${emp?`<div class="f-small" style="margin-top:auto">Resp: ${emp}</div>`:''}
-      ${hasQr?`<div class="qr-wrap"><div id="lbl-qr"></div><div class="qr-label">Trazabilidad</div></div>`:''}`;
-  }
-
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js">${String.fromCharCode(60)+'/script>'}
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{width:${size.w};${size.cont?'':'height:'+size.h+';'}background:#fff;font-family:Arial,Helvetica,sans-serif}
-    @page{size:${size.w} ${size.cont?'auto':size.h};margin:0}
-    @media print{html,body{width:${size.w};${size.cont?'':'height:'+size.h+';'}}.no-print{display:none!important}}
-    .label{width:${size.w};${size.cont?'height:auto;min-height:20mm;':'height:'+size.h+';overflow:hidden;'}padding:${pad};display:flex;flex-direction:column;gap:0.8mm;border:0.3mm solid #000}
-    .f-co{font-size:${fSmall};font-weight:900;color:#1a4fa8;text-transform:uppercase;letter-spacing:0.3px;line-height:1.1}
-    .f-title{font-size:${fTitle};font-weight:900;color:#000;line-height:1.15;word-break:break-word}
-    .f-lot{font-size:${fLot};font-weight:900;font-family:monospace;background:#e3efff;padding:0.5mm 1mm;border-radius:0.8mm;line-height:1.2;word-break:break-all}
-    .f-dlc{font-size:${fDate};font-weight:900;color:#c0392b;line-height:1.2}
-    .f-date{font-size:${fDate};color:#333;line-height:1.2}
-    .f-body{font-size:${fDate};color:#333;line-height:1.2}
-    .f-alrg{font-size:${fAlrg};font-weight:900;color:#c0392b;line-height:1.2;word-break:break-word}
-    .f-small{font-size:${fSmall};color:#888;line-height:1.1}
-    .sep{height:0.3mm;background:#ddd;margin:0.4mm 0;flex-shrink:0}
-    .qr-wrap{${size.cont?'':'margin-top:auto;'}display:flex;flex-direction:column;align-items:center;padding-top:1mm}
-    .qr-label{font-size:${fSmall};color:#aaa;margin-top:0.3mm;text-align:center}
-    .qr-wrap img,.qr-wrap canvas{width:${qrMm}mm!important;height:${qrMm}mm!important}
-    .no-print{margin:4px;padding:6px 16px;background:#1a4fa8;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
-  </style>
-  </head><body>
-    <div class="label">
-      ${empresa?`<div class="f-co">${empresa}</div><div class="sep"></div>`:''}
-      ${bodyHtml}
-    </div>
-    <button class="no-print" onclick="window.print()">🖨 Imprimir</button>
     <script>
-      window.addEventListener('load',function(){
-        var el=document.getElementById('lbl-qr');
-        if(el){
-          new QRCode(el,{text:'${qrData.replace(/'/g,"\\'")}',width:${qrPx},height:${qrPx},correctLevel:QRCode.CorrectLevel.M});
-        }
-        setTimeout(function(){window.print();},600);
-      });
-    ${String.fromCharCode(60)+'/script>'}
-  </body></html>`);
+      // Auto-print once all images are loaded
+      const imgs = document.querySelectorAll('img');
+      if(imgs.length===0){ setTimeout(()=>window.print(),300); }
+      else {
+        let loaded=0;
+        imgs.forEach(img=>{
+          if(img.complete){loaded++;if(loaded===imgs.length)setTimeout(()=>window.print(),300);}
+          else img.onload=()=>{loaded++;if(loaded===imgs.length)setTimeout(()=>window.print(),300);};
+        });
+        // Fallback: print after 2s regardless
+        setTimeout(()=>window.print(),2000);
+      }
+    <\/script>
+  </body></html>`;
+
+  // Re-open to write final content (popup was already opened)
+  w.document.open();
+  w.document.write(finalHtml);
   w.document.close();
 }
 
-// ── ENTREGA DIRECTA (sin regeneración — productos fríos) ────
-function openEntregaDirecta(elabId){
-  const elabs=ld(K.elab)||[];
-  const elab=elabs.find(e=>e.id===elabId);
-  if(!elab){alert('Elaboración no encontrada');return;}
-  openModal(`<div class="modal-title">🍽 Entrega directa — frío</div>
-    <div style="background:#f0fff4;border-radius:10px;padding:10px 14px;margin-bottom:12px;border-left:4px solid #27ae60">
-      <div style="font-size:16px;font-weight:900;color:#111">${elab.producto}</div>
-      ${elab.lote?`<div style="font-size:12px;color:#1a4fa8;font-family:monospace">L: ${elab.lote}</div>`:''}
-      <div style="font-size:12px;color:#888;margin-top:2px">Sin regeneración — se entrega en frío</div>
-    </div>
-    <div class="fc-group"><label class="fc-label">T° de servicio (°C)</label>
-      <input class="fc" id="ed-temp" type="number" step="0.1" placeholder="ej: 4°C" value="4">
-    </div>
-    <div class="fc-group" style="margin-top:8px"><label class="fc-label">Observaciones</label>
-      <input class="fc" id="ed-obs" placeholder="Notas...">
-    </div>
-    <div style="margin-top:10px;padding:8px 10px;background:#fff9e6;border-radius:8px;font-size:12px;color:#856404">
-      ⚠ T° de servicio debe ser ≤8°C para productos fríos sin regenerar.
-    </div>
-    <div class="modal-row" style="margin-top:14px">
-      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-green" style="flex:2" onclick="saveEntregaDirecta('${elabId}')">✓ Registrar entrega</button>
-    </div>`);
-}
 
-function saveEntregaDirecta(elabId){
-  const elabs=ld(K.elab)||[];
-  const idx=elabs.findIndex(e=>e.id===elabId);
-  if(idx<0){closeModal();return;}
-  const elab=elabs[idx];
-  const temp=parseFloat(document.getElementById('ed-temp').value)||null;
-  const obs=(document.getElementById('ed-obs')||{}).value||'';
-  const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
-  const now=new Date();
-  const tempOk=temp===null||temp<=8;
-  const tservRecs=ld(K.tserv)||[];
-  tservRecs.push({id:genId(),ts:now.toISOString(),date:today(),
-    producto:elab.producto,lote:elab.lote||'',temp,emp,obs,
-    tipo:'entrega_fria',conforme:tempOk});
-  sv(K.tserv,tservRecs);
-  elabs[idx]=Object.assign({},elab,{estado:'servido',fecha_servicio:today()});
-  sv(K.elab,elabs);
-  if(!tempOk){
-    const ncs=ld(K.noconf)||[];
-    ncs.push({id:genId(),ts:now.toISOString(),tipo:'Entrega fría',
-      descripcion:'T° '+temp+'°C en entrega de '+elab.producto+' — supera 8°C',estado:'Abierta',emp});
-    sv(K.noconf,ncs);
-    alert('⚠ T° fuera de rango. Registrado como no conformidad.');
-  }
-  closeModal();renderElab();updateScoreChip();
-  const proceso=[...(elab.proceso||['🍳 Elaborado · '+elab.date]),'🍽 Entregado en frío · '+today()];
-  setTimeout(()=>addToLabelQueue({tipo:'🍽 ENTREGA',producto:elab.producto,lote:elab.lote||'',
-    dlc:elab.dlc||'',ts:now.toISOString(),destino:'hoy',proceso}),300);
-}
 </script>
-<!-- FLOATING PRINT BADGE -->
-<div id="print-badge" style="display:none;position:fixed;bottom:72px;right:14px;z-index:9999;
-  background:#27ae60;color:#fff;border-radius:50px;padding:10px 18px;
-  box-shadow:0 4px 16px rgba(0,0,0,.25);cursor:pointer;
-  display:none;align-items:center;gap:8px;font-weight:700;font-size:15px"
-  onclick="_showLabelQueuePopup()">
-  <span style="font-size:20px">🖨</span>
-  <span id="print-badge-count">0 etiquetas</span>
-  <span style="background:rgba(255,255,255,.25);border-radius:20px;padding:2px 8px;font-size:12px">Ver cola</span>
-</div>
-
-
 </body>
 </html>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         

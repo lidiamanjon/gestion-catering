@@ -1,7 +1,11 @@
 <!DOCTYPE html>
+<!-- VERSION: v20260628-1921 -->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Albaraba SL · Catering & APPCC</title>
 <link rel="manifest" href="manifest.json">
@@ -1326,6 +1330,9 @@ function printFichaTecnicaMA03(idx){
   const html = `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Ficha Técnica · ${r.nombre}</title>
 <style>
   @page{size:A4 portrait;margin:15mm}
@@ -1690,154 +1697,162 @@ function albaranPaso1(){
 }
 
 // ── OCR: Lectura automática de albarán ───────────────────────────────────
-let _ocrWorker = null;
 
 async function procesarOCRAlbaran(){
   const btn = document.getElementById('alb-ocr-btn');
   const statusEl = document.getElementById('alb-ocr-status');
-  if(!_alb.imagen || !_alb.imagenType?.startsWith('image/')){
+
+  if(!_alb.imagen){
     alert('Primero adjunta una imagen del albarán'); return;
   }
-  // sync proveedor/fecha
-  const provEl = document.getElementById('alb-prov');
+  const provEl  = document.getElementById('alb-prov');
   const fechaEl = document.getElementById('alb-fecha');
-  if(provEl) _alb.proveedor = provEl.value.trim() || _alb.proveedor;
-  if(fechaEl) _alb.fecha = fechaEl.value || _alb.fecha;
+  if(provEl)  _alb.proveedor = provEl.value.trim() || _alb.proveedor;
+  if(fechaEl) _alb.fecha     = fechaEl.value        || _alb.fecha;
 
-  if(btn) btn.disabled = true;
+  if(btn)     btn.disabled = true;
   if(statusEl){ statusEl.style.display='block'; statusEl.innerHTML='⏳ Cargando motor OCR…'; }
 
   try {
-    // Load Tesseract if needed
     if(typeof Tesseract === 'undefined'){
       await new Promise((res,rej)=>{
         const s=document.createElement('script');
         s.src='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
-        s.onload=res; s.onerror=rej;
+        s.onload=res; s.onerror=()=>rej(new Error('No se pudo cargar Tesseract'));
         document.head.appendChild(s);
       });
     }
+    if(statusEl) statusEl.innerHTML='🔍 Leyendo imagen… (puede tardar 20-40 seg)';
 
-    if(statusEl) statusEl.innerHTML='🔍 Analizando imagen… (puede tardar 20-40s)';
-
-    const result = await Tesseract.recognize(_alb.imagen, 'spa+eng', {
+    const result = await Tesseract.recognize(_alb.imagen, 'spa', {
       logger: m => {
-        if(m.status==='recognizing text' && statusEl){
+        if(m.status==='recognizing text' && statusEl)
           statusEl.innerHTML = `🔍 Leyendo… ${Math.round((m.progress||0)*100)}%`;
-        }
       }
     });
 
-    const text = result.data.text;
-    if(statusEl) statusEl.innerHTML = '🧠 Interpretando líneas del albarán…';
+    const rawText = result.data.text;
+    if(statusEl) statusEl.innerHTML = '🧠 Interpretando líneas…';
 
-    const lineas = _parseAlbaranText(text);
+    const lineas = _parseAlbaranText(rawText);
 
     if(!lineas.length){
-      if(statusEl) statusEl.innerHTML = '⚠️ No se detectaron líneas de producto. Introduce manualmente.';
-      if(btn){ btn.disabled=false; btn.textContent='🔍 Reintentar OCR'; }
+      // Show raw text so user can see what OCR got
+      if(statusEl) statusEl.innerHTML =
+        `⚠️ No se detectaron líneas automáticamente.<br>
+         <details style="margin-top:6px;font-size:11px;color:#555">
+           <summary style="cursor:pointer;color:#1a4fa8">Ver texto OCR detectado</summary>
+           <pre style="white-space:pre-wrap;font-size:10px;max-height:120px;overflow-y:auto;background:#f5f5f5;padding:6px;border-radius:4px;margin-top:4px">${rawText.replace(/</g,'&lt;').slice(0,1500)}</pre>
+         </details>`;
+      if(btn){ btn.disabled=false; btn.textContent='🔍 Reintentar'; }
+      // Still go to paso1 so user can enter manually
+      setTimeout(()=>renderAlbaranPaso1(), 2000);
       return;
     }
 
-    // Merge with existing lineas (don't overwrite manual ones)
-    if(_alb.lineas.length === 0){
-      _alb.lineas = lineas;
-    } else {
-      _alb.lineas = [..._alb.lineas, ...lineas];
-    }
-
-    if(statusEl) statusEl.innerHTML = `✅ ${lineas.length} producto${lineas.length!==1?'s':''} detectado${lineas.length!==1?'s':''}. Revisa en el siguiente paso.`;
+    _alb.lineas = [..._alb.lineas, ...lineas];
+    if(statusEl) statusEl.innerHTML =
+      `✅ ${lineas.length} producto${lineas.length!==1?'s':''} detectado${lineas.length!==1?'s':''}. Revisa en el paso siguiente.`;
 
     setTimeout(()=>{
-      // Sync proveedor/fecha again
       const pv = document.getElementById('alb-prov');
       const fe = document.getElementById('alb-fecha');
       if(pv && pv.value.trim()) _alb.proveedor = pv.value.trim();
-      if(fe && fe.value) _alb.fecha = fe.value;
+      if(fe && fe.value)        _alb.fecha      = fe.value;
       renderAlbaranPaso1();
-    }, 900);
+    }, 800);
 
   } catch(err){
     console.error('OCR error', err);
-    if(statusEl) statusEl.innerHTML = '❌ Error al leer la imagen. Prueba con mejor iluminación o introduce manualmente.';
-    if(btn){ btn.disabled=false; }
+    if(statusEl) statusEl.innerHTML =
+      `❌ ${err.message||'Error al leer la imagen'}.<br>
+       Prueba con mejor iluminación o introduce las líneas manualmente.`;
+    if(btn){ btn.disabled=false; btn.textContent='🔍 Reintentar'; }
+    setTimeout(()=>renderAlbaranPaso1(), 2500);
   }
 }
 
 function _parseAlbaranText(rawText){
-  const lines = rawText.split('\n').map(l=>l.trim()).filter(l=>l.length > 3);
+  const lines = rawText.split('\n').map(l=>l.trim()).filter(l=>l.length >= 3);
 
-  // Noise words to skip (headers, totals, etc)
   const skipWords = ['total','subtotal','iva','base imponible','albarán','albaran',
-    'factura','proveedor','cliente','cif','nif','fecha','codigo','referencia',
-    'descripcion','precio','importe','cantidad','unidades','num','nº','page',
-    'pagina','www','http','tel','fax','email','dirección','direccion'];
+    'factura','proveedor','cliente','cif','nif','fecha','código','codigo','referencia',
+    'descripcion','descripción','precio unitario','importe','unidades','pagina','página',
+    'num.','nº','page','www','http','tel','fax','email','dirección','direccion',
+    'forma de pago','vencimiento','banco','cuenta','swift','iban'];
 
   const results = [];
 
   for(const line of lines){
-    const lo = line.toLowerCase();
-    // Skip obvious headers/footers
-    if(skipWords.some(w => lo === w || lo.startsWith(w+' ') || lo.startsWith(w+':'))) continue;
-    if(lo.match(/^(total|subtotal|iva|base)/)) continue;
-    if(line.length < 4) continue;
+    const lo = line.toLowerCase().trim();
 
-    // Extract all numbers from the line
-    // Accept both . and , as decimal separators: 12,50 or 12.50
-    const numMatches = [...line.matchAll(/\b(\d{1,6}[.,]\d{1,4}|\d{1,6})\b/g)]
-      .map(m => parseFloat(m[0].replace(',','.')))
-      .filter(n => !isNaN(n) && n >= 0);
+    // Skip lines that are purely a skip word
+    if(skipWords.some(w => lo === w || lo.startsWith(w+' ') || lo.startsWith(w+':') || lo.startsWith(w+'.'))) continue;
+    if(/^(total|subtotal|iva|base\s)/i.test(lo)) continue;
+    if(line.length < 3) continue;
 
-    if(!numMatches.length) continue; // no numbers = probably a header line
+    // Must have at least one letter-word of >=2 chars (not just numbers)
+    const hasLetters = /[a-záéíóúüñA-Z]{2,}/.test(line);
+    if(!hasLetters) continue;
 
-    // Remove all numbers from line to get the product name
+    // Skip pure dates
+    if(/^\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(lo)) continue;
+    // Skip lines that are just reference codes (all caps letters+numbers, <6 chars)
+    if(/^[A-Z0-9\-]{1,8}$/.test(line.trim())) continue;
+
+    // Extract numbers — handle Spanish format: 1.234,56 and English 1,234.56 and simple 12.50
+    const numMatches = [];
+    // Spanish: 1.234,56 or 234,56
+    for(const m of line.matchAll(/\b\d{1,3}(?:\.\d{3})*,\d{1,4}\b/g)){
+      numMatches.push(parseFloat(m[0].replace(/\./g,'').replace(',','.')));
+    }
+    // English decimal: 12.50 (only if no Spanish format found to avoid confusion)
+    if(!numMatches.length){
+      for(const m of line.matchAll(/\b\d{1,6}\.\d{1,4}\b/g)){
+        numMatches.push(parseFloat(m[0]));
+      }
+    }
+    // Plain integers
+    for(const m of line.matchAll(/\b(\d{1,6})\b/g)){
+      const n = parseInt(m[0]);
+      if(!isNaN(n)) numMatches.push(n);
+    }
+    const uniqueNums = [...new Set(numMatches.filter(n=>!isNaN(n)&&n>=0))];
+
+    // Clean name: remove numbers and symbols
     let nombre = line
-      .replace(/\b\d{1,6}[.,]\d{1,4}\b/g, '')
-      .replace(/\b\d{1,6}\b/g, '')
-      .replace(/[€$%*#|\\/_]/g,'')
+      .replace(/\b\d{1,3}(?:\.\d{3})*,\d{1,4}\b/g,'')
+      .replace(/\b\d{1,6}\.\d{1,4}\b/g,'')
+      .replace(/\b\d{1,6}\b/g,'')
+      .replace(/[€$%*#|\\/_\[\]{}()]/g,' ')
       .replace(/\s{2,}/g,' ')
       .trim();
 
-    // Name must have at least 3 chars after cleaning
     if(nombre.length < 3) continue;
+    if(/^[\W\d\s]+$/.test(nombre)) continue;
 
-    // Price heuristic: numbers with decimals are prices, integers are quantities
-    const decimals = numMatches.filter(n => !Number.isInteger(n) || n > 100);
-    const integers = numMatches.filter(n => Number.isInteger(n) && n > 0 && n <= 9999);
+    // Extract price (decimals, >0.1) and quantity (small integer)
+    const decimals = uniqueNums.filter(n => n !== Math.floor(n) || n > 200);
+    const integers = uniqueNums.filter(n => Number.isInteger(n) && n >= 1 && n <= 9999);
 
     let precio = 0, uds = 1;
-
-    if(decimals.length >= 2){
-      // Two prices → first is unit price, second is total
-      precio = decimals[0];
-    } else if(decimals.length === 1){
-      precio = decimals[0];
-    }
-
-    if(integers.length >= 1){
-      // Take smallest positive integer as quantity (usually 1-999)
-      const qty = integers.filter(n=>n>=1&&n<=9999).sort((a,b)=>a-b)[0];
-      if(qty) uds = qty;
-    }
-
-    // Skip if name is just punctuation or very generic
-    if(/^[\W\d]+$/.test(nombre)) continue;
-    // Skip lines that are just a date pattern
-    if(/^\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}$/.test(nombre.trim())) continue;
+    if(decimals.length >= 2) precio = Math.min(...decimals); // smaller = unit price
+    else if(decimals.length === 1) precio = decimals[0];
+    if(integers.length) uds = integers.filter(n=>n>=1&&n<=999).sort((a,b)=>a-b)[0] || 1;
 
     results.push({
       nombreAlb: _capitalizeAlb(nombre),
-      precio: precio,
-      uds: uds
+      precio,
+      uds
     });
   }
 
-  // Deduplicate by very similar names
+  // Deduplicate
   const deduped = [];
   for(const r of results){
     const norm = s=>s.toLowerCase().replace(/[^a-z0-9 ]/g,'').trim();
-    const already = deduped.some(d=>calcSimilitud(norm(d.nombreAlb), norm(r.nombreAlb)) > 85);
-    if(!already) deduped.push(r);
+    const dup = deduped.some(d => calcSimilitud(norm(d.nombreAlb), norm(r.nombreAlb)) > 85);
+    if(!dup) deduped.push(r);
   }
 
   return deduped;
@@ -1846,6 +1861,7 @@ function _parseAlbaranText(rawText){
 function _capitalizeAlb(s){
   return s.toLowerCase().replace(/(^|\s)[a-záéíóúüñ]/g, c=>c.toUpperCase()).trim();
 }
+
 
 // ── PASO 1: Entrada rápida de líneas ─────────────────────────────────────
 function renderAlbaranPaso1(){
@@ -2254,7 +2270,10 @@ function _abrirInformePrintable(titulo, subtitulo, tableHead, rows, desde, hasta
   const rowsHtml = rows.length
     ? rows.join('')
     : `<tr><td colspan="${tableHead.length}" style="text-align:center;color:#aaa;padding:16px">Sin registros en este período</td></tr>`;
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${titulo}</title>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0"><title>${titulo}</title>
   <style>
     *{box-sizing:border-box}
     body{font-family:Arial,sans-serif;font-size:11px;margin:15mm}
