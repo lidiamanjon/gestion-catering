@@ -9,10 +9,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="color-scheme" content="light">
 <title>APPCC · ALBARABA</title>
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{color-scheme:light!important}
 html,body{height:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f2f4f0;color:#1a1a2e;font-size:15px}
 button{cursor:pointer;font-family:inherit}
@@ -190,22 +192,7 @@ input,select,textarea{font-family:inherit;font-size:15px}
 .report-sign-box{text-align:center;width:45%}
 .report-sign-line{border-top:1px solid #333;margin-top:40px;padding-top:4px;font-size:11px;color:#666}
 
-/* DARK MODE */
-@media(prefers-color-scheme:dark){
-  body{background:#0a1525;color:#dceeff}
-  .card{background:#0d1f3c;box-shadow:none}
-  .tile{background:#0d1f3c;border-color:#1a3060}
-  .tile-label{color:#ccc}
-  .tile-sublabel{color:#8aaac8}
-  .tile-section-header{color:#4d9aff;border-left-color:#4d9aff}
-  .fc{background:#152847;border-color:#1a3060;color:#dceeff}
-  .home-footer{background:#0d1f3c;border-color:#1a3060}
-  .home-footer-btn{background:#152847}
-  .modal-sheet{background:#0d1f3c}
-  .list-row{border-color:#1a3060}
-  .numpad-display{background:#152847}
-  .npk{background:#152847;border-color:#1a3060;color:#ccc}
-}
+/* Forzar modo claro siempre */
 </style>
 
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" async></script>
@@ -6086,8 +6073,7 @@ const LBL_PLANTILLAS=[
 function renderEtiquetas(){
   const savedOrient=localStorage.getItem('a_lbl_orient')||'portrait';
   const elabs=(ld(K.elab)||[]).filter(e=>e.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50);
-  const receps=(ld(K.recep)||[]).sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50);
-  const openSections=JSON.parse(localStorage.getItem('a_etq_open')||'{"elab":true,"prod":false}');
+  const openSections=JSON.parse(localStorage.getItem('a_etq_open')||'{"elab":true,"manual":false}');
 
   function destBadge(def){
     const opts=[
@@ -6149,20 +6135,6 @@ function renderEtiquetas(){
       ${openSections.elab ? `<div>${elabs.length ? elabs.map(e=>itemRow(e,'elab',e.destino||'nevera')).join('') : '<div style="padding:14px;color:#aaa;text-align:center;font-size:13px">Sin elaboraciones activas</div>'}</div>` : ''}
     </div>
 
-    <!-- SECCIÓN: PRODUCTOS RECIBIDOS -->
-    <div class="card" style="margin-top:8px;overflow:hidden">
-      <div onclick="toggleEtqSection('prod')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#fff8f0;border-bottom:${openSections.prod?'1px solid #fde8cc':'none'}">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:18px">📦</span>
-          <div>
-            <div style="font-size:14px;font-weight:700;color:#e67e22">Productos recibidos</div>
-            <div style="font-size:11px;color:#888">${receps.length} recepciones recientes</div>
-          </div>
-        </div>
-        <span style="font-size:20px;color:#e67e22;font-weight:700">${openSections.prod?'▲':'▼'}</span>
-      </div>
-      ${openSections.prod ? `<div>${receps.length ? receps.map(r=>itemRow(r,'recep','nevera')).join('') : '<div style="padding:14px;color:#aaa;text-align:center;font-size:13px">Sin recepciones guardadas</div>'}</div>` : ''}
-    </div>
 
     <!-- SECCIÓN: ETIQUETA MANUAL -->
     <div class="card" style="margin-top:8px">
