@@ -770,6 +770,7 @@ function selR(g, el, v) {
     const grp = document.getElementById(id);
     if(grp) { grp.querySelectorAll('.radio-btn').forEach(b=>b.classList.remove('sel')); break; }
   }
+  if(!el) return; // null-safe: skip if element not found
   el.classList.add('sel');
   stA[g] = v;
   if(g==='mblusas') {
@@ -787,6 +788,9 @@ function selR(g, el, v) {
     // si solo entrega, los bloques de almacén no aplican (pero dejamos que el usuario los configure igual)
   }
 }
+
+// Init: apply section based on default selected service type
+document.addEventListener('DOMContentLoaded', ()=>{ cambiarServicio(); });
 
 document.querySelectorAll('.check-item input[type=checkbox]').forEach(inp=>{
   inp.addEventListener('change',e=>e.target.closest('.check-item').classList.toggle('activo',e.target.checked));

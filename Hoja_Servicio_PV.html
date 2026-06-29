@@ -692,12 +692,15 @@ const COFFEE_DESC_P = {
 function selR(g, el, v) {
   const grpIds=[`radio-${g}`,`radio-${g}-p`,`radio-${g}p`];
   for(const id of grpIds){const grp=document.getElementById(id);if(grp){grp.querySelectorAll('.radio-btn').forEach(b=>b.classList.remove('sel'));break;}}
+  if(!el) return;
   el.classList.add('sel');
   stP[g]=v;
   if(g==='coffeeopt') document.getElementById('coffee-desc-p').textContent=COFFEE_DESC_P[v]||'';
   if(g==='formatopop') document.getElementById('pop-entrantes-sel-p').style.display=v==='entrantes'?'block':'none';
   if(g==='cafep') document.getElementById('coffee-bebcal-p').style.display=v==='si'?'block':'none';
 }
+
+document.addEventListener('DOMContentLoaded', ()=>{ cambiarServicio(); });
 
 document.querySelectorAll('.check-item input[type=checkbox]').forEach(inp=>{
   inp.addEventListener('change',e=>e.target.closest('.check-item').classList.toggle('activo',e.target.checked));
