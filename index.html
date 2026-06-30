@@ -9400,7 +9400,22 @@ window.addEventListener('DOMContentLoaded',()=>{
       aa.style.display = 'block';
       if(tg) tg.classList.remove('active');
       if(ta) ta.classList.add('active');
-      try{ if(typeof showHome === 'function') showHome(); }catch(e){}
+      // Mostrar pantalla home de APPCC directamente
+      try{
+        document.querySelectorAll('#app-appcc .screen').forEach(function(s){
+          s.style.transform = 'translateX(100%)';
+        });
+        var homeEl = document.getElementById('home');
+        if(homeEl) homeEl.style.transform = 'translateX(0)';
+        if(typeof renderTileGrid==='function') renderTileGrid();
+        if(typeof updateScoreChip==='function') updateScoreChip();
+        if(typeof renderHomeAlerts==='function') renderHomeAlerts();
+        if(typeof _wSession!=='undefined') _wSession.updateHeader();
+        // Pedir trabajador si no hay ninguno seleccionado
+        if(typeof getActiveWorker==='function' && !getActiveWorker() && typeof _wSession!=='undefined'){
+          setTimeout(function(){ _wSession.showPicker(true); }, 400);
+        }
+      }catch(e){ console.error('switchApp appcc error:',e); }
     } else {
       aa.style.display = 'none';
       ag.style.display = '';
