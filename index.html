@@ -3479,7 +3479,7 @@ function loadDB(){
         localStorage.setItem('albaraba_v2',JSON.stringify(DB));
         setSyncStatus('ok');
         if(fbAuth&&fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
-        if(currentSection)nav(currentSection);else nav(userRole==='admin'?'dashboard':'tareas');
+        if(currentSection)nav(currentSection);else nav('dashboard');
       } else if(raw){
         // Firebase vacío pero tenemos datos locales → subirlos
         fbDB.ref('albaraba_v2').set(DB).then(()=>setSyncStatus('ok'));
@@ -9341,7 +9341,7 @@ window.addEventListener('DOMContentLoaded',()=>{
         if(overlay)overlay.style.display='none';
         loadDB();
         applyRole(user.email);
-        nav(userRole==='admin'?'dashboard':'tareas');
+        nav('dashboard');
       } else {
         if(overlay)overlay.style.display='flex';
       }
