@@ -14911,17 +14911,23 @@ async function _scanFromFile(inp, onResult){
     }catch(e){}
   }
 
-  // 2) Fallback: html5-qrcode (requiere librería CDN)
-  if(!window.Html5Qrcode){
-    if(res) res.innerHTML='<span style="color:#e74c3c">⚠ No se pudo leer el código.<br>Necesitas conexión a internet para la primera carga.<br>Inténtalo de nuevo con conexión.</span>';
-    return;
-  }
-  Html5Qrcode.scanFile(file, true).then(decodedText=>{
-    const parsed = parseScan(decodedText);
-    if(res) res.innerHTML='<span style="color:#27ae60;font-weight:700">✓ Código leído</span>';
-    setTimeout(()=>{ closeModalAPPCC(); onResult(parsed); }, 400);
-  }).catch(()=>{
-    if(res) res.innerHTML='<span style="color:#e74c3c">⚠ No se detectó ningún código.<br>Prueba con más luz y acercándote más al código.</span>';
+  // 2) Fallback: html5-qrcode — esperar a que cargue la librería (waitForLib)
+  if(res) res.innerHTML='<span style="color:#888">Cargando lector…</span>';
+  waitForLib(()=>window.Html5Qrcode, ()=>{
+    if(!window.Html5Qrcode){
+      if(res) res.innerHTML=`<span style="color:#e74c3c">⚠ Lector no disponible. Escribe el código manualmente en el campo de abajo.</span>`;
+      return;
+    }
+    if(res) res.innerHTML='<span style="color:#888">Detectando código…</span>';
+    Html5Qrcode.scanFile(file, true).then(decodedText=>{
+      const parsed = parseScan(decodedText);
+      if(res) res.innerHTML='<span style="color:#27ae60;font-weight:700">✓ Código leído</span>';
+      setTimeout(()=>{ closeModalAPPCC(); onResult(parsed); }, 400);
+    }).catch(()=>{
+      if(res) res.innerHTML='<span style="color:#e74c3c">⚠ No se detectó código.<br>Prueba con más luz, más cerca, o escríbelo manualmente abajo.</span>';
+    });
+  }, 0, ()=>{
+    if(res) res.innerHTML=`<span style="color:#e74c3c">⚠ Sin conexión. Escribe el código manualmente en el campo de abajo.</span>`;
   });
 }
 
@@ -15099,19 +15105,29 @@ function openScanWithRegister(onDone) {
     } else if (parsed.isInternal && parsed.producto) {
       onDone(parsed, parsed.producto, '');
     } else {
-      // Unknown product — show proper registration modal
+      // Producto desconocido — mostrar catálogo para seleccionar o registrar nuevo
       const provs = ld(K.provs).map(p => p.name);
+      const catProds = (ld('albaraba_v2') ? (JSON.parse(localStorage.getItem('albaraba_v2')||'{}')).productos||[] : [])
+        .sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+      const prodOpts = catProds.map(p=>`<option value="${(p.nombre||'').replace(/"/g,'&quot;')}">${p.nombre||''}${p.proveedor?' · '+p.proveedor:''}</option>`).join('');
       openModalAPPCC(`
-        <div class="modal-title">Producto nuevo — registrar</div>
-        <div style="background:#e8f5e9;border-radius:10px;padding:10px 12px;font-size:12px;margin-bottom:12px;color:#2e7d32">
-          ✓ Código leído. Escribe el nombre <strong>una sola vez</strong> — el programa lo recordará para siempre.
+        <div class="modal-title">📦 ¿Qué producto es?</div>
+        ${parsed.gtin?`<div style="font-size:11px;color:#aaa;margin-bottom:6px">Código: <code>${parsed.gtin}</code></div>`:''}
+        ${parsed.lot?`<div style="font-size:12px;margin-bottom:4px;color:#27ae60">✓ Lote detectado: <strong>${parsed.lot}</strong></div>`:''}
+        ${parsed.expiry?`<div style="font-size:12px;margin-bottom:6px;color:#27ae60">✓ Caducidad detectada: <strong>${fmtExpiryDisplay(parsed.expiry)}</strong></div>`:''}
+        <div class="fc-group" style="margin-bottom:8px">
+          <label class="fc-label">Selecciona del catálogo o escribe el nombre *</label>
+          <input class="fc" id="swr-nombre" list="swr-prod-dl" placeholder="Buscar producto del catálogo…" autofocus
+            oninput="
+              const v=this.value.trim();
+              const existe=document.querySelector('#swr-prod-dl option[value=\''+v.replace(/'/g,'\\\'')+'\']');
+              const aviso=document.getElementById('swr-nuevo-aviso');
+              if(aviso) aviso.style.display=(v&&!existe)?'block':'none';
+            ">
+          <datalist id="swr-prod-dl">${prodOpts}</datalist>
         </div>
-        ${parsed.gtin?`<div style="font-size:11px;color:#aaa;margin-bottom:8px">GTIN: <code>${parsed.gtin}</code></div>`:''}
-        ${parsed.lot?`<div style="font-size:12px;margin-bottom:5px">Lote detectado: <strong>${parsed.lot}</strong></div>`:''}
-        ${parsed.expiry?`<div style="font-size:12px;margin-bottom:5px">Caducidad detectada: <strong>${fmtExpiryDisplay(parsed.expiry)}</strong></div>`:''}
-        <div class="fc-group" style="margin-bottom:10px">
-          <label class="fc-label">Nombre del producto *</label>
-          <input class="fc" id="swr-nombre" placeholder="ej: Pechuga de pollo 5kg" autofocus>
+        <div id="swr-nuevo-aviso" style="display:none;background:#fff3cd;border-radius:8px;padding:8px 10px;font-size:12px;color:#856404;margin-bottom:8px">
+          ⚠ Este producto no está en el catálogo. Al continuar se registrará como producto nuevo y se asociará a este código de barras para la próxima vez.
         </div>
         <div class="fc-group" style="margin-bottom:14px">
           <label class="fc-label">Proveedor habitual</label>
@@ -15120,7 +15136,7 @@ function openScanWithRegister(onDone) {
         </div>
         <div class="modal-row">
           <button class="btn btn-outline" style="flex:1" onclick="closeModalAPPCC()">Cancelar</button>
-          <button class="btn btn-green" style="flex:2" onclick="window._swrSave()">✓ Guardar y continuar</button>
+          <button class="btn btn-green" style="flex:2" onclick="window._swrSave()">✓ Continuar</button>
         </div>
       `);
       window._swrParsed = parsed;
@@ -15240,16 +15256,66 @@ function scanForRecep() {
 }
 
 function applyScanToRecep(parsed, nombre, proveedor) {
-  // Ensure recepción modal is open with this data pre-filled
-  const prefill = {
-    producto: nombre || '',
-    lote: parsed.lot || '',
-    caducidad: parsed.expiry || '',
-    proveedor: proveedor || '',
-    cantidad: parsed.pesoKg ? parsed.pesoKg + ' kg' : (parsed.qty || ''),
-    _fromScan: true
-  };
-  openRecepModal(prefill);
+  const needLote = !parsed.lot;
+  const needCad  = !parsed.expiry;
+
+  // Si faltan lote o caducidad, preguntar antes de abrir el formulario
+  if(needLote || needCad){
+    const _defaultCad = addDays(today(), 4); // default 4 días nevera
+    openModalAPPCC(`
+      <div class="modal-title">📦 Completa los datos de recepción</div>
+      <div style="background:#e8f5e9;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:14px;color:#2e7d32">
+        ✓ Producto: <strong>${nombre||parsed.texto||'—'}</strong><br>
+        El código escaneado no incluía ${[needLote?'número de lote':null,needCad?'fecha de caducidad':null].filter(Boolean).join(' ni ')}.
+      </div>
+      ${needLote?`
+      <div class="fc-group" style="margin-bottom:12px">
+        <label class="fc-label">Número de lote *</label>
+        <input class="fc" id="asr-lote" placeholder="Escribe el nº de lote de la etiqueta" style="font-family:monospace;font-size:15px;font-weight:700">
+      </div>`:''}
+      ${needCad?`
+      <div class="fc-group" style="margin-bottom:14px">
+        <label class="fc-label">Fecha de caducidad *</label>
+        <input class="fc" type="date" id="asr-cad" value="${_defaultCad}">
+      </div>`:''}
+      <div class="modal-row">
+        <button class="btn btn-outline" style="flex:1" onclick="closeModalAPPCC()">Cancelar</button>
+        <button class="btn btn-green" style="flex:2" onclick="
+          const lote=(document.getElementById('asr-lote')||{}).value||'';
+          const cad=(document.getElementById('asr-cad')||{}).value||'';
+          if(${needLote}&&!lote){document.getElementById('asr-lote').style.borderColor='#e74c3c';return;}
+          if(${needCad}&&!cad){document.getElementById('asr-cad').style.borderColor='#e74c3c';return;}
+          closeModalAPPCC();
+          setTimeout(()=>{
+            window._asrParsed.lot=lote||window._asrParsed.lot;
+            window._asrParsed.expiry=cad||window._asrParsed.expiry;
+            const pf={
+              producto:window._asrNombre||'',
+              lote:window._asrParsed.lot||'',
+              caducidad:window._asrParsed.expiry||'',
+              proveedor:window._asrProv||'',
+              cantidad:window._asrParsed.pesoKg?window._asrParsed.pesoKg+' kg':(window._asrParsed.qty||''),
+              _fromScan:true
+            };
+            openRecepModal(pf);
+          },100);
+        ">✓ Continuar</button>
+      </div>
+    `);
+    window._asrParsed = parsed;
+    window._asrNombre = nombre;
+    window._asrProv   = proveedor;
+  } else {
+    const prefill = {
+      producto: nombre || '',
+      lote: parsed.lot || '',
+      caducidad: parsed.expiry || '',
+      proveedor: proveedor || '',
+      cantidad: parsed.pesoKg ? parsed.pesoKg + ' kg' : (parsed.qty || ''),
+      _fromScan: true
+    };
+    openRecepModal(prefill);
+  }
 }
 
 // ============================================================
