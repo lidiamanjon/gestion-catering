@@ -1,5 +1,16 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260628-1921 -->
+<!-- VERSION: v20260630-1200 -->
+<script>
+// Desregistrar service workers antiguos y limpiar caché
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs=>{
+    regs.forEach(r=>r.unregister());
+  });
+}
+if('caches' in window){
+  caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
+}
+</script>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
