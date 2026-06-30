@@ -19,7 +19,7 @@
 <meta name="apple-mobile-web-app-title" content="Albaraba">
 <link rel="apple-touch-icon" href="icon-192.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" async></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -14891,18 +14891,37 @@ function waitForLib(checkFn,callback,tries,onTimeout){
 }
 
 // ── File-based scan fallback ─────────────────────────────────────────────
-function _scanFromFile(inp, onResult){
+async function _scanFromFile(inp, onResult){
   const file = inp.files[0]; if(!file) return;
   const res = document.getElementById('scan-result');
   if(res) res.innerHTML = '<span style="color:#888">Leyendo imagen…</span>';
-  waitForLib(()=>window.Html5Qrcode, ()=>{
-    Html5Qrcode.scanFile(file, true).then(decodedText=>{
-      const parsed = parseScan(decodedText);
-      if(res) res.innerHTML='<span style="color:#27ae60;font-weight:700">✓ Código leído</span>';
-      setTimeout(()=>{ closeModalAPPCC(); onResult(parsed); }, 400);
-    }).catch(()=>{
-      if(res) res.innerHTML='<span style="color:#e74c3c">⚠ No se detectó ningún código. Inténtalo con mejor luz.</span>';
-    });
+
+  // 1) BarcodeDetector nativo (Chrome Android, sin CDN)
+  if('BarcodeDetector' in window){
+    try{
+      const det = new BarcodeDetector({formats:['ean_13','ean_8','code_128','qr_code','data_matrix','upc_a','upc_e','itf','code_39','code_93','aztec']});
+      const bmp = await createImageBitmap(file);
+      const codes = await det.detect(bmp);
+      if(codes.length>0){
+        const parsed = parseScan(codes[0].rawValue);
+        if(res) res.innerHTML='<span style="color:#27ae60;font-weight:700">✓ Código leído</span>';
+        setTimeout(()=>{ closeModalAPPCC(); onResult(parsed); }, 400);
+        return;
+      }
+    }catch(e){}
+  }
+
+  // 2) Fallback: html5-qrcode (requiere librería CDN)
+  if(!window.Html5Qrcode){
+    if(res) res.innerHTML='<span style="color:#e74c3c">⚠ No se pudo leer el código.<br>Necesitas conexión a internet para la primera carga.<br>Inténtalo de nuevo con conexión.</span>';
+    return;
+  }
+  Html5Qrcode.scanFile(file, true).then(decodedText=>{
+    const parsed = parseScan(decodedText);
+    if(res) res.innerHTML='<span style="color:#27ae60;font-weight:700">✓ Código leído</span>';
+    setTimeout(()=>{ closeModalAPPCC(); onResult(parsed); }, 400);
+  }).catch(()=>{
+    if(res) res.innerHTML='<span style="color:#e74c3c">⚠ No se detectó ningún código.<br>Prueba con más luz y acercándote más al código.</span>';
   });
 }
 
@@ -15132,43 +15151,60 @@ function stopScanner() {
 
 function openScanModal(onResult) {
   stopScanner();
+  _scannerActive = true; // FIX: must be set AFTER stopScanner (which resets it to false)
   window._currentScanCallback = onResult;
   openModalAPPCC(`
     <div class="modal-title">📷 Escanear código de barras</div>
-    <div style="font-size:12px;color:#555;margin-bottom:10px;background:#fff9e6;padding:8px 12px;border-radius:8px;border-left:3px solid #f39c12">
-      📦 Apunta al <strong>código de barras largo</strong> de la etiqueta — también lee QR y EAN-13
+    <div style="font-size:12px;color:#555;margin-bottom:12px;background:#fff9e6;padding:8px 12px;border-radius:8px;border-left:3px solid #f39c12">
+      📦 Apunta al <strong>código de barras</strong> de la etiqueta del producto
     </div>
-    <div id="scan-reader" style="width:100%;max-width:340px;margin:0 auto;border-radius:10px;overflow:hidden;min-height:180px;background:#1a1a1a"></div>
-    <div id="scan-result" style="margin-top:10px;min-height:36px;text-align:center;color:#888;font-size:13px;padding:6px">
-      Buscando código…
-    </div>
-    <label style="display:block;margin-top:6px;text-align:center">
-      <span style="font-size:12px;color:#1a4fa8;font-weight:600;cursor:pointer;text-decoration:underline">
-        📁 O sube una foto del código
-      </span>
-      <input type="file" accept="image/*" style="display:none" onchange="_scanFromFile(this,window._currentScanCallback||function(){})">
+    <!-- OPCIÓN PRINCIPAL: foto con cámara nativa (siempre funciona en iOS/Android) -->
+    <label style="display:block;margin-bottom:10px">
+      <div style="width:100%;background:linear-gradient(135deg,#1a4fa8,#1565c0);color:#fff;border-radius:14px;padding:16px;text-align:center;cursor:pointer;font-size:16px;font-weight:800;box-shadow:0 4px 12px rgba(26,79,168,.4)">
+        📷 Abrir cámara y fotografiar código
+      </div>
+      <input type="file" accept="image/*" capture="environment" style="display:none" onchange="_scanFromFile(this,window._currentScanCallback||function(){})">
     </label>
+    <!-- OPCIÓN SECUNDARIA: visor en tiempo real (requiere internet + permisos) -->
+    <div style="margin-bottom:8px;text-align:center;font-size:11px;color:#aaa;font-weight:600;letter-spacing:.5px">— O ESCANEO EN TIEMPO REAL —</div>
+    <div id="scan-reader" style="width:100%;max-width:340px;margin:0 auto;border-radius:10px;overflow:hidden;min-height:160px;background:#111"></div>
+    <div id="scan-result" style="margin-top:8px;min-height:32px;text-align:center;color:#888;font-size:12px;padding:5px">
+      Iniciando visor…
+    </div>
+    <!-- FALLBACK: entrada manual del código -->
+    <div style="margin-top:12px;padding-top:12px;border-top:1px solid #eee">
+      <div style="font-size:11px;color:#aaa;text-align:center;margin-bottom:6px">O escribe el código manualmente</div>
+      <div style="display:flex;gap:6px">
+        <input type="text" id="scan-manual-input" inputmode="numeric" placeholder="Ej: 8410525100014" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:10px;font-size:14px;font-family:monospace">
+        <button onclick="
+          const v=document.getElementById('scan-manual-input').value.trim();
+          if(!v){document.getElementById('scan-manual-input').style.borderColor='#e74c3c';return;}
+          stopScanner();closeModalAPPCC();
+          setTimeout(()=>{const cb=window._currentScanCallback;if(cb)cb(parseScan(v));},100);
+        " style="background:#1a4fa8;color:#fff;border:none;border-radius:10px;padding:0 16px;font-size:18px;cursor:pointer">✓</button>
+      </div>
+    </div>
     <button class="btn btn-outline btn-block" style="margin-top:10px" onclick="stopScanner();closeModalAPPCC()">Cancelar</button>
   `);
 
   waitForLib(()=>window.Html5Qrcode, ()=>{
     const scanEl=document.getElementById('scan-reader');
-    if(!scanEl || !_scannerActive){return;} // modal closed before lib loaded
+    if(!scanEl || !_scannerActive){return;} // modal was closed before lib loaded
     if(!window.Html5Qrcode){
       const res=document.getElementById('scan-result');
-      if(res) res.innerHTML='<span style="color:#e74c3c">⚠ Librería de escáner no disponible. Comprueba conexión a internet.</span>';
+      if(res) res.innerHTML='<span style="color:#aaa;font-size:11px">Visor no disponible — usa el botón de arriba para fotografiar</span>';
       return;
     }
     try {
       _scanner = new Html5Qrcode('scan-reader');
     } catch(e) {
       const res=document.getElementById('scan-result');
-      if(res) res.innerHTML='<span style="color:#e74c3c">⚠ Error iniciando escáner: '+e.message+'</span>';
+      if(res) res.innerHTML='<span style="color:#aaa;font-size:11px">Usa el botón de arriba para fotografiar el código</span>';
       return;
     }
     _scanner.start(
       { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 260, height: 100 } },
+      { fps: 10, qrbox: { width: 240, height: 90 } },
       (decodedText) => {
         if (!_scannerActive) return;
         _scannerActive = false;
@@ -15184,21 +15220,15 @@ function openScanModal(onResult) {
       if(!res) return;
       const isPermission = err && (err.name==='NotAllowedError' || (err.message||'').includes('ermission'));
       if(isPermission){
-        res.innerHTML=`<span style="color:#e74c3c">⚠ Cámara bloqueada.<br>Ve a Ajustes del navegador → Permisos → Cámara → Permitir</span>
-          <br><button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="stopScanner();closeModalAPPCC()">Cerrar</button>`;
+        res.innerHTML=`<span style="color:#e67e22;font-size:11px">⚠ Permisos de cámara bloqueados para el visor.<br>Usa el botón de arriba para fotografiar, o ve a<br><strong>Ajustes → Safari → Cámara → Permitir</strong></span>`;
       } else {
-        // Fallback: file input
-        res.innerHTML=`<span style="color:#e67e22">No se pudo activar la cámara en tiempo real.</span>
-          <br><label style="display:inline-block;margin-top:10px;padding:8px 16px;background:#1a4fa8;color:#fff;border-radius:8px;cursor:pointer;font-size:13px">
-            📁 Subir imagen del código
-            <input type="file" accept="image/*" capture="environment" style="display:none" onchange="_scanFromFile(this,onResult||function(){})">
-          </label>`;
+        res.innerHTML=`<span style="color:#aaa;font-size:11px">Visor no disponible — usa el botón de arriba para fotografiar el código</span>`;
       }
     });
   }, 0, ()=>{
-    // Timeout fallback — Html5Qrcode didn't load
+    // Timeout: html5-qrcode no cargó (sin conexión o CDN lento)
     const res=document.getElementById('scan-result');
-    if(res) res.innerHTML='<span style="color:#e74c3c">⚠ No se pudo cargar el escáner. Comprueba tu conexión.</span>';
+    if(res) res.innerHTML='<span style="color:#aaa;font-size:11px">Usa el botón de arriba para fotografiar el código</span>';
   });
 }
 
@@ -16473,14 +16503,15 @@ var _wSession = (function(){
 
 /* ═══ APP SWITCHER ═══ */
 (function(){
-  var _cur = localStorage.getItem('_albaraba_app') || 'gestion';
+  // sessionStorage: recuerda pestaña dentro de la sesión, pero siempre arranca en GESTIÓN al abrir la app
+  var _cur = sessionStorage.getItem('_albaraba_app') || 'gestion';
   window.switchApp = function(app){
     var ga=document.getElementById('app-gestion');
     var aa=document.getElementById('app-appcc');
     var tg=document.getElementById('sw-gestion');
     var ta=document.getElementById('sw-appcc');
     if(!ga||!aa)return;
-    localStorage.setItem('_albaraba_app', app);
+    sessionStorage.setItem('_albaraba_app', app);
     if(app==='appcc'){
       ga.style.display='none'; aa.style.display='block';
       tg.classList.remove('active'); ta.classList.add('active');
@@ -16501,9 +16532,10 @@ var _wSession = (function(){
                 document.getElementById('section-dashboard').style.display!=='none') renderDashboard(); }catch(e){}
     }
   };
-  // Restore last tab after DOM ready
+  // Restaurar pestaña de la sesión actual (nunca forzar APPCC al abrir de cero)
   document.addEventListener('DOMContentLoaded', function(){
     if(_cur==='appcc') switchApp('appcc');
+    // else queda en gestión por defecto
   });
 })();
 
