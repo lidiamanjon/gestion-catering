@@ -5909,9 +5909,10 @@ function exportarAppccExcel(){
 // ═══════════════════════════════════════════════════
 // ROLES Y USUARIOS
 // ═══════════════════════════════════════════════════
-let userRole='trabajador';
-let currentUserEmail='';
-let currentUserName='';
+// Recuperar rol guardado en localStorage para evitar parpadeo al cargar
+let userRole=(localStorage.getItem('_albaraba_role')||'admin');
+let currentUserEmail=localStorage.getItem('_albaraba_email')||'';
+let currentUserName=localStorage.getItem('_albaraba_name')||'';
 function applyRole(email){
   if(email)currentUserEmail=(email||'').toLowerCase().trim();
   // contacto@alaboca.es es SIEMPRE admin - hardcoded
@@ -5930,6 +5931,10 @@ function applyRole(email){
     const prefix=currentUserEmail.split('@')[0];
     currentUserName=prefix.charAt(0).toUpperCase()+prefix.slice(1);
   }
+  // Guardar en localStorage para que el rol persista entre recargas
+  localStorage.setItem('_albaraba_role', userRole);
+  localStorage.setItem('_albaraba_email', currentUserEmail);
+  localStorage.setItem('_albaraba_name', currentUserName);
   _applyRoleDOM();
 }
 function _applyRoleDOM(){
