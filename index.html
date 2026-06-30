@@ -9718,6 +9718,41 @@ function getUnifiedProvs(){
 }
 
 // ============================================================
+// WORKER SESSION — selección de trabajador activo
+// ============================================================
+var _wSession = (function(){
+  function getWorker(){ return localStorage.getItem(K.wActive)||''; }
+  function updateHeader(){
+    var w = getWorker();
+    var el = document.getElementById('header-worker-sub');
+    if(el) el.textContent = w ? ('👤 '+w+' · APPCC') : 'Sistema APPCC · Catering';
+    var btn = document.getElementById('wchange-btn');
+    if(btn) btn.title = w ? ('Trabajador: '+w+' · Cambiar') : 'Seleccionar trabajador';
+  }
+  function showPicker(force){
+    var emps = ld(K.emp);
+    if(!emps||!emps.length) emps = ['Lidia','Edwin','Gustavo','Jeni'];
+    var current = getWorker();
+    var opts = emps.map(function(e){
+      return '<button onclick="localStorage.setItem(\''+K.wActive+'\',\''+e+'\');_wSession.updateHeader();closeModalAPPCC();try{showHome();}catch(x){}" style="display:block;width:100%;padding:14px 18px;margin-bottom:8px;background:'+(e===current?'var(--primary)':'#f0f4ff')+';color:'+(e===current?'#fff':'var(--primary)')+';border:2px solid var(--primary);border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">'+e+'</button>';
+    }).join('');
+    openModalAPPCC('<div class="modal-title">👤 ¿Quién está trabajando?</div>'+opts+(force?'':'<button onclick="closeModalAPPCC()" style="display:block;width:100%;padding:12px;margin-top:4px;background:#f5f5f5;border:none;border-radius:10px;font-size:14px;cursor:pointer;color:#888">Cancelar</button>'));
+  }
+  // Auto-mostrar picker si no hay trabajador activo
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      if(!getWorker()){
+        // Solo mostrar si estamos en APPCC
+        var aa = document.getElementById('app-appcc');
+        if(aa && aa.style.display !== 'none') showPicker(true);
+      }
+      updateHeader();
+    }, 500);
+  });
+  return { showPicker: showPicker, updateHeader: updateHeader };
+})();
+
+// ============================================================
 // SEED DATA
 // ============================================================
 if(!localStorage.getItem('a_v5')){localStorage.setItem('a_v5','1');
