@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260630-1200 -->
+<!-- VERSION: v20260630-1800 -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 if('serviceWorker' in navigator){
@@ -10,6 +10,27 @@ if('serviceWorker' in navigator){
 if('caches' in window){
   caches.keys().then(keys=>keys.forEach(k=>caches.delete(k)));
 }
+// ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
+window.switchApp = function(app){
+  var ag=document.getElementById('app-gestion');
+  var aa=document.getElementById('app-appcc');
+  var tg=document.getElementById('sw-gestion');
+  var ta=document.getElementById('sw-appcc');
+  if(!ag||!aa)return;
+  sessionStorage.setItem('_albaraba_app',app);
+  if(app==='appcc'){
+    ag.style.display='none'; aa.style.display='block';
+    if(tg)tg.classList.remove('active'); if(ta)ta.classList.add('active');
+    try{if(typeof showHome==='function')showHome();}catch(e){}
+  } else {
+    aa.style.display='none'; ag.style.display='';
+    if(ta)ta.classList.remove('active'); if(tg)tg.classList.add('active');
+    try{var s=(typeof currentSection!=='undefined'&&currentSection)?currentSection:'dashboard';if(typeof nav==='function')nav(s);}catch(e){}
+  }
+};
+document.addEventListener('DOMContentLoaded',function(){
+  if(sessionStorage.getItem('_albaraba_app')==='appcc') window.switchApp('appcc');
+});
 </script>
 <html lang="es">
 <head>
@@ -9353,6 +9374,47 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 
 </div><!-- /app-gestion -->
+
+<script>
+/* ═══ APP SWITCHER ═══ */
+(function(){
+  var _cur = sessionStorage.getItem('_albaraba_app') || 'gestion';
+
+  window.switchApp = function(app){
+    var ag = document.getElementById('app-gestion');
+    var aa = document.getElementById('app-appcc');
+    var tg = document.getElementById('sw-gestion');
+    var ta = document.getElementById('sw-appcc');
+    if(!ag || !aa) return;
+
+    sessionStorage.setItem('_albaraba_app', app);
+    _cur = app;
+
+    if(app === 'appcc'){
+      ag.style.display = 'none';
+      aa.style.display = 'block';
+      if(tg) tg.classList.remove('active');
+      if(ta) ta.classList.add('active');
+      try{ if(typeof showHome === 'function') showHome(); }catch(e){}
+    } else {
+      aa.style.display = 'none';
+      ag.style.display = '';
+      if(ta) ta.classList.remove('active');
+      if(tg) tg.classList.add('active');
+      try{
+        var sec = (typeof currentSection !== 'undefined' && currentSection) ? currentSection : 'dashboard';
+        if(typeof nav === 'function') nav(sec);
+      }catch(e){}
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    if(_cur === 'appcc'){
+      switchApp('appcc');
+    }
+  });
+})();
+</script>
 
 <!-- ══════════════════════════════════════
      APPCC FOOD SAFETY
