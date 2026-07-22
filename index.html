@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-eva-plan2 -->
+<!-- VERSION: v20260722-eva-plan3 -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -511,14 +511,14 @@ html,body{height:100%;color-scheme:light!important}
     <span id="user-greeting-name">👤</span>
   </div>
   <div class="nav-group">
-    <div class="nav-label admin-only">Principal</div>
-    <div class="ni active admin-only" id="ni-dashboard" onclick="nav('dashboard')"><span class="ic">📊</span> Dashboard</div>
+    <div class="nav-label">Principal</div>
+    <div class="ni active" id="ni-dashboard" onclick="nav('dashboard')"><span class="ic">📊</span> Dashboard</div>
     <div class="nav-label">Catálogo</div>
     <div class="ni" id="ni-proveedores" onclick="nav('proveedores')"><span class="ic">🏭</span> Proveedores</div>
     <div class="ni" id="ni-productos" onclick="nav('productos')"><span class="ic">📦</span> Productos</div>
     <div class="ni" id="ni-elaboraciones" onclick="nav('elaboraciones')"><span class="ic">👨‍🍳</span> Elaboraciones</div>
     <div class="nav-label">Operaciones</div>
-    <div class="ni" id="ni-hojas" onclick="nav('hojas')"><span class="ic">📅</span> Planificación Eva</div>
+    <div class="ni admin-only" id="ni-hojas" onclick="nav('hojas')"><span class="ic">📅</span> Planificación Eva</div>
     <div class="ni" id="ni-pedidos" onclick="nav('pedidos')"><span class="ic">🛒</span> Generar Pedido</div>
     <div class="ni" id="ni-stock" onclick="nav('stock')"><span class="ic">📦</span> Stock</div>
     <div class="ni" id="ni-congelador" onclick="nav('congelador')"><span class="ic">🧊</span> Stock Congelador</div>
@@ -802,6 +802,7 @@ html,body{height:100%;color-scheme:light!important}
     <button id="tab-hojas-pend" class="btn btn-gold" onclick="setHojasTab('pendientes')">⏳ Pendientes</button>
     <button id="tab-hojas-real" class="btn btn-outline" onclick="setHojasTab('realizados')">✅ Realizados</button>
     <button id="tab-hojas-all"  class="btn btn-outline" onclick="setHojasTab('todos')">📋 Todos</button>
+    <button class="btn btn-green" style="margin-left:auto" onclick="agruparPedidosEventos()">🛒 Agrupar pedidos <span id="eventos-pedido-count">(0)</span></button>
   </div>
   <div class="card">
     <div class="card-head">
@@ -4045,7 +4046,11 @@ window.addEventListener('storage',function(e){
 // NAVIGATION
 // ═══════════════════════════════════════════════════
 let currentSection='dashboard';
+const WORKER_ALLOWED_SECTIONS=new Set(['dashboard','proveedores','productos','elaboraciones','pedidos','stock','congelador','mejoras','tareas','recetas','albaranes']);
 function nav(s){
+  if(typeof userRole!=='undefined'&&userRole==='trabajador'&&!WORKER_ALLOWED_SECTIONS.has(s)){
+    alert('Este apartado está reservado para jefes y oficina.');return;
+  }
   document.querySelectorAll('.section').forEach(el=>{el.classList.remove('active');el.style.display='none';});
   document.querySelectorAll('.ni').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.mn-item').forEach(el=>el.classList.remove('active'));
@@ -4756,9 +4761,10 @@ function calcularPedido(){
   }
 
   // Save
+  const eventos=[...new Set(Object.values(pedidoSeleccionadas).flatMap(v=>v.eventos||[]))];
   const pedidoObj={id:uid(),fecha:new Date().toISOString(),
     elaboraciones:Object.entries(pedidoSeleccionadas).map(([id,v])=>({id,raciones:v.raciones,nombre:DB.elaboraciones.find(x=>x.id===id)?.nombre||''})),
-    byProv,totales};
+    eventos,estado:'calculado',desactualizado:false,byProv,totales};
   DB.pedidos.push(pedidoObj);saveDB();
   document.getElementById('pedido-result-content').innerHTML=html;
   document.getElementById('pedido-result').style.display='';
@@ -5127,6 +5133,7 @@ function exportarStockExcel(){
 // HOJAS DE SERVICIO
 // ═══════════════════════════════════════════════════
 let hojaMenuCounter=0;
+const eventosPedidoSeleccionados=new Set();
 
 let _hojasTab='pendientes';
 function setHojasTab(tab){
@@ -5153,6 +5160,7 @@ function renderHojasTable(q=''){
     const appccTotal=(h.menu||[]).length,appccDone=(h.menu||[]).filter(m=>m.appcc_estado==='completada').length,appccEnProceso=(h.menu||[]).filter(m=>m.appcc_estado==='elaborada').length;
     return`<div class="hoja-card">
       <div class="hoja-header" onclick="toggleHojaBody('${h.id}')">
+        <label title="Incluir en pedido agrupado" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${eventosPedidoSeleccionados.has(h.id)?'checked':''} onchange="toggleEventoPedido('${h.id}',this.checked)"> Agrupar</label>
         <div style="flex:1">
           <div style="font-size:15px;font-weight:700">${esc(h.cliente)}${h.empresa?` · <span style="color:var(--muted);font-weight:400">${esc(h.empresa)}</span>`:''}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr}${h.hora?` · ${esc(h.hora)}`:''}${h.lugar?` · 📍${esc(h.lugar)}`:''}</div>
@@ -5342,9 +5350,11 @@ function updateMenuItemName(sel){
 function getMenuItems(){
   return [...document.getElementById('hoja-menu-list').querySelectorAll('.menu-item-row')].map(row=>{
     const sel=row.querySelector('select');
-    const inputs=row.querySelectorAll('input');
-    const txt=inputs[0]?inputs[0].value.trim():'';
-    const paxOvr=inputs[1]?parseInt(inputs[1].value)||0:0;
+    const search=row.querySelector('input[id$="-search"]');
+    const libre=row.querySelector('input[placeholder="o escribe nombre libre"]');
+    const qty=row.querySelector('.pax-qty');
+    const txt=(libre?.value||search?.value||'').trim();
+    const paxOvr=parseInt(qty?.value)||0;
     const elabId=sel?sel.value:'';
     const elab=elabId?DB.elaboraciones.find(x=>x.id===elabId):null;
     const nombre=txt||(elab?elab.nombre:'');
@@ -5360,12 +5370,39 @@ function saveHoja(){
   const id=document.getElementById('hoja-id').value||uid();
   const obj={id,fecha:document.getElementById('hoja-fecha').value,hora:document.getElementById('hoja-hora').value,cliente,empresa:document.getElementById('hoja-empresa').value,tel:document.getElementById('hoja-tel').value,pax,servicio:document.getElementById('hoja-servicio').value,lugar:document.getElementById('hoja-lugar').value,menu:getMenuItems(),postre:document.getElementById('hoja-postre').value,precio_venta:parseFloat(document.getElementById('hoja-precio-venta').value)||0,indicaciones:document.getElementById('hoja-indicaciones').value,notas:document.getElementById('hoja-notas').value};
   const idx=DB.hojas.findIndex(x=>x.id===id);
-  const existente=DB.hojas.find(x=>x.id===id);
-  if(existente){Object.assign(existente,obj);if(existente.fuente)obj.fuente=existente.fuente;if(existente.realizado)obj.realizado=existente.realizado;DB.hojas[DB.hojas.findIndex(x=>x.id===id)]=obj;}
-  else{obj.realizado=false;DB.hojas.push(obj);}
+  const existente=idx>=0?DB.hojas[idx]:null;
+  let recalculadas=0;
+  if(existente){
+    const anteriores=JSON.parse(JSON.stringify(existente));
+    const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+    obj.menu=obj.menu.map(nuevo=>{
+      const anterior=(existente.menu||[]).find(m=>(nuevo.elab_id&&m.elab_id===nuevo.elab_id)||(!nuevo.elab_id&&!m.elab_id&&norm(m.nombre)===norm(nuevo.nombre)));
+      if(!anterior)return nuevo;
+      const racAntes=parseInt(anterior.pax_override)||parseInt(existente.pax)||0;
+      const racAhora=parseInt(nuevo.pax_override)||pax;
+      if(racAntes===racAhora){
+        Object.keys(anterior).filter(k=>k.startsWith('appcc_')).forEach(k=>nuevo[k]=anterior[k]);
+      }else{
+        nuevo.appcc_estado='pendiente';recalculadas++;
+      }
+      return nuevo;
+    });
+    const eliminadas=(existente.menu||[]).filter(a=>!obj.menu.some(n=>(n.elab_id&&n.elab_id===a.elab_id)||(!n.elab_id&&!a.elab_id&&norm(n.nombre)===norm(a.nombre)))).length;
+    const anadidas=obj.menu.filter(n=>!(existente.menu||[]).some(a=>(n.elab_id&&n.elab_id===a.elab_id)||(!n.elab_id&&!a.elab_id&&norm(n.nombre)===norm(a.nombre)))).length;
+    recalculadas+=anadidas+eliminadas;
+    obj.fuente=existente.fuente||obj.fuente;
+    obj.realizado=Boolean(existente.realizado);
+    obj.fecha_realizado=existente.fecha_realizado||'';
+    obj.creado_en=existente.creado_en||new Date().toISOString();
+    obj.actualizado_en=new Date().toISOString();
+    obj.revisiones=[...(existente.revisiones||[]),{fecha:obj.actualizado_en,pax_anterior:existente.pax,pax_nuevo:pax,menu_anterior:anteriores.menu||[],resumen:{anadidas,eliminadas,recalculadas}}].slice(-20);
+    DB.hojas[idx]={...existente,...obj};
+    (DB.pedidos||[]).forEach(p=>{if((p.eventos||[]).includes(id))p.desactualizado=true;});
+  } else {obj.realizado=false;obj.creado_en=new Date().toISOString();DB.hojas.push(obj);}
   saveDB();closeModal('modal-hoja');
   if(typeof setHojasTab==='function')setHojasTab('pendientes');
   else renderHojasTable();
+  if(existente&&recalculadas)alert('✅ Evento actualizado. Se han recalculado '+recalculadas+' elementos y los pedidos anteriores quedan marcados para revisar.');
 }
 
 function deleteHoja(id){
@@ -5402,7 +5439,7 @@ function generarPresupuesto_G(id){
 function confirmarServicioRealizado(id){
   const h=DB.hojas.find(x=>x.id===id);if(!h)return;
   const appccPendientes=(h.menu||[]).filter(m=>m.appcc_estado!=='completada');
-  if(appccPendientes.length){alert('No se puede cerrar el evento: quedan '+appccPendientes.length+' elaboraciones sin finalizar en APPCC.\n\nCompleta elaboración, lotes y entrega/regeneración antes de confirmar el servicio.');return;}
+  if(appccPendientes.length&&!confirm('⚠️ AVISO: quedan '+appccPendientes.length+' elaboraciones sin finalizar en APPCC.\n\nPuedes cerrar el evento igualmente; el expediente conservará este aviso. ¿Continuar?'))return;
   const pax=parseInt(h.pax)||0;
   // Calculate totals to deduct
   const descuentos={};
@@ -5438,7 +5475,7 @@ function confirmarServicioRealizado(id){
   });
   // Mark as done
   const idx=DB.hojas.findIndex(x=>x.id===id);
-  if(idx>=0){DB.hojas[idx].realizado=true;DB.hojas[idx].fecha_realizado=new Date().toISOString();}
+  if(idx>=0){DB.hojas[idx].realizado=true;DB.hojas[idx].fecha_realizado=new Date().toISOString();DB.hojas[idx].cierre_con_avisos=appccPendientes.length>0;DB.hojas[idx].appcc_pendientes_al_cierre=appccPendientes.map(m=>m.nombre);}
   saveDB();
   renderHojasTable();
   alert(`✅ Servicio confirmado. Stock actualizado${nProds?` (${nProds} productos descontados)`:''}.`);
@@ -5447,9 +5484,31 @@ function confirmarServicioRealizado(id){
 function cargarPedidoDesdeHoja(id){
   const h=DB.hojas.find(x=>x.id===id);if(!h)return;
   Object.keys(pedidoSeleccionadas).forEach(k=>delete pedidoSeleccionadas[k]);
-  (h.menu||[]).forEach(m=>{if(m.elab_id)pedidoSeleccionadas[m.elab_id]={elaboracion_id:m.elab_id,raciones:m.pax_override||h.pax||1,evento_id:h.id};});
+  (h.menu||[]).forEach(m=>{if(m.elab_id)pedidoSeleccionadas[m.elab_id]={elaboracion_id:m.elab_id,raciones:m.pax_override||h.pax||1,eventos:[h.id]};});
   if(!Object.keys(pedidoSeleccionadas).length){alert('Primero vincula las elaboraciones de esta hoja con el catálogo.');return;}
   nav('pedidos');renderPedidoSection();setTimeout(()=>calcularPedido(),80);
+}
+
+function toggleEventoPedido(id,checked){
+  if(checked)eventosPedidoSeleccionados.add(id);else eventosPedidoSeleccionados.delete(id);
+  const count=document.getElementById('eventos-pedido-count');if(count)count.textContent='('+eventosPedidoSeleccionados.size+')';
+}
+
+function agruparPedidosEventos(){
+  const hojas=(DB.hojas||[]).filter(h=>eventosPedidoSeleccionados.has(h.id));
+  if(!hojas.length){alert('Marca al menos un evento con la casilla «Agrupar».');return;}
+  Object.keys(pedidoSeleccionadas).forEach(k=>delete pedidoSeleccionadas[k]);
+  const sinVincular=[];
+  hojas.forEach(h=>(h.menu||[]).forEach(m=>{
+    if(!m.elab_id){sinVincular.push(h.cliente+': '+m.nombre);return;}
+    const rac=parseInt(m.pax_override)||parseInt(h.pax)||1;
+    if(!pedidoSeleccionadas[m.elab_id])pedidoSeleccionadas[m.elab_id]={elaboracion_id:m.elab_id,raciones:0,eventos:[]};
+    pedidoSeleccionadas[m.elab_id].raciones+=rac;
+    pedidoSeleccionadas[m.elab_id].eventos.push(h.id);
+  }));
+  if(!Object.keys(pedidoSeleccionadas).length){alert('Los eventos seleccionados no tienen elaboraciones vinculadas al catálogo.');return;}
+  nav('pedidos');renderPedidoSection();setTimeout(()=>calcularPedido(),80);
+  if(sinVincular.length)alert('⚠️ Pedido calculado, pero estas elaboraciones no se incluyeron porque aún no están vinculadas:\n\n'+sinVincular.join('\n'));
 }
 
 function listaComprasDesdeHoja(id){
@@ -6453,13 +6512,43 @@ function previewEvaImport(payload){
     <div class="notice info" style="margin-top:10px">Guardar crea el evento y sus elaboraciones pendientes. No envía pedidos ni descuenta stock.</div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="openEvaImportModal()">← Corregir</button><button class="btn btn-gold" onclick="confirmEvaImport()">✓ Guardar planificación</button></div>`, 'lg');
 }
+function _evaRegistrarElaboracionesNuevas(hoja){
+  const desconocidas=(hoja.menu||[]).filter(m=>!m.elab_id);
+  if(!desconocidas.length)return 0;
+  if(!confirm('Eva ha detectado '+desconocidas.length+' elaboración(es) que no están en el catálogo:\n\n'+desconocidas.map(m=>'· '+m.nombre).join('\n')+'\n\n¿Quieres registrarlas ahora como fichas pendientes de completar?'))return 0;
+  desconocidas.forEach(m=>{
+    const ya=_evaFindElab(m.nombre);
+    const e=ya||{id:uid(),nombre:m.nombre,categoria:'otros',raciones_base:10,ingredientes:[],proceso:'',notas:'Creada desde Planificación Eva. Pendiente completar receta, proceso y precios.',foto:'',creada_desde_eva:true};
+    if(!ya)DB.elaboraciones.push(e);
+    m.elab_id=e.id;m.nombre=e.nombre;
+  });
+  return desconocidas.length;
+}
+function _evaCompletarPrecios(hoja){
+  const productos=new Map();
+  const sinReceta=[];
+  (hoja.menu||[]).forEach(m=>{
+    const e=DB.elaboraciones.find(x=>x.id===m.elab_id);if(!e)return;
+    if(!(e.ingredientes||[]).length){sinReceta.push(e.nombre);return;}
+    e.ingredientes.forEach(i=>{const p=DB.productos.find(x=>x.id===i.producto_id);if(p&&!(parseFloat(p.precio_compra||p.precio)>0))productos.set(p.id,p);});
+  });
+  if(productos.size&&confirm('Faltan precios de compra en '+productos.size+' producto(s). ¿Quieres introducirlos ahora?\n\nPuedes cancelar cualquier precio y el evento se guardará igualmente.')){
+    productos.forEach(p=>{const valor=prompt('Precio de compra de «'+p.nombre+'» por '+(p.unidad||'unidad')+' (€):','');if(valor!==null&&String(valor).trim()!==''&&parseFloat(String(valor).replace(',','.'))>=0)p.precio_compra=parseFloat(String(valor).replace(',','.'));});
+  }
+  if(!(parseFloat(hoja.precio_venta)>0)&&confirm('Este evento no tiene precio de venta. ¿Quieres introducirlo ahora?')){
+    const valor=prompt('Precio total de venta del evento (€):','');if(valor!==null&&String(valor).trim()!=='')hoja.precio_venta=parseFloat(String(valor).replace(',','.'))||0;
+  }
+  return [...new Set(sinReceta)];
+}
 function confirmEvaImport(){
   const hoja=window._evaHojaPreview;if(!hoja)return;
   if(!hoja.cliente||!hoja.fecha||!hoja.pax){alert('Faltan cliente, fecha o número de asistentes. Corrige la hoja antes de guardarla.');return;}
+  const nuevas=_evaRegistrarElaboracionesNuevas(hoja);
+  const sinReceta=_evaCompletarPrecios(hoja);
   const idx=(DB.hojas||[]).findIndex(x=>x.id===hoja.id);
   if(idx>=0)DB.hojas[idx]=hoja;else DB.hojas.unshift(hoja);
   saveDB();window._evaHojaPreview=null;closeModal('modal-universal');updateEvaPlanSummary();setHojasTab('pendientes');
-  alert('✅ Planificación guardada. Las elaboraciones ya aparecen como pendientes en APPCC.');
+  alert('✅ Planificación guardada. Las elaboraciones ya aparecen como pendientes en APPCC.'+(nuevas?'\n\nSe han creado '+nuevas+' fichas nuevas en el catálogo.':'')+(sinReceta.length?'\n\n⚠️ Pendiente completar receta y precios de: '+sinReceta.join(', '):''));
 }
 function importEvaHojaFile(event){
   const file=event.target.files?.[0];event.target.value='';if(!file)return;
@@ -9516,6 +9605,7 @@ window.addEventListener('DOMContentLoaded',()=>{
       if(user){
         if(overlay)overlay.style.display='none';
         loadDB();
+        if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
         applyRole(user.email);
         nav('dashboard');
       } else {
@@ -9527,6 +9617,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     const overlay=document.getElementById('login-overlay');
     if(overlay)overlay.style.display='none';
     loadDB();
+    if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
     nav('dashboard');
   }
 });
@@ -9881,7 +9972,38 @@ const ld=k=>{
     return Array.isArray(value)?value:[];
   }catch(e){console.warn('Dato APPCC dañado; se ignora:',k);return fallback}
 };
-const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+const APPCC_DEVICE_LOCAL_KEYS=new Set([K.wActive]);
+let _appccCloudApplying=false,_appccCloudRef=null;
+const _appccCloudTimers={};
+const sv=(k,v)=>{
+  localStorage.setItem(k,JSON.stringify(v));
+  if(_appccCloudRef&&!_appccCloudApplying&&!APPCC_DEVICE_LOCAL_KEYS.has(k)){
+    clearTimeout(_appccCloudTimers[k]);setSyncStatus('saving');
+    _appccCloudTimers[k]=setTimeout(()=>_appccCloudRef.child(k).set(v).then(()=>setSyncStatus('ok')).catch(e=>{console.error('APPCC cloud:',e);setSyncStatus('error');}),180);
+  }
+};
+function initAPPCCCloudSync(){
+  if(_appccCloudRef||!fbDB||!fbAuth||!fbAuth.currentUser)return;
+  _appccCloudRef=fbDB.ref('appcc_v1');
+  _appccCloudRef.once('value').then(snap=>{
+    const remoto=snap.val();
+    if(remoto){
+      _appccCloudApplying=true;
+      Object.entries(remoto).forEach(([k,v])=>{if(!APPCC_DEVICE_LOCAL_KEYS.has(k))localStorage.setItem(k,JSON.stringify(v));});
+      _appccCloudApplying=false;
+    }else{
+      const inicial={};Object.values(K).forEach(k=>{if(APPCC_DEVICE_LOCAL_KEYS.has(k))return;const raw=localStorage.getItem(k);if(raw!==null)try{inicial[k]=JSON.parse(raw)}catch(e){}});
+      if(Object.keys(inicial).length)_appccCloudRef.set(inicial);
+    }
+    setSyncStatus('ok');
+    _appccCloudRef.on('value',cloudSnap=>{
+      const data=cloudSnap.val()||{};_appccCloudApplying=true;
+      Object.entries(data).forEach(([k,v])=>{if(!APPCC_DEVICE_LOCAL_KEYS.has(k))localStorage.setItem(k,JSON.stringify(v));});
+      _appccCloudApplying=false;
+      if(typeof renderHomeAlerts==='function')renderHomeAlerts();
+    });
+  }).catch(e=>{console.error('APPCC cloud init:',e);setSyncStatus('error');});
+}
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function genLot(){const n=new Date(),p=x=>String(x).padStart(2,'0');return String(n.getFullYear()).slice(2)+p(n.getMonth()+1)+p(n.getDate())+p(n.getHours())+p(n.getMinutes())+p(n.getSeconds())}
 function today(){return new Date().toISOString().slice(0,10)}
@@ -10207,6 +10329,9 @@ function renderHomeAlerts(){
     </div>`).join('')}</div>`;
 }
 function showMod(id){
+  if(typeof userRole!=='undefined'&&userRole==='trabajador'&&id==='inf'){
+    alert('Los informes APPCC están reservados para jefes y oficina.');return;
+  }
   _openModDirect(id);
 }
 function renderMod(id){
@@ -10342,6 +10467,7 @@ function renderTileGrid(){
   SECTIONS.forEach(sec=>{
     html+=`<div class="tile-section-header">${sec.header}</div>`;
     sec.mods.forEach(mod=>{
+      if(typeof userRole!=='undefined'&&userRole==='trabajador'&&mod==='inf')return;
       const t=tileMap[mod];
       if(!t)return;
       const cnt=getPendingCount(t.mod);
