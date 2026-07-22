@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-sync-segura1 -->
+<!-- VERSION: v20260722-eva-bridge2 -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -780,7 +780,7 @@ html,body{height:100%;color-scheme:light!important}
 
 <div class="section" id="section-hojas">
   <div class="topbar">
-    <div><div class="pg-title">📅 Planificación con Eva</div><div class="pg-sub">Una hoja alimenta elaboraciones, compras, costes, stock y trazabilidad</div></div>
+    <div><div class="pg-title">📅 Eventos a realizar · Planificación Eva</div><div class="pg-sub">Documentos, cobros, elaboraciones, compras, stock y trazabilidad en un único evento</div></div>
     <button class="btn btn-outline" onclick="descargarHojas()">📥 Descargar</button>
     <button class="btn btn-gold" onclick="openHojaModal()">+ Añadir evento</button>
   </div>
@@ -2318,10 +2318,10 @@ function renderAlbaranes(){
           <div class="list-icon">🧾</div>
           <div class="list-main" style="flex:1">
             <div class="list-title">${esc(h.proveedor||'Sin proveedor')} · ${h.fecha||''}</div>
-            <div class="list-sub">${h.nLineas||0} líneas · <strong>${h.actualizados||0} productos actualizados</strong></div>
+            <div class="list-sub">${h.nLineas||0} líneas · <strong>${h.actualizados||0} productos actualizados</strong>${h.estado_revision==='pendiente'?` · <span style="color:#c2410c;font-weight:700">Pendiente de revisión</span>`:''}</div>
           </div>
           <div style="display:flex;gap:6px;align-items:center">
-            ${h.imagen?`<button class="btn btn-sm" onclick="verImagenAlbaran(${realIdx})" style="background:#1a4fa8;color:#fff">📄 Ver albarán</button>`:'<span style="font-size:11px;color:#ccc">Sin imagen</span>'}
+            ${h.documento_url?`<button class="btn btn-sm btn-outline" onclick="abrirDocumentoAlbaran(${realIdx})">🔗 Abrir original</button>`:h.imagen?`<button class="btn btn-sm" onclick="verImagenAlbaran(${realIdx})" style="background:#1a4fa8;color:#fff">📄 Ver albarán</button>`:'<span style="font-size:11px;color:#ccc">Sin imagen</span>'}
           </div>
         </div>`;
       }).join('')}
@@ -5224,7 +5224,7 @@ function renderHojasTable(q=''){
     const appccTotal=(h.menu||[]).length,appccDone=(h.menu||[]).filter(m=>m.appcc_estado==='completada').length,appccEnProceso=(h.menu||[]).filter(m=>m.appcc_estado==='elaborada').length;
     return`<div class="hoja-card">
       <div class="hoja-header" onclick="toggleHojaBody('${h.id}')">
-        <label title="Incluir en pedido agrupado" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${eventosPedidoSeleccionados.has(h.id)?'checked':''} onchange="toggleEventoPedido('${h.id}',this.checked)"> Agrupar</label>
+        <label title="Incluir en pedido agrupado" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${eventosPedidoSeleccionados.has(h.id)?'checked':''} ${h.eva_revision_pendiente?'disabled':''} onchange="toggleEventoPedido('${h.id}',this.checked)"> Agrupar</label>
         <div style="flex:1">
           <div style="font-size:15px;font-weight:700">${esc(h.cliente)}${h.empresa?` · <span style="color:var(--muted);font-weight:400">${esc(h.empresa)}</span>`:''}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr}${h.hora?` · ${esc(h.hora)}`:''}${h.lugar?` · 📍${esc(h.lugar)}`:''}</div>
@@ -5233,7 +5233,7 @@ function renderHojasTable(q=''){
         <span class="badge b-prov">${esc(h.servicio||'')}</span>
         ${appccTotal?`<span class="badge" style="background:${appccDone===appccTotal?'#dcfce7':appccEnProceso?'#fff7ed':'#eef4ff'};color:${appccDone===appccTotal?'#166534':appccEnProceso?'#9a3412':'#1a4fa8'}">APPCC ${appccDone}/${appccTotal}${appccEnProceso?' · '+appccEnProceso+' en proceso':''}</span>`:''}
         ${h.fuente?`<span class="badge" style="background:rgba(99,102,241,.1);color:#4338ca;font-size:10px">${h.fuente==='alaboca'?'🍽 Alaboca':'🌿 PV'}</span>`:''}
-        ${h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`}
+        ${h.eva_revision_pendiente||h.eva_cambio_pendiente?`<span class="badge b-warn">✨ Revisión de Eva pendiente</span><button class="btn btn-sm btn-green" onclick="event.stopPropagation();aprobarPropuestaEva('${h.id}')">✓ Revisar y aprobar</button><button class="btn btn-sm btn-del" onclick="event.stopPropagation();rechazarPropuestaEva('${h.id}')">Rechazar</button>`:h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`}
         <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')">📄 PDF</button>
         <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();cargarPedidoDesdeHoja('${h.id}')">🛒 Calcular pedido</button>
         <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();descargarEventoParaEva('${h.id}')">⬇ Expediente Eva</button>
@@ -5250,6 +5250,33 @@ function renderHojasTable(q=''){
 function toggleHojaBody(id){
   const el=document.getElementById('body-'+id);
   el.classList.toggle('open');
+}
+
+function abrirDocumentoEvento(id,tipo){
+  const h=(DB.hojas||[]).find(x=>x.id===id);if(!h)return;
+  const url=tipo==='carpeta_drive_url'?h.carpeta_drive_url:h.documentos?.[tipo];
+  if(!/^https:\/\//i.test(String(url||''))){alert('Este documento todavía no tiene un enlace válido en Drive.');return;}
+  window.open(url,'_blank','noopener');
+}
+
+function renderDocumentacionEvento(h){
+  const docs=h.documentos||{},fac=h.facturacion||{};
+  const enlaces=[
+    ['presupuesto_url','Presupuesto',docs.presupuesto_url],
+    ['hoja_servicio_url','Hoja de servicio',docs.hoja_servicio_url],
+    ['factura_url','Factura final',docs.factura_url],
+    ['carpeta_drive_url','Carpeta del cliente',h.carpeta_drive_url]
+  ];
+  const total=Math.max(0,Number(fac.total_factura||0)),cobrado=Math.max(0,Number(fac.importe_cobrado||0)),pendiente=Math.max(0,total-cobrado);
+  const estadoCobro=String(fac.estado_cobro||'pendiente').toLowerCase();
+  const colorCobro=estadoCobro==='cobrado'?'#166534':estadoCobro==='parcial'?'#9a3412':'#991b1b';
+  const fondoCobro=estadoCobro==='cobrado'?'#dcfce7':estadoCobro==='parcial'?'#fff7ed':'#fef2f2';
+  return`<div style="margin-bottom:14px;padding:12px 14px;background:#f8fafc;border:1px solid #dbe3ef;border-radius:10px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px"><strong style="font-size:13px">📁 Documentación y cobro</strong><span class="badge b-cat">${esc(String(h.estado_comercial||'pendiente').replaceAll('_',' '))}</span><span class="badge" style="background:${fondoCobro};color:${colorCobro}">${estadoCobro==='parcial'?'Cobrado parcialmente':estadoCobro==='cobrado'?'Cobrado':'Cobro pendiente'}</span>${h.archivado_cliente_en?'<span class="badge b-ok">Archivado en cliente</span>':''}</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">${enlaces.map(([tipo,nombre,url])=>url?`<button class="btn btn-sm btn-outline" onclick="abrirDocumentoEvento('${h.id}','${tipo}')">🔗 ${nombre}</button>`:`<span class="badge" style="background:#eee;color:#777">${nombre}: pendiente</span>`).join('')}</div>
+    ${(total||fac.numero_factura)?`<div style="font-size:12px;color:var(--muted);margin-top:9px">Factura ${esc(fac.numero_factura||'sin número')} · Total: <strong>${total.toLocaleString('es-ES',{style:'currency',currency:'EUR'})}</strong> · Cobrado: <strong>${cobrado.toLocaleString('es-ES',{style:'currency',currency:'EUR'})}</strong> · Pendiente: <strong>${pendiente.toLocaleString('es-ES',{style:'currency',currency:'EUR'})}</strong></div>`:''}
+    <div style="font-size:10px;color:var(--muted);margin-top:7px">Los archivos originales permanecen en Drive; aquí solo se guardan sus enlaces y estados.</div>
+  </div>`;
 }
 
 function renderHojaBody(h){
@@ -5281,6 +5308,7 @@ function renderHojaBody(h){
   }
   return`
     ${pedBadge}
+    ${renderDocumentacionEvento(h)}
     <div class="hoja-meta">
       <div class="hoja-meta-item"><div class="lbl">PAX</div><div class="val">👥 ${h.pax}</div></div>
       <div class="hoja-meta-item"><div class="lbl">Servicio</div><div class="val">${esc(h.servicio||'—')}</div></div>
@@ -5502,6 +5530,7 @@ function generarPresupuesto_G(id){
 
 function confirmarServicioRealizado(id){
   const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  if(h.eva_revision_pendiente||h.eva_cambio_pendiente){alert('Revisa primero la propuesta pendiente de Eva.');return;}
   const appccPendientes=(h.menu||[]).filter(m=>m.appcc_estado!=='completada');
   if(appccPendientes.length&&!confirm('⚠️ AVISO: quedan '+appccPendientes.length+' elaboraciones sin finalizar en APPCC.\n\nPuedes cerrar el evento igualmente; el expediente conservará este aviso. ¿Continuar?'))return;
   const pax=parseInt(h.pax)||0;
@@ -5547,6 +5576,7 @@ function confirmarServicioRealizado(id){
 
 function cargarPedidoDesdeHoja(id){
   const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  if(h.eva_revision_pendiente){alert('Este evento todavía está pendiente de revisión humana.');return;}
   Object.keys(pedidoSeleccionadas).forEach(k=>delete pedidoSeleccionadas[k]);
   (h.menu||[]).forEach(m=>{if(m.elab_id)pedidoSeleccionadas[m.elab_id]={elaboracion_id:m.elab_id,raciones:m.pax_override||h.pax||1,eventos:[h.id]};});
   if(!Object.keys(pedidoSeleccionadas).length){alert('Primero vincula las elaboraciones de esta hoja con el catálogo.');return;}
@@ -5559,7 +5589,7 @@ function toggleEventoPedido(id,checked){
 }
 
 function agruparPedidosEventos(){
-  const hojas=(DB.hojas||[]).filter(h=>eventosPedidoSeleccionados.has(h.id));
+  const hojas=(DB.hojas||[]).filter(h=>eventosPedidoSeleccionados.has(h.id)&&!h.eva_revision_pendiente);
   if(!hojas.length){alert('Marca al menos un evento con la casilla «Agrupar».');return;}
   Object.keys(pedidoSeleccionadas).forEach(k=>delete pedidoSeleccionadas[k]);
   const sinVincular=[];
@@ -6556,8 +6586,10 @@ function normalizarHojaEva(payload){
     };
   }).filter(x=>x.nombre);
   const fecha=src.fecha||src.date||src.eventDate||src.fecha_evento||'';
+  const documentos=src.documentos||{};
+  const facturacion=src.facturacion||src.factura||{};
   return{
-    id:src.id||('eva_'+uid()),fecha:String(fecha).slice(0,10),hora:src.hora||src.time||'',
+    id:src.id_evento||src.id||('eva_'+uid()),eva_id:src.id_evento||src.id||'',fecha:String(fecha).slice(0,10),hora:src.hora||src.time||'',
     cliente:src.cliente||src.customer||src.clientName||src.nombre_cliente||'',
     empresa:src.empresa||src.company||'',tel:src.tel||src.telefono||src.phone||'',
     pax:Math.max(0,parseInt(src.pax??src.asistentes??src.guests??0)||0),
@@ -6566,7 +6598,18 @@ function normalizarHojaEva(payload){
     postre:src.postre||src.dessert||'',precio_venta:parseFloat(src.precio_venta??src.totalPrice??src.price??0)||0,
     indicaciones:src.indicaciones||src.restricciones||src.instructions||'',
     notas:src.notas||src.notes||'',fuente:'eva',origen_documento:src.origen_documento||src.source||'Eva',
-    realizado:Boolean(src.realizado),eva_importado_en:new Date().toISOString()
+    realizado:Boolean(src.realizado),marca:src.marca||'',estado:src.estado||'pendiente',
+    estado_comercial:src.estado_comercial||(src.confirmado?'confirmado':'pendiente'),
+    carpeta_drive_url:src.carpeta_drive_url||src.drive_folder_url||'',
+    documentos:{
+      presupuesto_url:documentos.presupuesto_url||src.presupuesto_url||'',presupuesto_estado:documentos.presupuesto_estado||src.presupuesto_estado||'',
+      hoja_servicio_url:documentos.hoja_servicio_url||src.hoja_servicio_url||'',factura_url:documentos.factura_url||facturacion.factura_url||src.factura_url||''
+    },
+    facturacion:{
+      numero_factura:facturacion.numero_factura||'',fecha_factura:facturacion.fecha_factura||'',total_factura:Math.max(0,Number(facturacion.total_factura??src.total_factura??0)||0),
+      estado_cobro:facturacion.estado_cobro||src.estado_cobro||'pendiente',importe_cobrado:Math.max(0,Number(facturacion.importe_cobrado??src.importe_cobrado??0)||0),fecha_ultimo_cobro:facturacion.fecha_ultimo_cobro||''
+    },
+    archivado_cliente_en:src.archivado_cliente_en||'',eva_importado_en:new Date().toISOString()
   };
 }
 function _evaPreviewHtml(hoja){
@@ -6637,8 +6680,82 @@ function importEvaHojaFile(event){
   const file=event.target.files?.[0];event.target.value='';if(!file)return;
   const reader=new FileReader();reader.onload=()=>{try{previewEvaImport(JSON.parse(String(reader.result||'')));}catch(e){alert('No se pudo leer el JSON de Eva.');}};reader.readAsText(file,'UTF-8');
 }
+function abrirDocumentoAlbaran(idx){
+  const h=(DB.albaranesLog||[])[idx],url=String(h?.documento_url||'');
+  if(!/^https:\/\//i.test(url)){alert('El enlace del documento no es válido.');return;}
+  window.open(url,'_blank','noopener');
+}
+let _evaBridgeRef=null;
+function initEvaBridgeSync(){
+  if(_evaBridgeRef||!fbDB||!fbAuth||!fbAuth.currentUser)return;
+  _evaBridgeRef=fbDB.ref('eva_bridge_v1/inbox');
+  _evaBridgeRef.on('child_added',snap=>{
+    const msg=snap.val()||{};
+    if(msg.tipo==='documento_proveedor'&&msg.estado==='pendiente_revision'&&msg.documento){
+      if(!(DB.albaranesLog||[]).some(x=>x.eva_bridge_message_id===snap.key)){
+        const d=msg.documento;DB.albaranesLog=DB.albaranesLog||[];
+        DB.albaranesLog.push({id:d.id_documento||('eva_'+snap.key),eva_bridge_message_id:snap.key,origen:'EVA_CHATGPT',proveedor:d.proveedor||'',fecha:d.fecha||'',numero_documento:d.numero_documento||'',tipo_documento:d.tipo_documento||'albaran',base_imponible:d.base_imponible||0,iva:d.iva||0,total:d.total||0,nLineas:(d.productos||[]).length,actualizados:0,lineas:d.productos||[],documento_url:d.archivo_origen||'',estado_revision:'pendiente',id_evento:msg.id_evento||'',ts:Date.now()});
+        saveDB();if(currentSection==='albaranes')renderAlbaranes();
+      }
+      snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});return;
+    }
+    if(msg.estado!=='pendiente_revision'||!msg.evento)return;
+    const hoja=normalizarHojaEva(msg.evento);hoja.eva_id=msg.id_evento||hoja.id;hoja.id=hoja.eva_id;
+    hoja.eva_bridge_message_id=snap.key;hoja.eva_recibido_en=msg.recibido_en||new Date().toISOString();
+    const existente=(DB.hojas||[]).find(h=>h.id===hoja.id||h.eva_id===hoja.eva_id);
+    if(existente){
+      if(existente.eva_bridge_message_id===snap.key||existente.eva_cambio_pendiente?.eva_bridge_message_id===snap.key)return;
+      hoja.id=existente.id;hoja.eva_bridge_message_id=snap.key;existente.eva_cambio_pendiente=hoja;
+    }else{
+      hoja.eva_revision_pendiente=true;hoja.estado='pendiente_revision_eva';hoja.realizado=false;DB.hojas.unshift(hoja);
+    }
+    saveDB();
+    snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});
+    if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
+  },e=>console.error('Puente Eva:',e));
+}
+function aprobarPropuestaEva(id){
+  const h=(DB.hojas||[]).find(x=>x.id===id);if(!h)return;
+  const propuesta=h.eva_cambio_pendiente||h;
+  window._evaBridgeReviewId=id;
+  openModal(`<div class="modal-title">✨ Revisar propuesta recibida de Eva</div>${_evaPreviewHtml(propuesta)}
+    <div class="notice info" style="margin-top:10px">Al aprobar, la app conservará la trazabilidad existente de las elaboraciones que no hayan cambiado. Los cambios de raciones volverán a quedar pendientes de APPCC.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Seguir revisando después</button><button class="btn btn-green" onclick="confirmarPropuestaEva()">✓ Aprobar propuesta</button></div>`, 'lg');
+}
+function confirmarPropuestaEva(){
+  const id=window._evaBridgeReviewId,h=(DB.hojas||[]).find(x=>x.id===id);if(!h)return;
+  const esCambio=Boolean(h.eva_cambio_pendiente),propuesta=JSON.parse(JSON.stringify(h.eva_cambio_pendiente||h));
+  _evaRegistrarElaboracionesNuevas(propuesta);_evaCompletarPrecios(propuesta);
+  let final=propuesta;
+  if(esCambio){
+    propuesta.menu=(propuesta.menu||[]).map(nuevo=>{
+      const anterior=(h.menu||[]).find(m=>(nuevo.elab_id&&m.elab_id===nuevo.elab_id)||_evaNormText(m.nombre)===_evaNormText(nuevo.nombre));
+      if(!anterior)return nuevo;
+      const antes=parseInt(anterior.pax_override)||parseInt(h.pax)||0,ahora=parseInt(nuevo.pax_override)||parseInt(propuesta.pax)||0;
+      if(antes===ahora)Object.keys(anterior).filter(k=>k.startsWith('appcc_')).forEach(k=>nuevo[k]=anterior[k]);
+      else nuevo.appcc_estado='pendiente';
+      return nuevo;
+    });
+    final={...h,...propuesta,id:h.id,eva_id:h.eva_id||propuesta.eva_id,realizado:h.realizado};
+  }
+  const messageId=propuesta.eva_bridge_message_id||h.eva_bridge_message_id;
+  delete final.eva_revision_pendiente;delete final.eva_cambio_pendiente;
+  final.estado=final.realizado?'realizado':'pendiente';final.eva_aprobado_en=new Date().toISOString();final.actualizado_en=final.eva_aprobado_en;
+  final.revisiones=[...(h.revisiones||[]),{fecha:final.eva_aprobado_en,tipo:esCambio?'cambio_eva_aprobado':'evento_eva_aprobado',usuario:currentUserEmail||''}].slice(-20);
+  DB.hojas[DB.hojas.findIndex(x=>x.id===id)]=final;saveDB();
+  if(messageId&&fbDB)fbDB.ref('eva_bridge_v1/inbox/'+messageId).update({estado:'aprobado',aprobado_en:final.eva_aprobado_en,aprobado_por:currentUserEmail||''});
+  window._evaBridgeReviewId=null;closeModal('modal-universal');updateEvaPlanSummary();renderHojasTable();alert('✅ Propuesta de Eva aprobada y enlazada con el evento.');
+}
+function rechazarPropuestaEva(id){
+  const idx=(DB.hojas||[]).findIndex(x=>x.id===id);if(idx<0)return;const h=DB.hojas[idx];
+  if(!confirm('¿Rechazar esta propuesta de Eva? El evento operativo anterior se conservará.'))return;
+  const propuesta=h.eva_cambio_pendiente||h,messageId=propuesta.eva_bridge_message_id||h.eva_bridge_message_id;
+  if(h.eva_cambio_pendiente)delete h.eva_cambio_pendiente;else DB.hojas.splice(idx,1);
+  saveDB();if(messageId&&fbDB)fbDB.ref('eva_bridge_v1/inbox/'+messageId).update({estado:'rechazado',rechazado_en:new Date().toISOString(),rechazado_por:currentUserEmail||''});
+  updateEvaPlanSummary();renderHojasTable();
+}
 function getEvaPendingElaborations(){
-  const result=[];(DB.hojas||[]).filter(h=>!h.realizado).forEach(h=>{
+  const result=[];(DB.hojas||[]).filter(h=>!h.realizado&&!h.eva_revision_pendiente).forEach(h=>{
     (h.menu||[]).forEach((m,index)=>{if(m.appcc_estado!=='completada')result.push({hojaId:h.id,menuIndex:index,cliente:h.cliente,fecha:h.fecha,hora:h.hora,lugar:h.lugar,nombre:m.nombre,elab_id:m.elab_id,raciones:m.pax_override||h.pax||0,appcc_estado:m.appcc_estado||'pendiente',appcc_rec_id:m.appcc_rec_id||''});});
   });return result.sort((a,b)=>String(a.fecha||'9999').localeCompare(String(b.fecha||'9999')));
 }
@@ -6686,8 +6803,8 @@ function descargarEventoParaEva(hojaId){
 }
 function updateEvaPlanSummary(){
   const el=document.getElementById('eva-plan-summary');if(!el)return;
-  const eventos=(DB.hojas||[]).filter(h=>!h.realizado).length,pend=getEvaPendingElaborations().length;
-  el.innerHTML=`<div style="display:flex;gap:8px"><div style="flex:1;background:#eef4ff;border-radius:10px;padding:10px;text-align:center"><strong style="display:block;font-size:21px;color:#1a4fa8">${eventos}</strong><span style="font-size:10px;color:#666">EVENTOS</span></div><div style="flex:1;background:#fff7ed;border-radius:10px;padding:10px;text-align:center"><strong style="display:block;font-size:21px;color:#c2410c">${pend}</strong><span style="font-size:10px;color:#666">ELAB. PENDIENTES</span></div></div>`;
+  const eventos=(DB.hojas||[]).filter(h=>!h.realizado).length,pend=getEvaPendingElaborations().length,revision=(DB.hojas||[]).filter(h=>h.eva_revision_pendiente||h.eva_cambio_pendiente).length;
+  el.innerHTML=`<div style="display:flex;gap:8px"><div style="flex:1;background:#eef4ff;border-radius:10px;padding:10px;text-align:center"><strong style="display:block;font-size:21px;color:#1a4fa8">${eventos}</strong><span style="font-size:10px;color:#666">EVENTOS</span></div><div style="flex:1;background:#fff7ed;border-radius:10px;padding:10px;text-align:center"><strong style="display:block;font-size:21px;color:#c2410c">${pend}</strong><span style="font-size:10px;color:#666">ELAB. PENDIENTES</span></div><div style="flex:1;background:#f5f3ff;border-radius:10px;padding:10px;text-align:center"><strong style="display:block;font-size:21px;color:#6d28d9">${revision}</strong><span style="font-size:10px;color:#666">REVISAR DE EVA</span></div></div>`;
 }
 window.EvaAlbaraba={
   version:'1.0',
@@ -9689,6 +9806,7 @@ window.addEventListener('DOMContentLoaded',()=>{
         if(overlay)overlay.style.display='none';
         loadDB();
         if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
+        setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
         applyRole(user.email);
         nav('dashboard');
       } else {
@@ -9701,6 +9819,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     if(overlay)overlay.style.display='none';
     loadDB();
     if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
+    setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
     nav('dashboard');
   }
 });
