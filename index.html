@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-appcc-limpia -->
+<!-- VERSION: v20260722-appcc-limpia2 -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -9797,7 +9797,7 @@ var _wSession = (function(){
     localStorage.removeItem(K.wActive);
     localStorage.removeItem(LAST_ACTIVITY_KEY);
     updateHeader();
-    if(appccVisible())showPicker(true,'Sesión pausada por 2 minutos de inactividad');
+    if(appccVisible())showPicker(true,'Sesión pausada por 2 minutos de inactividad','inactividad');
   }
   function selectByIndex(index){
     var worker=pickerEmps[index];
@@ -9811,11 +9811,11 @@ var _wSession = (function(){
     closePicker();
     armTimer();
   }
-  function showPicker(force,reason){
+  function showPicker(force,reason,motive){
     var emps = ld(K.emp);
     if(!emps||!emps.length) emps = ['Lidia','Edwin','Gustavo','Jeni'];
     pickerEmps=emps.slice();
-    pickerReason=reason&&reason.toLowerCase().includes('inactividad')?'inactividad':force?'entrada':'cambio manual';
+    pickerReason=motive||(force?'entrada':'cambio manual');
     var current = getWorker();
     var opts = emps.map(function(e,index){
       return '<button onclick="_wSession.selectByIndex('+index+')" style="display:block;width:100%;padding:15px 18px;margin-bottom:8px;background:'+(e===current?'#1a4fa8':'#f0f4ff')+';color:'+(e===current?'#fff':'#1a4fa8')+';border:2px solid #1a4fa8;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">'+e+'</button>';
@@ -9834,7 +9834,7 @@ var _wSession = (function(){
     localStorage.removeItem(K.wActive);
     localStorage.removeItem(LAST_ACTIVITY_KEY);
     updateHeader();
-    setTimeout(function(){showPicker(true,'Identificación obligatoria al entrar en APPCC.');},150);
+    setTimeout(function(){showPicker(true,'Identificación obligatoria al entrar en APPCC.','entrada');},150);
   }
   function exit(){
     clearTimeout(timer);
