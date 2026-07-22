@@ -1,0 +1,28 @@
+{
+  "name": "ALBARABA · Gestión y APPCC",
+  "short_name": "ALBARABA",
+  "description": "Gestión y control APPCC de ALBARABA S.L.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "lang": "es",
+  "categories": ["business", "food", "productivity"],
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
