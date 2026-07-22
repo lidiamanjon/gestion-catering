@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-appcc-completa2 -->
+<!-- VERSION: v20260722-appcc-limpia -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -518,7 +518,6 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni" id="ni-productos" onclick="nav('productos')"><span class="ic">📦</span> Productos</div>
     <div class="ni" id="ni-elaboraciones" onclick="nav('elaboraciones')"><span class="ic">👨‍🍳</span> Elaboraciones</div>
     <div class="nav-label">Operaciones</div>
-    <div class="ni" id="ni-hojas" onclick="nav('hojas')"><span class="ic">📋</span> Hojas de Servicio</div>
     <div class="ni" id="ni-pedidos" onclick="nav('pedidos')"><span class="ic">🛒</span> Generar Pedido</div>
     <div class="ni" id="ni-stock" onclick="nav('stock')"><span class="ic">📦</span> Stock</div>
     <div class="ni" id="ni-congelador" onclick="nav('congelador')"><span class="ic">🧊</span> Stock Congelador</div>
@@ -567,12 +566,7 @@ html,body{height:100%;color-scheme:light!important}
     </div>
   </div>
   <!-- ACCESO RÁPIDO — siempre visible -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-    <div onclick="nav('hojas')" style="background:#fff;border:2px solid #1a4fa8;border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 18px rgba(26,79,168,.18)'" onmouseout="this.style.boxShadow='none'">
-      <div style="font-size:34px">📋</div>
-      <div style="font-weight:800;font-size:13px;color:#1a4fa8;margin-top:7px">Hojas de Servicio</div>
-      <div style="font-size:11px;color:#888;margin-top:2px">Ver servicios realizados</div>
-    </div>
+  <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:16px">
     <div onclick="nav('pedidos')" style="background:#fffbeb;border:2px solid #d97706;border-radius:14px;padding:18px 10px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 4px 18px rgba(217,119,6,.18)'" onmouseout="this.style.boxShadow='none'">
       <div style="font-size:34px">🛒</div>
       <div style="font-weight:800;font-size:13px;color:#d97706;margin-top:7px">Pedidos</div>
@@ -782,7 +776,7 @@ html,body{height:100%;color-scheme:light!important}
 
 </div>
 
-<div class="section" id="section-hojas">
+<div class="section" id="section-hojas" style="display:none!important">
   <div class="topbar">
     <div><div class="pg-title">Hojas de Servicio</div><div class="pg-sub">Eventos y control de stock por servicio</div></div>
     <button class="btn btn-outline" onclick="descargarHojas()">📥 Descargar</button>
@@ -919,7 +913,7 @@ html,body{height:100%;color-scheme:light!important}
         <div class="fg"><label class="fl">Nombre</label><input class="fc" id="usr-nombre" placeholder="Nombre del trabajador"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="usr-email" type="email" placeholder="email@ejemplo.com"></div>
         <div class="fg"><label class="fl">Contraseña</label><input class="fc" id="usr-pwd" type="password" placeholder="Mínimo 6 caracteres"></div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">El trabajador verá: Proveedores, Productos, Elaboraciones, Hojas de Servicio, Pedidos, Stock, Mejoras y Tareas. Comparte el email y contraseña con él.</p>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">El trabajador verá: Proveedores, Productos, Elaboraciones, Pedidos, Stock, Mejoras, Tareas y APPCC. Comparte el email y contraseña con él.</p>
         <button class="btn btn-gold" onclick="crearUsuario()" style="width:100%;justify-content:center">Crear cuenta</button>
         <div id="usr-msg" style="font-size:12px;text-align:center;margin-top:8px;min-height:16px"></div>
       </div>
@@ -928,7 +922,7 @@ html,body{height:100%;color-scheme:light!important}
     <div class="card">
       <div class="card-head"><h3>🔑 Administradores</h3></div>
       <div style="padding:14px">
-        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Los admins ven todo. Los trabajadores ven: Catálogo, Operaciones, Hojas de Servicio, Mejoras y Tareas. No ven: Dashboard, Informes, Gastos, APPCC, Formularios ni Datos.</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Los administradores ven todas las áreas disponibles. Los trabajadores ven Catálogo, Pedidos, Stock, Mejoras, Tareas y APPCC; no ven Dashboard, Informes, Gastos ni Datos.</p>
         <a href="https://console.firebase.google.com/project/albaraba-gestion/authentication/users" target="_blank" class="btn" style="width:100%;justify-content:center;margin-bottom:12px;text-decoration:none;font-size:12px">🔗 Borrar cuenta en Firebase Console</a>
         <div id="admins-list" style="margin-bottom:12px"></div>
     <div style="font-size:11px;color:var(--muted);margin-top:8px">Trabajadores registrados:</div>
@@ -4134,7 +4128,7 @@ function numProdsDeProveedor(pid){return DB.productos.filter(p=>p.proveedor_id==
 // ═══════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════
-function renderDashboard(){
+function renderDashboardConHojas(){
   const hoy=new Date();hoy.setHours(0,0,0,0);
   const en7=new Date(hoy);en7.setDate(en7.getDate()+7);
   const serviciosSemana=DB.hojas.filter(h=>{if(!h.fecha)return false;const d=new Date(h.fecha+'T00:00:00');return d>=hoy&&d<=en7;}).length;
@@ -4306,6 +4300,33 @@ function renderDashboard(){
     <div class="card" style="grid-column:span 2"><div class="card-head"><h3>📅 Próximos eventos</h3><button class="btn btn-sm btn-gold" onclick="nav('hojas')">Ver todos</button></div><div style="padding:0 16px 4px">${agendaHTML}</div></div>
     <div class="card"><div class="card-head"><h3>📊 Servicios por mes</h3></div><div style="padding:14px 16px 8px">${barChart}</div></div>
     <div class="card"><div class="card-head"><h3>📝 Tareas pendientes</h3><button class="btn btn-sm btn-gold" onclick="nav('tareas')">Ver todas</button></div><div style="padding:0 16px 4px">${tareasHTML}</div></div>`;
+}
+
+// Dashboard operativo sin hojas de servicio ni presupuestos.
+function renderDashboard(){
+  const appccNC=(()=>{try{const r=JSON.parse(localStorage.getItem('a_noconf')||'[]');return Array.isArray(r)?r.filter(x=>x.estado!=='cerrada').length:0;}catch(e){return 0;}})();
+  const appccScheds=(()=>{try{const r=JSON.parse(localStorage.getItem('a_sched')||'[]');return Array.isArray(r)?r:[];}catch(e){return[];}})();
+  const now=new Date();
+  const appccPend=appccScheds.filter(s=>{
+    const recs=(()=>{try{const r=JSON.parse(localStorage.getItem('a_'+s.mod)||'[]');return Array.isArray(r)?r:[];}catch(e){return[];}})();
+    if(s.freq==='diario'){const cutoff=new Date(now-(s.maxH||26)*3600000);return!recs.some(r=>new Date(r.ts||r.date)>cutoff);}
+    if(s.freq==='semanal'){const mon=new Date(now);mon.setDate(now.getDate()-now.getDay()+1);mon.setHours(0,0,0,0);return!recs.some(r=>new Date(r.ts||r.date)>=mon);}
+    const first=new Date(now.getFullYear(),now.getMonth(),1);return!recs.some(r=>new Date(r.ts||r.date)>=first);
+  });
+  const pedidosPend=(DB.pedidos||[]).filter(p=>!['completado','recibido','cerrado'].includes(String(p.estado||'').toLowerCase())).length;
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="sc" style="cursor:pointer" onclick="nav('pedidos')"><div class="sc-ic b">🛒</div><div><div class="sc-v">${pedidosPend}</div><div class="sc-l">Pedidos pendientes</div></div></div>
+    <div class="sc" style="cursor:pointer" onclick="switchApp('appcc')"><div class="sc-ic" style="background:${appccNC+appccPend.length>0?'rgba(230,126,34,.15)':'rgba(26,79,168,.1)'}">🧪</div><div><div class="sc-v">${appccNC+appccPend.length}</div><div class="sc-l">Tareas APPCC${appccNC?' ('+appccNC+' NC)':''}</div></div></div>`;
+
+  const categorias={};(DB.elaboraciones||[]).forEach(e=>{const key=e.categoria||'Otros';categorias[key]=(categorias[key]||0)+1;});
+  const categoriasHTML=Object.entries(categorias).map(([k,v])=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border)"><span>${CAT_LABELS[k]||k}</span><strong>${v}</strong></div>`).join('')||'<div style="padding:14px;text-align:center;color:var(--muted)">Sin elaboraciones</div>';
+  const tareas=(DB.tareas||[]).filter(t=>!['completada','hecha','realizada'].includes(String(t.estado||'').toLowerCase())).slice(0,6);
+  const tareasHTML=tareas.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)"><span>${t.prioridad==='alta'?'🔴':t.prioridad==='media'?'🟡':'⚪'}</span><div style="flex:1;font-size:13px;font-weight:600">${esc(t.titulo||t.text||t.descripcion||'Tarea')}</div><span style="font-size:11px;color:var(--muted)">${esc(t.responsable||'')}</span></div>`).join('')||'<div style="padding:14px;text-align:center;color:var(--muted)">✅ Sin tareas pendientes</div>';
+  const mejoras=(DB.mejoras||[]).filter(m=>m.estado==='pendiente');
+  const mejorasAlert=mejoras.length?`<div class="notice warn" style="grid-column:span 2;cursor:pointer" onclick="nav('mejoras')">🔧 <strong>${mejoras.length} mejora(s) pendiente(s).</strong> <u>Ver Mejoras →</u></div>`:'';
+  const appccCard=`<div class="card" style="grid-column:span 2;background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;cursor:pointer;border:none" onclick="switchApp('appcc')"><div style="padding:18px 20px;display:flex;align-items:center;gap:16px"><div style="font-size:38px">🧪</div><div style="flex:1"><div style="font-size:17px;font-weight:800">APPCC · Control Sanitario</div><div style="font-size:12px;opacity:.75;margin-top:3px">Temperaturas · Limpiezas · Lotes · Etiquetas · Informes oficiales</div></div><div style="font-size:12px;font-weight:700;background:rgba(255,255,255,.2);padding:8px 16px;border-radius:20px">Abrir APPCC →</div></div></div>`;
+  const appccTasks=appccPend.length?`<div class="card" style="grid-column:span 2;border-left:4px solid #e67e22"><div class="card-head"><h3>⚠️ APPCC — ${appccPend.length} pendiente(s)</h3><button class="btn btn-sm btn-gold" onclick="switchApp('appcc')">Ir al APPCC →</button></div><div style="padding:0 16px 8px">${appccPend.map(s=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)">${s.icon||'📋'} ${esc(s.label||s.mod)}</div>`).join('')}</div></div>`:'';
+  document.getElementById('dash-grids').innerHTML=appccCard+mejorasAlert+appccTasks+`<div class="card"><div class="card-head"><h3>👨‍🍳 Elaboraciones</h3></div><div style="padding:0 16px 8px">${categoriasHTML}</div></div><div class="card"><div class="card-head"><h3>📝 Tareas pendientes</h3><button class="btn btn-sm btn-gold" onclick="nav('tareas')">Ver todas</button></div><div style="padding:0 16px 8px">${tareasHTML}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -9676,7 +9697,7 @@ const K={
   noconf:'a_noconf', formacion:'a_form', mant:'a_mant',
   contras:'a_contras', plagas:'a_plagas', cfg_emp:'a_cfgemp',
   gtindb:'a_gtindb',
-  wActive:'a_worker_active',
+  wActive:'a_worker_active', workerLog:'a_worker_sessions',
   docs:'a_docs',
   tempnc:'a_tempnc',
   prodPend:'a_prod_pendiente'
@@ -9737,6 +9758,7 @@ var _wSession = (function(){
   var LAST_ACTIVITY_KEY='a_worker_last_activity';
   var timer=null;
   var pickerEmps=[];
+  var pickerReason='entrada';
   function getWorker(){ return localStorage.getItem(K.wActive)||''; }
   function appccVisible(){
     var app=document.getElementById('app-appcc');
@@ -9781,6 +9803,10 @@ var _wSession = (function(){
     var worker=pickerEmps[index];
     if(!worker)return;
     localStorage.setItem(K.wActive,worker);
+    var sessions=ld(K.workerLog);
+    sessions.push({id:genId(),emp:worker,ts:new Date().toISOString(),motivo:pickerReason});
+    if(sessions.length>500)sessions=sessions.slice(-500);
+    sv(K.workerLog,sessions);
     updateHeader();
     closePicker();
     armTimer();
@@ -9789,6 +9815,7 @@ var _wSession = (function(){
     var emps = ld(K.emp);
     if(!emps||!emps.length) emps = ['Lidia','Edwin','Gustavo','Jeni'];
     pickerEmps=emps.slice();
+    pickerReason=reason&&reason.toLowerCase().includes('inactividad')?'inactividad':force?'entrada':'cambio manual';
     var current = getWorker();
     var opts = emps.map(function(e,index){
       return '<button onclick="_wSession.selectByIndex('+index+')" style="display:block;width:100%;padding:15px 18px;margin-bottom:8px;background:'+(e===current?'#1a4fa8':'#f0f4ff')+';color:'+(e===current?'#fff':'#1a4fa8')+';border:2px solid #1a4fa8;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">'+e+'</button>';
@@ -14865,6 +14892,7 @@ function clearAll(){
 }
 function renderCfg(){
   const emps=ld(K.emp);const zonas=ld(K.zonas);const provs=ld(K.provs);
+  const sessions=ld(K.workerLog).slice(-20).reverse();
   document.getElementById('cfg-body').innerHTML=`
     <div class="card">
       <div class="card-head"><h3>👥 Empleados</h3>
@@ -14878,6 +14906,10 @@ function renderCfg(){
           <button class="btn-icon" onclick="delEmp(${i})" style="color:#e74c3c">🗑</button>
         </div>
       </div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin empleados. Añade el primero.</div>'}</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>🕒 Registro de accesos APPCC</h3><span style="font-size:11px;color:#888">Últimos ${sessions.length}</span></div>
+      <div>${sessions.map(s=>`<div class="list-row"><div class="list-icon">👤</div><div class="list-main"><div class="list-title">${s.emp||'—'}</div><div class="list-sub">${fmtDT(s.ts)} · ${s.motivo||'entrada'}</div></div></div>`).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Aún no hay accesos registrados.</div>'}</div>
     </div>
     <div class="card">
       <div class="card-head"><h3>❄ Cámaras y Zonas</h3>

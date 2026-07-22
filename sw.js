@@ -1,13 +1,10 @@
-const CACHE_NAME = 'albaraba-appcc-v20260722-appcc-completa2';
+const CACHE_NAME = 'albaraba-appcc-v20260722-appcc-limpia';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png',
-  './Hoja_Servicio_ALABOCA.html',
-  './Hoja_Servicio_PV.html',
-  './Presupuesto_Catering.html'
+  './icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {
