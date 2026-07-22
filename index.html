@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-appcc-limpia2 -->
+<!-- VERSION: v20260722-eva-plan1 -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -518,6 +518,7 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni" id="ni-productos" onclick="nav('productos')"><span class="ic">📦</span> Productos</div>
     <div class="ni" id="ni-elaboraciones" onclick="nav('elaboraciones')"><span class="ic">👨‍🍳</span> Elaboraciones</div>
     <div class="nav-label">Operaciones</div>
+    <div class="ni" id="ni-hojas" onclick="nav('hojas')"><span class="ic">📅</span> Planificación Eva</div>
     <div class="ni" id="ni-pedidos" onclick="nav('pedidos')"><span class="ic">🛒</span> Generar Pedido</div>
     <div class="ni" id="ni-stock" onclick="nav('stock')"><span class="ic">📦</span> Stock</div>
     <div class="ni" id="ni-congelador" onclick="nav('congelador')"><span class="ic">🧊</span> Stock Congelador</div>
@@ -776,11 +777,26 @@ html,body{height:100%;color-scheme:light!important}
 
 </div>
 
-<div class="section" id="section-hojas" style="display:none!important">
+<div class="section" id="section-hojas">
   <div class="topbar">
-    <div><div class="pg-title">Hojas de Servicio</div><div class="pg-sub">Eventos y control de stock por servicio</div></div>
+    <div><div class="pg-title">📅 Planificación con Eva</div><div class="pg-sub">Una hoja alimenta elaboraciones, compras, costes, stock y trazabilidad</div></div>
     <button class="btn btn-outline" onclick="descargarHojas()">📥 Descargar</button>
-    <button class="btn btn-gold" onclick="openHojaModal()">+ Nueva hoja</button>
+    <button class="btn btn-gold" onclick="openHojaModal()">+ Añadir evento</button>
+  </div>
+  <div class="card" style="padding:16px;margin-bottom:14px;border-left:4px solid #1a4fa8">
+    <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+      <div style="font-size:34px">✨</div>
+      <div style="flex:1;min-width:240px">
+        <div style="font-size:16px;font-weight:800;color:#1a4fa8">Entrada de hojas para Eva</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.55;margin-top:4px">Eva puede entregar aquí una hoja estructurada. También puedes pegar el JSON que te prepare o crear el evento manualmente. Antes de guardar verás los datos y podrás corregirlos.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <button class="btn btn-sm btn-gold" onclick="openEvaImportModal()">✨ Importar desde Eva</button>
+          <button class="btn btn-sm btn-outline" onclick="document.getElementById('eva-hoja-file').click()">📎 Importar JSON</button>
+          <input type="file" id="eva-hoja-file" accept=".json,application/json" style="display:none" onchange="importEvaHojaFile(event)">
+        </div>
+      </div>
+      <div id="eva-plan-summary" style="min-width:210px"></div>
+    </div>
   </div>
   <div style="display:flex;gap:8px;margin-bottom:12px">
     <button id="tab-hojas-pend" class="btn btn-gold" onclick="setHojasTab('pendientes')">⏳ Pendientes</button>
@@ -4043,7 +4059,7 @@ function nav(s){
   else if(s==='productos')renderProdTable();
   else if(s==='elaboraciones')renderElabTable();
   else if(s==='hoja-launcher'){nav('hojas');return;}
-  else if(s==='hojas'){syncExternalHojas();if(typeof setHojasTab==='function')setHojasTab(_hojasTab||'pendientes');else renderHojasTable();}
+  else if(s==='hojas'){syncExternalHojas();updateEvaPlanSummary();if(typeof setHojasTab==='function')setHojasTab(_hojasTab||'pendientes');else renderHojasTable();}
   else if(s==='pedidos')renderPedidoSection();
   else if(s==='stock')renderStockTable();
   else if(s==='congelador')renderCongeladorStock();
@@ -4314,7 +4330,9 @@ function renderDashboard(){
     const first=new Date(now.getFullYear(),now.getMonth(),1);return!recs.some(r=>new Date(r.ts||r.date)>=first);
   });
   const pedidosPend=(DB.pedidos||[]).filter(p=>!['completado','recibido','cerrado'].includes(String(p.estado||'').toLowerCase())).length;
+  const evaPend=typeof getEvaPendingElaborations==='function'?getEvaPendingElaborations():[];
   document.getElementById('dash-stats').innerHTML=`
+    <div class="sc" style="cursor:pointer" onclick="nav('hojas')"><div class="sc-ic" style="background:rgba(245,158,11,.14)">📅</div><div><div class="sc-v">${evaPend.length}</div><div class="sc-l">Elaboraciones de eventos</div></div></div>
     <div class="sc" style="cursor:pointer" onclick="nav('pedidos')"><div class="sc-ic b">🛒</div><div><div class="sc-v">${pedidosPend}</div><div class="sc-l">Pedidos pendientes</div></div></div>
     <div class="sc" style="cursor:pointer" onclick="switchApp('appcc')"><div class="sc-ic" style="background:${appccNC+appccPend.length>0?'rgba(230,126,34,.15)':'rgba(26,79,168,.1)'}">🧪</div><div><div class="sc-v">${appccNC+appccPend.length}</div><div class="sc-l">Tareas APPCC${appccNC?' ('+appccNC+' NC)':''}</div></div></div>`;
 
@@ -4325,8 +4343,9 @@ function renderDashboard(){
   const mejoras=(DB.mejoras||[]).filter(m=>m.estado==='pendiente');
   const mejorasAlert=mejoras.length?`<div class="notice warn" style="grid-column:span 2;cursor:pointer" onclick="nav('mejoras')">🔧 <strong>${mejoras.length} mejora(s) pendiente(s).</strong> <u>Ver Mejoras →</u></div>`:'';
   const appccCard=`<div class="card" style="grid-column:span 2;background:linear-gradient(135deg,#1a4fa8,#0d2d6e);color:#fff;cursor:pointer;border:none" onclick="switchApp('appcc')"><div style="padding:18px 20px;display:flex;align-items:center;gap:16px"><div style="font-size:38px">🧪</div><div style="flex:1"><div style="font-size:17px;font-weight:800">APPCC · Control Sanitario</div><div style="font-size:12px;opacity:.75;margin-top:3px">Temperaturas · Limpiezas · Lotes · Etiquetas · Informes oficiales</div></div><div style="font-size:12px;font-weight:700;background:rgba(255,255,255,.2);padding:8px 16px;border-radius:20px">Abrir APPCC →</div></div></div>`;
+  const evaCard=`<div class="card" style="grid-column:span 2;border-left:4px solid #f59e0b;cursor:pointer" onclick="nav('hojas')"><div style="padding:16px 18px;display:flex;align-items:center;gap:14px"><div style="font-size:34px">✨</div><div style="flex:1"><div style="font-size:16px;font-weight:800;color:#1a4fa8">Planificación Eva</div><div style="font-size:12px;color:var(--muted);margin-top:3px">${evaPend.length} elaboraciones pendientes · hojas, compras, costes y trazabilidad por evento</div></div><span class="btn btn-sm btn-gold">Abrir →</span></div></div>`;
   const appccTasks=appccPend.length?`<div class="card" style="grid-column:span 2;border-left:4px solid #e67e22"><div class="card-head"><h3>⚠️ APPCC — ${appccPend.length} pendiente(s)</h3><button class="btn btn-sm btn-gold" onclick="switchApp('appcc')">Ir al APPCC →</button></div><div style="padding:0 16px 8px">${appccPend.map(s=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)">${s.icon||'📋'} ${esc(s.label||s.mod)}</div>`).join('')}</div></div>`:'';
-  document.getElementById('dash-grids').innerHTML=appccCard+mejorasAlert+appccTasks+`<div class="card"><div class="card-head"><h3>👨‍🍳 Elaboraciones</h3></div><div style="padding:0 16px 8px">${categoriasHTML}</div></div><div class="card"><div class="card-head"><h3>📝 Tareas pendientes</h3><button class="btn btn-sm btn-gold" onclick="nav('tareas')">Ver todas</button></div><div style="padding:0 16px 8px">${tareasHTML}</div></div>`;
+  document.getElementById('dash-grids').innerHTML=evaCard+appccCard+mejorasAlert+appccTasks+`<div class="card"><div class="card-head"><h3>👨‍🍳 Elaboraciones</h3></div><div style="padding:0 16px 8px">${categoriasHTML}</div></div><div class="card"><div class="card-head"><h3>📝 Tareas pendientes</h3><button class="btn btn-sm btn-gold" onclick="nav('tareas')">Ver todas</button></div><div style="padding:0 16px 8px">${tareasHTML}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════════
@@ -5142,8 +5161,7 @@ function renderHojasTable(q=''){
         ${h.fuente?`<span class="badge" style="background:rgba(99,102,241,.1);color:#4338ca;font-size:10px">${h.fuente==='alaboca'?'🍽 Alaboca':'🌿 PV'}</span>`:''}
         ${h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`}
         <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')">📄 PDF</button>
-        <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();listaComprasDesdeHoja('${h.id}')">🛒 Lista compras</button>
-        <button class="btn btn-sm" style="background:#fff3e0;color:#e65100;font-weight:600" onclick="event.stopPropagation();generarPresupuesto_G('${h.id}')">📋 Presupuesto</button>
+        <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();cargarPedidoDesdeHoja('${h.id}')">🛒 Calcular pedido</button>
         <button class="btn btn-sm btn-light" onclick="event.stopPropagation();editHoja('${h.id}')">✏️</button>
         <button class="btn btn-sm btn-del" onclick="event.stopPropagation();deleteHoja('${h.id}')">🗑</button>
       </div>
@@ -5419,6 +5437,14 @@ function confirmarServicioRealizado(id){
   saveDB();
   renderHojasTable();
   alert(`✅ Servicio confirmado. Stock actualizado${nProds?` (${nProds} productos descontados)`:''}.`);
+}
+
+function cargarPedidoDesdeHoja(id){
+  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  Object.keys(pedidoSeleccionadas).forEach(k=>delete pedidoSeleccionadas[k]);
+  (h.menu||[]).forEach(m=>{if(m.elab_id)pedidoSeleccionadas[m.elab_id]={elaboracion_id:m.elab_id,raciones:m.pax_override||h.pax||1,evento_id:h.id};});
+  if(!Object.keys(pedidoSeleccionadas).length){alert('Primero vincula las elaboraciones de esta hoja con el catálogo.');return;}
+  nav('pedidos');renderPedidoSection();setTimeout(()=>calcularPedido(),80);
 }
 
 function listaComprasDesdeHoja(id){
@@ -6356,6 +6382,100 @@ function saveHojaFromExternal(hoja, nuevasElab){
     try{renderDashboard&&renderDashboard();}catch(e){}
   }catch(e){console.error('saveHojaFromExternal:',e);}
 }
+
+// Contrato de entrada de EVA -> planificación operativa.
+// La IA nunca guarda directamente: primero se normaliza y se muestra una vista previa.
+function _evaNormText(value){
+  return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+}
+function _evaFindElab(nombre){
+  const q=_evaNormText(nombre);if(!q)return null;
+  return (DB.elaboraciones||[]).find(e=>_evaNormText(e.nombre)===q)
+    ||(DB.elaboraciones||[]).find(e=>{const n=_evaNormText(e.nombre);return n.length>5&&(n.includes(q)||q.includes(n));})||null;
+}
+function normalizarHojaEva(payload){
+  const src=payload?.hoja_servicio||payload?.serviceSheet||payload?.evento||payload?.event||payload||{};
+  const rawMenu=src.menu||src.elaboraciones||src.productionItems||src.items||[];
+  const menu=(Array.isArray(rawMenu)?rawMenu:[]).map((item,index)=>{
+    const data=typeof item==='string'?{nombre:item}:item||{};
+    const nombre=data.nombre||data.name||data.elaboracion||data.description||data.title||'';
+    const match=_evaFindElab(nombre);
+    return{
+      elab_id:data.elab_id||data.elaborationId||match?.id||'',
+      nombre:match?.nombre||nombre||('Elaboración '+(index+1)),
+      pax_override:Math.max(0,parseInt(data.pax_override??data.raciones??data.quantity??data.cantidad??0)||0),
+      appcc_estado:data.appcc_estado||'pendiente',
+      origen:'eva'
+    };
+  }).filter(x=>x.nombre);
+  const fecha=src.fecha||src.date||src.eventDate||src.fecha_evento||'';
+  return{
+    id:src.id||('eva_'+uid()),fecha:String(fecha).slice(0,10),hora:src.hora||src.time||'',
+    cliente:src.cliente||src.customer||src.clientName||src.nombre_cliente||'',
+    empresa:src.empresa||src.company||'',tel:src.tel||src.telefono||src.phone||'',
+    pax:Math.max(0,parseInt(src.pax??src.asistentes??src.guests??0)||0),
+    servicio:src.servicio||src.serviceType||src.tipo||'Servicio de catering',
+    lugar:src.lugar||src.ubicacion||src.location||'',menu,
+    postre:src.postre||src.dessert||'',precio_venta:parseFloat(src.precio_venta??src.totalPrice??src.price??0)||0,
+    indicaciones:src.indicaciones||src.restricciones||src.instructions||'',
+    notas:src.notas||src.notes||'',fuente:'eva',origen_documento:src.origen_documento||src.source||'Eva',
+    realizado:Boolean(src.realizado),eva_importado_en:new Date().toISOString()
+  };
+}
+function _evaPreviewHtml(hoja){
+  const noMatch=(hoja.menu||[]).filter(x=>!x.elab_id);
+  return`<div style="background:#eef4ff;border:1px solid #c7d7ff;border-radius:10px;padding:12px;margin-bottom:12px">
+    <div style="font-weight:800;color:#1a4fa8">${esc(hoja.cliente||'Cliente pendiente')} · ${hoja.pax||0} pax</div>
+    <div style="font-size:12px;color:#555;margin-top:4px">${esc(hoja.fecha||'Fecha pendiente')} ${hoja.hora?'· '+esc(hoja.hora):''} ${hoja.lugar?'· '+esc(hoja.lugar):''}</div>
+  </div>
+  <div style="font-size:13px;font-weight:700;margin-bottom:6px">Elaboraciones detectadas (${hoja.menu.length})</div>
+  <div style="max-height:230px;overflow:auto">${hoja.menu.map(m=>`<div style="display:flex;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #eee"><span>${m.elab_id?'✅':'⚠️'}</span><span style="flex:1">${esc(m.nombre)}</span><strong>${m.pax_override||hoja.pax||0} rac.</strong></div>`).join('')||'<div style="color:#a00">No se detectó ninguna elaboración.</div>'}</div>
+  ${noMatch.length?`<div class="notice warn" style="margin-top:10px">⚠️ ${noMatch.length} elaboración(es) no coinciden todavía con el catálogo. Podrás vincularlas al editar la hoja.</div>`:''}`;
+}
+function openEvaImportModal(){
+  openModal(`<div class="modal-title">✨ Importar hoja preparada por Eva</div>
+    <div style="font-size:12px;color:#666;line-height:1.5;margin-bottom:10px">Pega el JSON estructurado de Eva. Se revisará antes de incorporarlo a pedidos, costes y APPCC.</div>
+    <textarea class="fc" id="eva-json-input" style="min-height:220px;font-family:monospace;font-size:12px" placeholder='{"cliente":"Ejemplo","fecha":"2026-08-10","pax":50,"elaboraciones":[{"nombre":"Tortilla de patata","raciones":50}]}'></textarea>
+    <div id="eva-json-error" style="color:#b91c1c;font-size:12px;margin-top:7px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-gold" onclick="previewEvaImport()">Revisar hoja →</button></div>`, 'lg');
+}
+function previewEvaImport(payload){
+  let parsed=payload;
+  if(parsed===undefined){try{parsed=JSON.parse(document.getElementById('eva-json-input').value);}catch(e){const el=document.getElementById('eva-json-error');if(el)el.textContent='El contenido no es un JSON válido.';return;}}
+  const hoja=normalizarHojaEva(parsed);
+  window._evaHojaPreview=hoja;
+  openModal(`<div class="modal-title">🔎 Revisión de la hoja</div>${_evaPreviewHtml(hoja)}
+    <div class="notice info" style="margin-top:10px">Guardar crea el evento y sus elaboraciones pendientes. No envía pedidos ni descuenta stock.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="openEvaImportModal()">← Corregir</button><button class="btn btn-gold" onclick="confirmEvaImport()">✓ Guardar planificación</button></div>`, 'lg');
+}
+function confirmEvaImport(){
+  const hoja=window._evaHojaPreview;if(!hoja)return;
+  if(!hoja.cliente||!hoja.fecha||!hoja.pax){alert('Faltan cliente, fecha o número de asistentes. Corrige la hoja antes de guardarla.');return;}
+  const idx=(DB.hojas||[]).findIndex(x=>x.id===hoja.id);
+  if(idx>=0)DB.hojas[idx]=hoja;else DB.hojas.unshift(hoja);
+  saveDB();window._evaHojaPreview=null;closeModal('modal-universal');updateEvaPlanSummary();setHojasTab('pendientes');
+  alert('✅ Planificación guardada. Las elaboraciones ya aparecen como pendientes en APPCC.');
+}
+function importEvaHojaFile(event){
+  const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  const reader=new FileReader();reader.onload=()=>{try{previewEvaImport(JSON.parse(String(reader.result||'')));}catch(e){alert('No se pudo leer el JSON de Eva.');}};reader.readAsText(file,'UTF-8');
+}
+function getEvaPendingElaborations(){
+  const result=[];(DB.hojas||[]).filter(h=>!h.realizado).forEach(h=>{
+    (h.menu||[]).forEach((m,index)=>{if(m.appcc_estado!=='completada')result.push({hojaId:h.id,menuIndex:index,cliente:h.cliente,fecha:h.fecha,hora:h.hora,lugar:h.lugar,nombre:m.nombre,elab_id:m.elab_id,raciones:m.pax_override||h.pax||0});});
+  });return result.sort((a,b)=>String(a.fecha||'9999').localeCompare(String(b.fecha||'9999')));
+}
+function updateEvaPlanSummary(){
+  const el=document.getElementById('eva-plan-summary');if(!el)return;
+  const eventos=(DB.hojas||[]).filter(h=>!h.realizado).length,pend=getEvaPendingElaborations().length;
+  el.innerHTML=`<div style="display:flex;gap:8px"><div style="flex:1;background:#eef4ff;border-radius:10px;padding:10px;text-align:center"><strong style="display:block;font-size:21px;color:#1a4fa8">${eventos}</strong><span style="font-size:10px;color:#666">EVENTOS</span></div><div style="flex:1;background:#fff7ed;border-radius:10px;padding:10px;text-align:center"><strong style="display:block;font-size:21px;color:#c2410c">${pend}</strong><span style="font-size:10px;color:#666">ELAB. PENDIENTES</span></div></div>`;
+}
+window.EvaAlbaraba={
+  version:'1.0',
+  previsualizarHoja:payload=>previewEvaImport(payload),
+  importarHoja:payload=>previewEvaImport(payload),
+  pendientes:()=>getEvaPendingElaborations()
+};
 function cerrarHojaOverlay(){
   const ov=document.getElementById('hoja-overlay');
   const fr=document.getElementById('hoja-frame');
@@ -11620,6 +11740,7 @@ function renderElab(){
   const today_str=today();
   const todayRecs=recs.filter(r=>r.date===today_str);
   const otherRecs=recs.filter(r=>r.date!==today_str).slice(0,20);
+  const evaPend=typeof getEvaPendingElaborations==='function'?getEvaPendingElaborations():[];
   
   function recHtml(r){
     const dleft=daysLeft(r.dlc);
@@ -11646,6 +11767,7 @@ function renderElab(){
         <div class="list-title">${r.producto}</div>
         <div class="list-sub"><span class="lot-code">${r.lote}</span> · ${r.emp}</div>
         <div class="list-sub" style="margin-top:2px">DLC: ${r.dlc||'—'} · ${fmtDate(r.ts)}</div>
+        ${r.evento_cliente?`<div class="list-sub" style="margin-top:3px;color:#1a4fa8;font-weight:700">📅 ${r.evento_cliente}${r.evento_fecha?' · '+r.evento_fecha:''}</div>`:''}
         ${qBar}
       </div>
       <div class="list-right">
@@ -11660,6 +11782,14 @@ function renderElab(){
   }
 
   document.getElementById('elab-body').innerHTML=`
+    ${evaPend.length?`<div class="card" style="border:2px solid #f59e0b">
+      <div class="card-head" style="background:#fff7ed"><h3>📅 Elaboraciones pendientes de eventos (${evaPend.length})</h3></div>
+      <div>${evaPend.slice(0,30).map(p=>`<div class="list-row" style="align-items:center">
+        <div class="list-icon">${p.elab_id?'🍳':'⚠️'}</div>
+        <div class="list-main"><div class="list-title">${esc(p.nombre)}</div><div class="list-sub">${esc(p.cliente)} · ${p.raciones} raciones · ${esc(p.fecha||'sin fecha')}</div></div>
+        <div class="list-right">${p.elab_id?`<button class="btn btn-sm btn-green" onclick="iniciarEvaElab('${p.hojaId}',${p.menuIndex})">Empezar →</button>`:'<span class="list-badge badge-orange">Vincular catálogo</span>'}</div>
+      </div>`).join('')}</div>
+    </div>`:`<div class="card" style="border-left:4px solid #27ae60"><div style="padding:14px 16px;color:#166534;font-weight:700">✅ No hay elaboraciones de eventos pendientes</div></div>`}
     <div class="card">
       <div class="card-head"><h3>🍳 Producción de hoy (${todayRecs.length})</h3>
         <button class="btn btn-sm btn-green" onclick="openElabModalAPPCC()">+ Nueva</button>
@@ -11816,7 +11946,18 @@ function _autoFillRecepFromCatalog(nombre){
   }
 }
 
-function openElabModalAPPCC(){
+function iniciarEvaElab(hojaId,menuIndex){
+  const hoja=(DB.hojas||[]).find(h=>h.id===hojaId);const item=hoja?.menu?.[menuIndex];if(!hoja||!item)return;
+  window._evaPendingContext={hojaId,menuIndex,cliente:hoja.cliente,fecha:hoja.fecha,lugar:hoja.lugar,nombre:item.nombre,raciones:item.pax_override||hoja.pax||0,elab_id:item.elab_id||''};
+  openElabModalAPPCC(true);
+  setTimeout(()=>{
+    const ctx=window._evaPendingContext,sel=document.getElementById('el-prod'),cant=document.getElementById('el-cant');
+    if(sel&&ctx){const target=(DB.elaboraciones||[]).find(e=>e.id===ctx.elab_id);if(target){sel.value=target.nombre;elabProdSelected();}}
+    if(cant&&ctx){cant.value=ctx.raciones;const rn=document.getElementById('el-raciones-num');if(rn)rn.value=ctx.raciones;calcularIngredientesElab();}
+  },80);
+}
+function openElabModalAPPCC(keepEvaContext=false){
+  if(!keepEvaContext)window._evaPendingContext=null;
   const gestorElabs=getGestorElabs().sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
   window._elabCatalog=gestorElabs;
   const prodOpts=gestorElabs.map(e=>`<option value="${e.nombre.replace(/"/g,'&quot;')}">${e.nombre}</option>`).join('');
@@ -11824,7 +11965,9 @@ function openElabModalAPPCC(){
   window._elabIngredientes=[];
   window._elabReceta=null;
   window._elabRacionesData=null;
+  const evaCtx=window._evaPendingContext;
   openModalAPPCC(`<div class="modal-title">🍳 Nueva Elaboración</div>
+    ${evaCtx?`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:10px 12px;margin-bottom:10px"><div style="font-size:12px;font-weight:800;color:#9a3412">📅 PARA EVENTO</div><div style="font-size:14px;font-weight:700">${esc(evaCtx.cliente)} · ${esc(evaCtx.fecha||'')}</div><div style="font-size:11px;color:#666">${esc(evaCtx.lugar||'')} · ${evaCtx.raciones} raciones previstas</div></div>`:''}
     <div class="fc-group"><label class="fc-label">Elaboración <span style="color:#c00">*</span></label>
       <input class="fc" id="el-prod-search" placeholder="🔍 Buscar..." oninput="filterElabSelect(this.value)" style="margin-bottom:6px">
       <select class="fc" id="el-prod" size="5" style="height:120px" onchange="elabProdSelected()">${prodOpts}</select>
@@ -12173,8 +12316,15 @@ function saveElab(){
   const _lr=window._lastRecepData;
   const recepOrigen=(_lr&&_lr.date===today()&&(prod.toLowerCase().includes((_lr.producto||'').toLowerCase().split(' ')[0])||(_lr.producto||'').toLowerCase().includes(prod.toLowerCase().split(' ')[0])))?_lr:null;
   if(recepOrigen) window._lastRecepData=null;
-  const rec={id:genId(),lote:lote||(recepOrigen?recepOrigen.lote:''),producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,ingredientes,estado:'en_stock',date:today(),ts:new Date().toISOString(),recep_id:recepOrigen?recepOrigen.id:null};
+  const evaCtx=window._evaPendingContext||null;
+  const rec={id:genId(),lote:lote||(recepOrigen?recepOrigen.lote:''),producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,ingredientes,estado:'en_stock',date:today(),ts:new Date().toISOString(),recep_id:recepOrigen?recepOrigen.id:null,
+    evento_id:evaCtx?.hojaId||null,evento_cliente:evaCtx?.cliente||'',evento_fecha:evaCtx?.fecha||'',evento_lugar:evaCtx?.lugar||''};
   recs.push(rec);sv(K.elab,recs);
+  if(evaCtx){
+    const hoja=(DB.hojas||[]).find(h=>h.id===evaCtx.hojaId),item=hoja?.menu?.[evaCtx.menuIndex];
+    if(item){item.appcc_estado='completada';item.appcc_rec_id=rec.id;item.appcc_completada_en=rec.ts;item.appcc_empleado=emp;saveDB();}
+    window._evaPendingContext=null;
+  }
   // Descontar del stock de materias primas (K.recep)
   if(window._elabRacionesData&&window._elabRacionesData.calcs){
     const stockArr=ld(K.recep)||[];
