@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260722-appcc-completa';
+const CACHE_NAME = 'albaraba-appcc-v20260722-appcc-completa2';
 const APP_SHELL = [
   './',
   './index.html',
