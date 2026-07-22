@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-appcc-completa -->
+<!-- VERSION: v20260722-appcc-completa2 -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -15407,7 +15407,7 @@ function openScanModal(onResult) {
       if(res) res.innerHTML='<span style="color:#aaa;font-size:11px">Usa el botón de arriba para fotografiar el código</span>';
       return;
     }
-    _scanner.start(
+    const startPromise=_scanner.start(
       { facingMode: 'environment' },
       { fps: 10, qrbox: { width: 240, height: 90 } },
       (decodedText) => {
@@ -15420,7 +15420,19 @@ function openScanModal(onResult) {
         setTimeout(() => { closeModalAPPCC(); onResult(parsed); }, 400);
       },
       () => {} // ignore per-frame errors
-    ).catch(err => {
+    );
+    const visorWatchdog=setTimeout(()=>{
+      const res=document.getElementById('scan-result');
+      if(res&&_scannerActive&&res.textContent.includes('Iniciando')){
+        res.innerHTML='<span style="color:#687386;font-size:11px">Si no aparece el visor, usa <strong>Abrir cámara y fotografiar código</strong>.</span>';
+      }
+    },8000);
+    startPromise.then(()=>{
+      clearTimeout(visorWatchdog);
+      const res=document.getElementById('scan-result');
+      if(res&&_scannerActive)res.innerHTML='<span style="color:#27ae60;font-size:11px;font-weight:700">● Visor activo — apunta al código</span>';
+    }).catch(err => {
+      clearTimeout(visorWatchdog);
       const res=document.getElementById('scan-result');
       if(!res) return;
       const isPermission = err && (err.name==='NotAllowedError' || (err.message||'').includes('ermission'));
