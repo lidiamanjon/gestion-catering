@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-appcc-fix1 -->
+<!-- VERSION: v20260722-appcc-completa -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -9398,13 +9398,11 @@ window.addEventListener('DOMContentLoaded',()=>{
         if(typeof renderTileGrid==='function') renderTileGrid();
         if(typeof updateScoreChip==='function') updateScoreChip();
         if(typeof renderHomeAlerts==='function') renderHomeAlerts();
-        if(typeof _wSession!=='undefined') _wSession.updateHeader();
-        // Pedir trabajador si no hay ninguno seleccionado
-        if(typeof getActiveWorker==='function' && !getActiveWorker() && typeof _wSession!=='undefined'){
-          setTimeout(function(){ _wSession.showPicker(true); }, 400);
-        }
+        // Cada entrada en APPCC exige identificar de nuevo al trabajador.
+        if(typeof _wSession!=='undefined') _wSession.enter();
       }catch(e){ console.error('switchApp appcc error:',e); }
     } else {
+      if(typeof _wSession!=='undefined') _wSession.exit();
       aa.style.display = 'none';
       ag.style.display = '';
       if(ta) ta.classList.remove('active');
@@ -9735,24 +9733,98 @@ function getUnifiedProvs(){
 // WORKER SESSION — selección de trabajador activo
 // ============================================================
 var _wSession = (function(){
+  var INACTIVITY_MS=2*60*1000;
+  var LAST_ACTIVITY_KEY='a_worker_last_activity';
+  var timer=null;
+  var pickerEmps=[];
   function getWorker(){ return localStorage.getItem(K.wActive)||''; }
+  function appccVisible(){
+    var app=document.getElementById('app-appcc');
+    return !!(app&&app.style.display!=='none');
+  }
   function updateHeader(){
     var w = getWorker();
     var el = document.getElementById('header-worker-sub');
     if(el) el.textContent = w ? ('👤 '+w+' · APPCC') : 'Sistema APPCC · Catering';
     var btn = document.getElementById('wchange-btn');
     if(btn) btn.title = w ? ('Trabajador: '+w+' · Cambiar') : 'Seleccionar trabajador';
+    var name=document.getElementById('wchange-name');
+    if(name) name.textContent=w||'Identificarse';
   }
-  function showPicker(force){
+  function getOverlay(){
+    var overlay=document.getElementById('worker-lock-overlay');
+    if(overlay)return overlay;
+    overlay=document.createElement('div');
+    overlay.id='worker-lock-overlay';
+    overlay.style.cssText='position:fixed;inset:0;z-index:30000;background:rgba(9,20,45,.72);display:none;align-items:flex-end;justify-content:center;padding:12px';
+    document.body.appendChild(overlay);
+    return overlay;
+  }
+  function closePicker(){
+    var overlay=document.getElementById('worker-lock-overlay');
+    if(overlay)overlay.style.display='none';
+  }
+  function armTimer(){
+    clearTimeout(timer);
+    if(!getWorker()||!appccVisible())return;
+    localStorage.setItem(LAST_ACTIVITY_KEY,String(Date.now()));
+    timer=setTimeout(lock,INACTIVITY_MS);
+  }
+  function lock(){
+    clearTimeout(timer);
+    localStorage.removeItem(K.wActive);
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
+    updateHeader();
+    if(appccVisible())showPicker(true,'Sesión pausada por 2 minutos de inactividad');
+  }
+  function selectByIndex(index){
+    var worker=pickerEmps[index];
+    if(!worker)return;
+    localStorage.setItem(K.wActive,worker);
+    updateHeader();
+    closePicker();
+    armTimer();
+  }
+  function showPicker(force,reason){
     var emps = ld(K.emp);
     if(!emps||!emps.length) emps = ['Lidia','Edwin','Gustavo','Jeni'];
+    pickerEmps=emps.slice();
     var current = getWorker();
-    var opts = emps.map(function(e){
-      return '<button onclick="localStorage.setItem(\''+K.wActive+'\',\''+e+'\');_wSession.updateHeader();closeModalAPPCC();try{showHome();}catch(x){}" style="display:block;width:100%;padding:14px 18px;margin-bottom:8px;background:'+(e===current?'var(--primary)':'#f0f4ff')+';color:'+(e===current?'#fff':'var(--primary)')+';border:2px solid var(--primary);border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">'+e+'</button>';
+    var opts = emps.map(function(e,index){
+      return '<button onclick="_wSession.selectByIndex('+index+')" style="display:block;width:100%;padding:15px 18px;margin-bottom:8px;background:'+(e===current?'#1a4fa8':'#f0f4ff')+';color:'+(e===current?'#fff':'#1a4fa8')+';border:2px solid #1a4fa8;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer">'+e+'</button>';
     }).join('');
-    openModalAPPCC('<div class="modal-title">👤 ¿Quién está trabajando?</div>'+opts+(force?'':'<button onclick="closeModalAPPCC()" style="display:block;width:100%;padding:12px;margin-top:4px;background:#f5f5f5;border:none;border-radius:10px;font-size:14px;cursor:pointer;color:#888">Cancelar</button>'));
+    var overlay=getOverlay();
+    overlay.innerHTML='<div style="width:100%;max-width:440px;background:#fff;border-radius:18px;padding:20px;box-shadow:0 10px 35px rgba(0,0,0,.35)">'+
+      '<div style="font-size:20px;font-weight:800;color:#102a56;margin-bottom:5px">👤 ¿Quién está trabajando?</div>'+
+      '<div style="font-size:12px;color:#687386;margin-bottom:15px">'+(reason||'Identifícate para registrar correctamente cada control APPCC.')+'</div>'+
+      opts+
+      (force?'':'<button onclick="_wSession.closePicker()" style="display:block;width:100%;padding:12px;margin-top:4px;background:#f5f5f5;border:none;border-radius:10px;font-size:14px;cursor:pointer;color:#687386">Cancelar</button>')+
+      '</div>';
+    overlay.style.display='flex';
   }
-  // Auto-mostrar picker si no hay trabajador activo
+  function enter(){
+    clearTimeout(timer);
+    localStorage.removeItem(K.wActive);
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
+    updateHeader();
+    setTimeout(function(){showPicker(true,'Identificación obligatoria al entrar en APPCC.');},150);
+  }
+  function exit(){
+    clearTimeout(timer);
+    closePicker();
+  }
+  function activity(){
+    if(appccVisible()&&getWorker())armTimer();
+  }
+  ['pointerdown','keydown','touchstart'].forEach(function(eventName){
+    document.addEventListener(eventName,activity,{passive:true,capture:true});
+  });
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden||!appccVisible())return;
+    var last=parseInt(localStorage.getItem(LAST_ACTIVITY_KEY)||'0',10);
+    if(!getWorker()||!last||Date.now()-last>=INACTIVITY_MS)lock();
+    else armTimer();
+  });
   document.addEventListener('DOMContentLoaded', function(){
     setTimeout(function(){
       if(!getWorker()){
@@ -9763,7 +9835,7 @@ var _wSession = (function(){
       updateHeader();
     }, 500);
   });
-  return { showPicker: showPicker, updateHeader: updateHeader };
+  return {showPicker:showPicker,updateHeader:updateHeader,selectByIndex:selectByIndex,closePicker:closePicker,enter:enter,exit:exit};
 })();
 
 // ============================================================
@@ -15058,81 +15130,68 @@ async function _scanFromFile(inp, onResult){
   });
 }
 
-// GS1 Application Identifier lengths (fixed-length AIs)
+// Longitudes del valor (sin incluir el identificador de aplicación).
 const GS1_AI_FIXED = {
-  '00':20,'01':16,'02':16,'03':16,'04':18,'11':8,'12':8,'13':8,
-  '14':8,'15':8,'16':8,'17':8,'18':8,'19':8,'20':4,'31':10,
-  '32':10,'33':10,'34':10,'35':10,'36':10,'41':16
+  '00':18,'01':14,'02':14,'11':6,'12':6,'13':6,'15':6,'16':6,'17':6,
+  '20':2,'410':13,'411':13,'412':13,'413':13,'414':13,'415':13,'416':13
 };
+const GS1_AI_VARIABLE = ['10','21','22','30','37','90','91','92','93','94','95','96','97','98','99',
+  '240','241','242','243','250','251','253','254','400','401','403','420','421','422','423','424','425','426',
+  '7002','7004','8002','8003','8004','8007','8010','8011','8012','8020','8110','8200'];
+
+function _gs1AiAt(s,index){
+  for(const len of [4,3,2]){
+    const ai=s.substring(index,index+len);
+    if(GS1_AI_FIXED[ai]!==undefined||GS1_AI_VARIABLE.includes(ai)||/^3[1-6]\d{2}$/.test(ai))return ai;
+  }
+  return '';
+}
 
 function parseGS1(raw) {
-  // Remove parentheses format: (01)... → 01...
-  let s = raw.replace(/\(([0-9]{2,4})\)/g, '$1');
-  const result = {};
-  let i = 0;
-  const FNC1 = String.fromCharCode(29); // GS separator
-  s = s.replace(new RegExp(FNC1,'g'), '');
+  const original=String(raw||'').trim();
+  const FNC1=String.fromCharCode(29);
+  const result={};
 
-  while (i < s.length) {
-    // Try AI lengths 2,3,4
-    let found = false;
-    for (const len of [2,3,4]) {
-      if (i + len > s.length) continue;
-      const ai = s.substring(i, i + len);
-      if (GS1_AI_FIXED[ai] !== undefined) {
-        const valLen = GS1_AI_FIXED[ai] - len;
-        result[ai] = s.substring(i + len, i + GS1_AI_FIXED[ai]);
-        i += GS1_AI_FIXED[ai];
-        found = true; break;
-      }
-    }
-    if (!found) {
-      // Variable length AI — read until FNC1 or end
-      const ai2 = s.substring(i, i+2);
-      const ai3 = s.substring(i, i+3);
-      const knownVar = ['10','21','22','240','241','242','250','251','253','254',
-                        '30','37','390','391','392','393','400','401','402','403',
-                        '410','411','412','413','414','415','420','421','422',
-                        '423','424','425','426','7001','7002','7003','7004',
-                        '8001','8002','8003','8004','8005','8006','8007','8008',
-                        '8010','8011','8012','8017','8018','8020','8100','8101',
-                        '8102','8110','8200','90','91','92','93','94','95','96',
-                        '97','98','99'];
-      let aiUsed = null;
-      // Try longest match first
-      for (const ka of knownVar.sort((a,b)=>b.length-a.length)) {
-        if (s.startsWith(ka, i)) { aiUsed = ka; break; }
-      }
-      if (aiUsed) {
-        i += aiUsed.length;
-        const end = s.indexOf(FNC1, i);
-        result[aiUsed] = end === -1 ? s.substring(i) : s.substring(i, end);
-        i = end === -1 ? s.length : end + 1;
-      } else {
-        i++; // skip unknown byte
+  // Formato legible: (01)084... (17)270630 (10)LOTE
+  if(/\(\d{2,4}\)/.test(original)){
+    const re=/\((\d{2,4})\)([^()]*)/g;
+    let match;
+    while((match=re.exec(original))!==null)result[match[1]]=match[2].replace(new RegExp(FNC1,'g'),'').trim();
+  }else{
+    let s=original.replace(/^\]C1/,'');
+    let i=0;
+    while(i<s.length){
+      if(s[i]===FNC1){i++;continue;}
+      const ai=_gs1AiAt(s,i);
+      if(!ai){i++;continue;}
+      i+=ai.length;
+      const fixedLen=/^3[1-6]\d{2}$/.test(ai)?6:GS1_AI_FIXED[ai];
+      if(fixedLen!==undefined){
+        result[ai]=s.substring(i,i+fixedLen);
+        i+=fixedLen;
+      }else{
+        const end=s.indexOf(FNC1,i);
+        result[ai]=(end===-1?s.substring(i):s.substring(i,end)).trim();
+        i=end===-1?s.length:end+1;
       }
     }
   }
 
-  // Map to friendly keys
-  const out = { raw };
-  if (result['01']) out.gtin = result['01'];
-  if (result['02']) out.gtin = result['02'];
-  if (result['10']) out.lot = result['10'].trim();
-  if (result['17']) {
-    const d = result['17'];
-    // YYMMDD → YYYY-MM-DD
-    const yy = parseInt(d.substring(0,2));
-    const year = yy >= 50 ? 1900+yy : 2000+yy;
-    out.expiry = `${year}-${d.substring(2,4)}-${d.substring(4,6)||'01'}`;
+  const out={raw:original};
+  if(result['01'])out.gtin=result['01'];
+  else if(result['02'])out.gtin=result['02'];
+  if(result['10'])out.lot=result['10'].trim();
+  if(/^\d{6}$/.test(result['17']||'')){
+    const d=result['17'];
+    const yy=parseInt(d.substring(0,2),10);
+    const year=yy>=50?1900+yy:2000+yy;
+    out.expiry=`${year}-${d.substring(2,4)}-${d.substring(4,6)}`;
   }
-  if (result['30']) out.qty = result['30'];
-  if (result['3100']||result['3101']||result['3102']||result['3103']) {
-    const key = Object.keys(result).find(k=>k.startsWith('31'));
-    if(key) {
-      const dec = parseInt(key[3]);
-      out.pesoKg = (parseInt(result[key]) / Math.pow(10,dec)).toFixed(dec);
-    }
+  if(result['30'])out.qty=result['30'];
+  const weightKey=Object.keys(result).find(k=>/^31\d{2}$/.test(k));
+  if(weightKey&&/^\d{6}$/.test(result[weightKey])){
+    const decimals=parseInt(weightKey[3],10);
+    out.pesoKg=(parseInt(result[weightKey],10)/Math.pow(10,decimals)).toFixed(decimals);
   }
   return out;
 }
@@ -15152,9 +15211,12 @@ function parseInternalQR(raw) {
 }
 
 function parseScan(raw) {
-  const internal = parseInternalQR(raw);
+  const clean=String(raw||'').trim();
+  const internal = parseInternalQR(clean);
   if (internal) return internal;
-  const gs1 = parseGS1(raw);
+  // EAN-8, UPC-A, EAN-13 y GTIN-14 sin identificadores GS1.
+  if(/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(clean))return{raw:clean,gtin:clean};
+  const gs1 = parseGS1(clean);
   return gs1;
 }
 
@@ -16535,4 +16597,6 @@ async function _batchPrint(items, orient){
 /* ═══════════════════════════════════════════════════════════════════
    WORKER SESSION — Selección de trabajador + timeout inactividad (5 min)
    ═══════════════════════════════════════════════════════════════════ */
-var _wSessi
+</script>
+</body>
+</html>
