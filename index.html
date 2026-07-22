@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-pwa-installable -->
+<!-- VERSION: v20260722-appcc-fix1 -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -522,10 +522,6 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni" id="ni-pedidos" onclick="nav('pedidos')"><span class="ic">🛒</span> Generar Pedido</div>
     <div class="ni" id="ni-stock" onclick="nav('stock')"><span class="ic">📦</span> Stock</div>
     <div class="ni" id="ni-congelador" onclick="nav('congelador')"><span class="ic">🧊</span> Stock Congelador</div>
-    <div class="nav-label">Formularios</div>
-    <div class="ni" onclick="abrirHojaServicio('alaboca')"><span class="ic">📋</span> Hoja Alaboca</div>
-    <div class="ni" onclick="abrirHojaServicio('pv')"><span class="ic">🌿</span> Hoja PV</div>
-    <div class="ni admin-only" onclick="abrirPresupuesto()"><span class="ic">💼</span> Presupuesto</div>
     <div class="nav-label admin-only">Documentos</div>
     <div class="ni admin-only" id="ni-informes" onclick="nav('informes')"><span class="ic">📄</span> Informes</div>
     <div class="ni admin-only" id="ni-gastos" onclick="nav('gastos')"><span class="ic">💰</span> Gastos</div>
@@ -9687,7 +9683,18 @@ const K={
   tempnc:'a_tempnc',
   prodPend:'a_prod_pendiente'
 };
-const ld=k=>JSON.parse(localStorage.getItem(k)||'[]');
+const APPCC_OBJECT_KEYS=new Set([K.cfg_emp,K.gtindb]);
+// Los datos APPCC proceden de distintas versiones de la app. Si un registro
+// antiguo queda incompleto o con un formato inesperado, no debe impedir que
+// se abra todo el panel.
+const ld=k=>{
+  const fallback=APPCC_OBJECT_KEYS.has(k)?{}:[];
+  try{
+    const value=JSON.parse(localStorage.getItem(k)||JSON.stringify(fallback));
+    if(APPCC_OBJECT_KEYS.has(k))return value&&typeof value==='object'&&!Array.isArray(value)?value:{};
+    return Array.isArray(value)?value:[];
+  }catch(e){console.warn('Dato APPCC dañado; se ignora:',k);return fallback}
+};
 const sv=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function genLot(){const n=new Date(),p=x=>String(x).padStart(2,'0');return String(n.getFullYear()).slice(2)+p(n.getMonth()+1)+p(n.getDate())+p(n.getHours())+p(n.getMinutes())+p(n.getSeconds())}
