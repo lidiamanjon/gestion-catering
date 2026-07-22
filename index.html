@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-eva-plan3 -->
+<!-- VERSION: v20260722-sync-segura1 -->
 <script>
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
@@ -534,6 +534,7 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni admin-only" id="ni-usuarios" onclick="nav('usuarios')"><span class="ic">👥</span> Usuarios</div>
     <div class="nav-label admin-only">Datos</div>
     <div class="ni admin-only" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
+    <div class="ni admin-only" onclick="restoreLatestAutoBackup()"><span class="ic">🛟</span> Recuperar copia automática</div>
     <div class="ni admin-only" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
@@ -3410,14 +3411,68 @@ function _generarInformeTareas(){
   );
 }
 
+let _cloudSaveTimer=null;
+function _saveLocalRecoveryPoint(raw,reason,force=false){
+  if(!raw)return;
+  const now=Date.now(),last=parseInt(localStorage.getItem('_albaraba_backup_at')||'0');
+  if(!force&&now-last<5*60*1000)return;
+  try{
+    const prev=localStorage.getItem('_albaraba_backup_1');if(prev)localStorage.setItem('_albaraba_backup_2',prev);
+    localStorage.setItem('_albaraba_backup_1',JSON.stringify({fecha:new Date().toISOString(),motivo:reason||'guardado',datos:JSON.parse(raw)}));
+    localStorage.setItem('_albaraba_backup_at',String(now));
+  }catch(e){try{localStorage.removeItem('_albaraba_backup_2');}catch(_){}console.warn('No se pudo crear copia local:',e);}
+}
+function _mergeDBPreservingRecords(remote,local){
+  const merge=(a,b)=>{
+    if(Array.isArray(a)||Array.isArray(b)){
+      const aa=Array.isArray(a)?a:[],bb=Array.isArray(b)?b:[];
+      if([...aa,...bb].some(x=>x&&typeof x==='object'&&x.id)){
+        const map=new Map();aa.forEach(x=>map.set(x?.id||JSON.stringify(x),x));bb.forEach(x=>map.set(x?.id||JSON.stringify(x),x));return[...map.values()];
+      }
+      return [...new Map([...aa,...bb].map(x=>[JSON.stringify(x),x])).values()];
+    }
+    if(a&&typeof a==='object'&&b&&typeof b==='object'){
+      const out={...a};Object.keys(b).forEach(k=>out[k]=k in a?merge(a[k],b[k]):b[k]);return out;
+    }
+    return b===undefined?a:b;
+  };
+  return merge(remote||{},local||{});
+}
+function _backupCloudOnce(data){
+  if(!fbDB||!data)return Promise.resolve();
+  const day=new Date().toISOString().slice(0,10),marker='_albaraba_cloud_backup_'+day;
+  if(localStorage.getItem(marker))return Promise.resolve();
+  return fbDB.ref('albaraba_backups/'+day).transaction(current=>current||{creada_en:new Date().toISOString(),datos:data})
+    .then(()=>localStorage.setItem(marker,'1')).catch(e=>console.warn('Copia cloud no disponible:',e));
+}
 function saveDB(){
-  localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+  const previous=localStorage.getItem('albaraba_v2');
+  _saveLocalRecoveryPoint(previous,'antes de guardar');
+  DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),dispositivo:navigator.userAgent.slice(0,80)};
+  const payload=JSON.parse(JSON.stringify(DB));
+  localStorage.setItem('albaraba_v2',JSON.stringify(payload));
+  localStorage.setItem('_albaraba_pending_sync','1');
   if(fbDB&&fbAuth&&fbAuth.currentUser){
-    setSyncStatus('saving');
-    fbDB.ref('albaraba_v2').set(DB)
-      .then(()=>setSyncStatus('ok'))
-      .catch(()=>setSyncStatus('error'));
-  }
+    setSyncStatus('saving');clearTimeout(_cloudSaveTimer);
+    _cloudSaveTimer=setTimeout(()=>{
+      const token=payload._sync.actualizado_en;
+      let backupData=payload;try{if(previous)backupData=JSON.parse(previous);}catch(e){}
+      _backupCloudOnce(backupData).then(()=>fbDB.ref('albaraba_v2').set(payload))
+        .then(()=>{const actual=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');if(actual?._sync?.actualizado_en===token)localStorage.removeItem('_albaraba_pending_sync');setSyncStatus('ok');})
+        .catch(()=>setSyncStatus('error'));
+    },250);
+  }else setSyncStatus('offline');
+}
+
+function restoreLatestAutoBackup(){
+  const raw=localStorage.getItem('_albaraba_backup_1');
+  if(!raw){alert('Todavía no hay una copia automática en este dispositivo.');return;}
+  try{
+    const copia=JSON.parse(raw);
+    if(!confirm('Se recuperará la copia del '+new Date(copia.fecha).toLocaleString('es-ES')+'.\n\nAntes se guardará una copia del estado actual. ¿Continuar?'))return;
+    _saveLocalRecoveryPoint(localStorage.getItem('albaraba_v2'),'antes de recuperar',true);
+    DB=copia.datos;applyMigrations();saveDB();nav('dashboard');alert('✅ Copia recuperada y enviada para sincronizar.');
+  }catch(e){alert('No se pudo leer la copia automática.');}
 }
 
 function setSyncStatus(s){
@@ -3471,12 +3526,21 @@ function loadDB(){
     fbDB.ref('albaraba_v2').once('value').then(snap=>{
       const data=snap.val();
       if(data){
-        // Firebase tiene datos → usarlos (verdad absoluta)
-        DB=data;
+        const pending=localStorage.getItem('_albaraba_pending_sync')==='1';
+        let mergedPending=false;
+        if(pending&&raw){
+          // Hubo trabajo sin conexión: conservar ambos lados y unir registros por id.
+          _saveLocalRecoveryPoint(JSON.stringify(data),'nube antes de fusionar',true);
+          DB=_mergeDBPreservingRecords(data,DB);
+          mergedPending=true;
+        }else{
+          if(raw&&raw!==JSON.stringify(data))_saveLocalRecoveryPoint(raw,'antes de actualizar desde nube',true);
+          DB=data;
+        }
         applyMigrations();
         _installBidfoodFichas();
         localStorage.setItem('albaraba_v2',JSON.stringify(DB));
-        setSyncStatus('ok');
+        if(mergedPending)saveDB();else setSyncStatus('ok');
         if(fbAuth&&fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
         if(currentSection)nav(currentSection);else nav('dashboard');
       } else if(raw){
@@ -6429,8 +6493,27 @@ function doLogin(){
     });
 }
 
+let _pwaUpdateAccepted=false;
+function showPwaUpdateReady(reg){
+  if(document.getElementById('pwa-update-ready'))return;
+  const bar=document.createElement('div');bar.id='pwa-update-ready';
+  bar.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:20000;background:#1a1a2e;color:#fff;padding:12px 14px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.35);display:flex;align-items:center;gap:10px;max-width:92%;font-size:13px';
+  bar.innerHTML='<span>✨ Nueva versión preparada. Tus datos están guardados.</span><button style="border:0;border-radius:8px;background:#c9a227;color:#fff;padding:8px 12px;font-weight:700;cursor:pointer;white-space:nowrap">Actualizar ahora</button>';
+  bar.querySelector('button').onclick=()=>{_pwaUpdateAccepted=true;if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});else location.reload();};
+  document.body.appendChild(bar);
+}
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
+  navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>{
+    if(reg.waiting)showPwaUpdateReady(reg);
+    reg.addEventListener('updatefound',()=>{
+      const worker=reg.installing;if(!worker)return;
+      worker.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)showPwaUpdateReady(reg);});
+    });
+    reg.update().catch(()=>{});
+    setInterval(()=>reg.update().catch(()=>{}),10*60*1000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{});});
+  }).catch(()=>{});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(_pwaUpdateAccepted)location.reload();});
 }
 function saveHojaFromExternal(hoja, nuevasElab){
   try{
@@ -9977,9 +10060,11 @@ let _appccCloudApplying=false,_appccCloudRef=null;
 const _appccCloudTimers={};
 const sv=(k,v)=>{
   localStorage.setItem(k,JSON.stringify(v));
+  if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&!_appccCloudApplying)localStorage.setItem('_appcc_pending_'+k,'1');
   if(_appccCloudRef&&!_appccCloudApplying&&!APPCC_DEVICE_LOCAL_KEYS.has(k)){
     clearTimeout(_appccCloudTimers[k]);setSyncStatus('saving');
-    _appccCloudTimers[k]=setTimeout(()=>_appccCloudRef.child(k).set(v).then(()=>setSyncStatus('ok')).catch(e=>{console.error('APPCC cloud:',e);setSyncStatus('error');}),180);
+    const serialized=JSON.stringify(v);
+    _appccCloudTimers[k]=setTimeout(()=>_appccCloudRef.child(k).set(v).then(()=>{if(localStorage.getItem(k)===serialized)localStorage.removeItem('_appcc_pending_'+k);setSyncStatus('ok');}).catch(e=>{console.error('APPCC cloud:',e);setSyncStatus('error');}),180);
   }
 };
 function initAPPCCCloudSync(){
@@ -9988,17 +10073,29 @@ function initAPPCCCloudSync(){
   _appccCloudRef.once('value').then(snap=>{
     const remoto=snap.val();
     if(remoto){
+      const day=new Date().toISOString().slice(0,10);
+      fbDB.ref('appcc_backups/'+day).transaction(current=>current||{creada_en:new Date().toISOString(),datos:remoto}).catch(()=>{});
       _appccCloudApplying=true;
-      Object.entries(remoto).forEach(([k,v])=>{if(!APPCC_DEVICE_LOCAL_KEYS.has(k))localStorage.setItem(k,JSON.stringify(v));});
+      Object.entries(remoto).forEach(([k,v])=>{
+        if(APPCC_DEVICE_LOCAL_KEYS.has(k)||localStorage.getItem('_appcc_pending_'+k)==='1')return;
+        const next=JSON.stringify(v),previous=localStorage.getItem(k);
+        if(previous&&previous!==next)try{localStorage.setItem('_appcc_recovery_'+k,previous);}catch(e){}
+        localStorage.setItem(k,next);
+      });
       _appccCloudApplying=false;
+      Object.values(K).forEach(k=>{
+        if(APPCC_DEVICE_LOCAL_KEYS.has(k)||localStorage.getItem('_appcc_pending_'+k)!=='1')return;
+        const raw=localStorage.getItem(k);if(raw===null)return;
+        try{const value=JSON.parse(raw);_appccCloudRef.child(k).set(value).then(()=>localStorage.removeItem('_appcc_pending_'+k));}catch(e){}
+      });
     }else{
       const inicial={};Object.values(K).forEach(k=>{if(APPCC_DEVICE_LOCAL_KEYS.has(k))return;const raw=localStorage.getItem(k);if(raw!==null)try{inicial[k]=JSON.parse(raw)}catch(e){}});
-      if(Object.keys(inicial).length)_appccCloudRef.set(inicial);
+      if(Object.keys(inicial).length)_appccCloudRef.set(inicial).then(()=>Object.keys(inicial).forEach(k=>localStorage.removeItem('_appcc_pending_'+k)));
     }
     setSyncStatus('ok');
     _appccCloudRef.on('value',cloudSnap=>{
       const data=cloudSnap.val()||{};_appccCloudApplying=true;
-      Object.entries(data).forEach(([k,v])=>{if(!APPCC_DEVICE_LOCAL_KEYS.has(k))localStorage.setItem(k,JSON.stringify(v));});
+      Object.entries(data).forEach(([k,v])=>{if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&localStorage.getItem('_appcc_pending_'+k)!=='1')localStorage.setItem(k,JSON.stringify(v));});
       _appccCloudApplying=false;
       if(typeof renderHomeAlerts==='function')renderHomeAlerts();
     });
