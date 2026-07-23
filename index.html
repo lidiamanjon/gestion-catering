@@ -3412,6 +3412,9 @@ function _generarInformeTareas(){
 }
 
 let _cloudSaveTimer=null;
+let _mainCloudRef=null;
+let _mainCloudListening=false;
+let _mainCloudApplying=false;
 function _saveLocalRecoveryPoint(raw,reason,force=false){
   if(!raw)return;
   const now=Date.now(),last=parseInt(localStorage.getItem('_albaraba_backup_at')||'0');
@@ -3457,7 +3460,7 @@ function saveDB(){
     _cloudSaveTimer=setTimeout(()=>{
       const token=payload._sync.actualizado_en;
       let backupData=payload;try{if(previous)backupData=JSON.parse(previous);}catch(e){}
-      _backupCloudOnce(backupData).then(()=>fbDB.ref('albaraba_v2').set(payload))
+      _backupCloudOnce(backupData).then(()=>fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,payload)))
         .then(()=>{const actual=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');if(actual?._sync?.actualizado_en===token)localStorage.removeItem('_albaraba_pending_sync');setSyncStatus('ok');})
         .catch(()=>setSyncStatus('error'));
     },250);
@@ -3501,6 +3504,35 @@ function applyMigrations(){
   if(DB.proveedores.length===0){
     DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
   }
+}
+
+function initMainCloudRealtime(){
+  if(_mainCloudListening||!fbDB||!fbAuth||!fbAuth.currentUser)return;
+  _mainCloudRef=fbDB.ref('albaraba_v2');
+  _mainCloudListening=true;
+  _mainCloudRef.on('value',snap=>{
+    const data=snap.val();
+    if(!data||_mainCloudApplying)return;
+    // Mientras este dispositivo tiene un guardado pendiente, no se pisa su
+    // trabajo local. La transacción de saveDB fusionará ambos lados.
+    if(localStorage.getItem('_albaraba_pending_sync')==='1')return;
+    const next=JSON.stringify(data);
+    const previous=localStorage.getItem('albaraba_v2');
+    if(previous===next){setSyncStatus('ok');return;}
+    _saveLocalRecoveryPoint(previous,'antes de aplicar cambio de otro dispositivo',true);
+    _mainCloudApplying=true;
+    try{
+      DB=data;
+      applyMigrations();
+      _installBidfoodFichas();
+      localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+      setSyncStatus('ok');
+      if(fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
+      if(currentSection)nav(currentSection);else nav('dashboard');
+    }finally{
+      _mainCloudApplying=false;
+    }
+  },error=>{console.error('Gestión cloud realtime:',error);setSyncStatus('error');});
 }
 
 function loadDB(){
@@ -3554,7 +3586,7 @@ function loadDB(){
         saveDB();
         setSyncStatus('ok');
       }
-    }).catch(()=>setSyncStatus('error'));
+    }).then(()=>initMainCloudRealtime()).catch(()=>setSyncStatus('error'));
   } else if(!FB_READY){
     setSyncStatus('offline');
   }
@@ -10177,9 +10209,26 @@ const ld=k=>{
 const APPCC_DEVICE_LOCAL_KEYS=new Set([K.wActive]);
 let _appccCloudApplying=false,_appccCloudRef=null;
 const _appccCloudTimers={};
+function _mergeAPPCCCloudValue(remote,local){
+  if(Array.isArray(remote)||Array.isArray(local)){
+    const a=Array.isArray(remote)?remote:[],b=Array.isArray(local)?local:[];
+    if([...a,...b].some(item=>item&&typeof item==='object'&&item.id!==undefined)){
+      const map=new Map();
+      a.forEach(item=>map.set(item?.id??JSON.stringify(item),item));
+      b.forEach(item=>map.set(item?.id??JSON.stringify(item),item));
+      return [...map.values()];
+    }
+    return [...new Map([...a,...b].map(item=>[JSON.stringify(item),item])).values()];
+  }
+  if(remote&&typeof remote==='object'&&local&&typeof local==='object')return{...remote,...local};
+  return local===undefined?remote:local;
+}
 const sv=(k,v)=>{
   localStorage.setItem(k,JSON.stringify(v));
-  if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&!_appccCloudApplying)localStorage.setItem('_appcc_pending_'+k,'1');
+  // Antes de que Firebase termine de cargar, los valores semilla de una
+  // instalación nueva son solo una caché provisional. No deben marcarse como
+  // trabajo pendiente ni sobrescribir la información real de otros equipos.
+  if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&!_appccCloudApplying&&_appccCloudRef)localStorage.setItem('_appcc_pending_'+k,'1');
   if(_appccCloudRef&&!_appccCloudApplying&&!APPCC_DEVICE_LOCAL_KEYS.has(k)){
     clearTimeout(_appccCloudTimers[k]);setSyncStatus('saving');
     const serialized=JSON.stringify(v);
@@ -10205,7 +10254,14 @@ function initAPPCCCloudSync(){
       Object.values(K).forEach(k=>{
         if(APPCC_DEVICE_LOCAL_KEYS.has(k)||localStorage.getItem('_appcc_pending_'+k)!=='1')return;
         const raw=localStorage.getItem(k);if(raw===null)return;
-        try{const value=JSON.parse(raw);_appccCloudRef.child(k).set(value).then(()=>localStorage.removeItem('_appcc_pending_'+k));}catch(e){}
+        try{
+          const value=JSON.parse(raw);
+          _appccCloudRef.child(k).transaction(current=>_mergeAPPCCCloudValue(current,value)).then(result=>{
+            const merged=result.snapshot.val();
+            if(merged!==null)localStorage.setItem(k,JSON.stringify(merged));
+            localStorage.removeItem('_appcc_pending_'+k);
+          });
+        }catch(e){}
       });
     }else{
       const inicial={};Object.values(K).forEach(k=>{if(APPCC_DEVICE_LOCAL_KEYS.has(k))return;const raw=localStorage.getItem(k);if(raw!==null)try{inicial[k]=JSON.parse(raw)}catch(e){}});
