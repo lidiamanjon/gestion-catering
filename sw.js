@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260723-eva-pdf-direct1';
+const CACHE_NAME = 'albaraba-appcc-v20260723-trazabilidad-evento1';
 const APP_SHELL = [
   './',
   './index.html',

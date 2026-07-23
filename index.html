@@ -5274,7 +5274,6 @@ function renderHojasTable(q=''){
         ${h.eva_revision_pendiente||h.eva_cambio_pendiente?`<span class="badge b-warn">✨ Revisión de Eva pendiente</span>${evaMissing.length?`<span class="badge" style="background:#fee2e2;color:#991b1b">Falta: ${evaMissing.join(', ')}</span>`:''}<button class="btn btn-sm btn-green" onclick="event.stopPropagation();aprobarPropuestaEva('${h.id}')">${evaMissing.length?'✏️ Completar datos':'✓ Revisar y aprobar'}</button><button class="btn btn-sm btn-del" onclick="event.stopPropagation();rechazarPropuestaEva('${h.id}')">Rechazar</button>`:h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`}
         <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')" title="${h.documentos?.hoja_servicio_url?'Abrir el PDF final preparado por EVA':'El PDF de EVA todavía está pendiente'}">📄 PDF EVA</button>
         <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();cargarPedidoDesdeHoja('${h.id}')">🛒 Calcular pedido</button>
-        <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();descargarEventoParaEva('${h.id}')">⬇ Expediente Eva</button>
         <button class="btn btn-sm btn-light" onclick="event.stopPropagation();editHoja('${h.id}')">✏️</button>
         <button class="btn btn-sm btn-del" onclick="event.stopPropagation();deleteHoja('${h.id}')">🗑</button>
       </div>
@@ -6848,17 +6847,11 @@ function construirExpedienteEventoEva(hojaId){
   const incidencias=noConformidades.filter(n=>lotes.some(l=>String(n.descripcion||n.obs||'').includes(l))||elaboraciones.some(e=>String(n.descripcion||n.obs||'').includes(e.producto||'')));
   return{
     schema:'albaraba.eva.expediente-appcc.v1',generado_en:new Date().toISOString(),origen:'ALBARABA APPCC',
-    evento:{id:hoja.id,cliente:hoja.cliente,empresa:hoja.empresa||'',fecha:hoja.fecha,hora:hoja.hora||'',lugar:hoja.lugar||'',pax:hoja.pax,servicio:hoja.servicio||'',indicaciones:hoja.indicaciones||'',notas:hoja.notas||''},
+    evento:{id:hoja.id,id_evento:hoja.eva_id||hoja.id_evento||hoja.id,cliente:hoja.cliente,empresa:hoja.empresa||'',fecha:hoja.fecha,hora:hoja.hora||'',fecha_entrega:hoja.fecha,hora_entrega:hoja.hora||'',lugar:hoja.lugar||'',pax:hoja.pax,servicio:hoja.servicio||'',marca:hoja.marca||hoja.fuente||'',indicaciones:hoja.indicaciones||'',notas:hoja.notas||'',carpeta_drive_url:hoja.carpeta_drive_url||'',documentos:hoja.documentos||{}},
     resumen:{elaboraciones_previstas:menu.length,elaboraciones_finalizadas:finalizadas,estado:menu.length&&finalizadas===menu.length?'completo':finalizadas?'en_proceso':'pendiente',incidencias:incidencias.length},
     planificacion:menu,procesos_appcc:procesos,no_conformidades:incidencias,
-    aviso:'Documento de intercambio para Eva. Los registros sanitarios originales permanecen en ALBARABA APPCC.'
+    aviso:'Consulta directa para Eva. Los registros sanitarios originales permanecen en ALBARABA APPCC y se enlazan por evento y lote.'
   };
-}
-function descargarEventoParaEva(hojaId){
-  const expediente=construirExpedienteEventoEva(hojaId);if(!expediente){alert('No se encontró el evento.');return;}
-  const safe=String(expediente.evento.cliente||'evento').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-zA-Z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,50);
-  const blob=new Blob([JSON.stringify(expediente,null,2)],{type:'application/json;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`EVA_APPCC_${expediente.evento.fecha||today()}_${safe||'evento'}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 function updateEvaPlanSummary(){
   const el=document.getElementById('eva-plan-summary');if(!el)return;
@@ -6869,7 +6862,8 @@ window.EvaAlbaraba={
   version:'1.0',
   previsualizarHoja:payload=>previewEvaImport(payload),
   importarHoja:payload=>previewEvaImport(payload),
-  pendientes:()=>getEvaPendingElaborations()
+  pendientes:()=>getEvaPendingElaborations(),
+  expedienteEvento:hojaId=>construirExpedienteEventoEva(hojaId)
 };
 function cerrarHojaOverlay(){
   const ov=document.getElementById('hoja-overlay');
@@ -12428,9 +12422,13 @@ function _autoFillRecepFromCatalog(nombre){
   }
 }
 
-function iniciarEvaElab(hojaId,menuIndex){
+function contextoEventoAPPCC(hojaId,menuIndex){
   const hoja=(DB.hojas||[]).find(h=>h.id===hojaId);const item=hoja?.menu?.[menuIndex];if(!hoja||!item)return;
-  window._evaPendingContext={hojaId,menuIndex,cliente:hoja.cliente,fecha:hoja.fecha,lugar:hoja.lugar,nombre:item.nombre,raciones:item.pax_override||hoja.pax||0,elab_id:item.elab_id||''};
+  return{hojaId,menuIndex,id_evento:hoja.eva_id||hoja.id_evento||hoja.id,cliente:hoja.cliente,empresa:hoja.empresa||'',fecha:hoja.fecha,hora:hoja.hora||'',fecha_entrega:hoja.fecha,hora_entrega:hoja.hora||'',lugar:hoja.lugar,servicio:hoja.servicio||'',pax:hoja.pax||0,marca:hoja.marca||hoja.fuente||'',nombre:item.nombre,raciones:item.pax_override||hoja.pax||0,elab_id:item.elab_id||''};
+}
+function iniciarEvaElab(hojaId,menuIndex){
+  window._evaPendingContext=contextoEventoAPPCC(hojaId,menuIndex);
+  if(!window._evaPendingContext)return;
   openElabModalAPPCC(true);
   setTimeout(()=>{
     const ctx=window._evaPendingContext,sel=document.getElementById('el-prod'),cant=document.getElementById('el-cant');
@@ -12800,7 +12798,10 @@ function saveElab(){
   if(recepOrigen) window._lastRecepData=null;
   const evaCtx=window._evaPendingContext||null;
   const rec={id:genId(),lote:lote||(recepOrigen?recepOrigen.lote:''),producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,ingredientes,estado:'en_stock',date:today(),ts:new Date().toISOString(),recep_id:recepOrigen?recepOrigen.id:null,
-    evento_id:evaCtx?.hojaId||null,evento_cliente:evaCtx?.cliente||'',evento_fecha:evaCtx?.fecha||'',evento_lugar:evaCtx?.lugar||''};
+    evento_id:evaCtx?.hojaId||null,id_evento:evaCtx?.id_evento||evaCtx?.hojaId||null,evento_menu_index:evaCtx?.menuIndex??null,
+    evento_cliente:evaCtx?.cliente||'',evento_empresa:evaCtx?.empresa||'',evento_fecha:evaCtx?.fecha||'',evento_hora:evaCtx?.hora||'',
+    evento_fecha_entrega:evaCtx?.fecha_entrega||evaCtx?.fecha||'',evento_hora_entrega:evaCtx?.hora_entrega||evaCtx?.hora||'',
+    evento_lugar:evaCtx?.lugar||'',evento_servicio:evaCtx?.servicio||'',evento_pax:evaCtx?.pax||0,evento_marca:evaCtx?.marca||''};
   recs.push(rec);sv(K.elab,recs);
   if(evaCtx){
     const hoja=(DB.hojas||[]).find(h=>h.id===evaCtx.hojaId),item=hoja?.menu?.[evaCtx.menuIndex];
@@ -13306,7 +13307,7 @@ function viewTrazDetail(id){
     ${(e.ingredientes||[]).length?`<div style="font-size:11px;font-weight:700;color:#5b21b6;margin-bottom:4px">Lotes materias primas:</div><div style="line-height:2">${lotesMP||'<span style="color:#aaa;font-size:11px">No registrados</span>'}</div>`:''}
   </div>`;
   openModalAPPCC(`<div class="modal-title" style="font-size:14px">📋 Expediente — ${e.producto}</div>
-    ${e.evento_id?`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:9px;padding:8px 10px;margin-bottom:9px"><div style="font-size:10px;font-weight:800;color:#9a3412">EVENTO VINCULADO</div><div style="font-size:13px;font-weight:700">${esc(e.evento_cliente||'Cliente')} · ${esc(e.evento_fecha||'')}</div><div style="font-size:11px;color:#666">${esc(e.evento_lugar||'')}</div></div>`:''}
+    ${e.evento_id?`<div style="background:#fff7ed;border:1px solid #fdba74;border-radius:9px;padding:10px 12px;margin-bottom:9px"><div style="font-size:10px;font-weight:800;color:#9a3412">EVENTO Y ENTREGA VINCULADOS</div><div style="font-size:14px;font-weight:800">${esc(e.evento_cliente||'Cliente')}</div><div style="font-size:12px;color:#444;margin-top:3px">Entrega: <strong>${esc(e.evento_fecha_entrega||e.evento_fecha||'')}${e.evento_hora_entrega||e.evento_hora?' · '+esc(e.evento_hora_entrega||e.evento_hora):''}</strong></div><div style="font-size:11px;color:#666">${esc(e.evento_lugar||'')}${e.evento_servicio?' · '+esc(e.evento_servicio):''}${e.evento_pax?' · '+esc(e.evento_pax)+' pax':''}</div><div style="font-size:10px;color:#9a3412;margin-top:4px">ID: ${esc(e.id_evento||e.evento_id)}</div></div>`:''}
     ${loteSummaryHtml}
     ${secHdr('🍳','Elaboración','#e8f4fd')}
       <div style="font-size:12px;line-height:1.9">
@@ -13322,7 +13323,6 @@ function viewTrazDetail(id){
     ${!rs.length?`<div style="margin-top:10px">${e.destino==='congelador'&&!ds.length?`<button class="btn btn-block btn-gold" onclick="openDescongelFor('${e.id}')">🔄 Siguiente: registrar descongelación</button>`:ds.length?`<button class="btn btn-block btn-green" onclick="openRegenForDescongel('${ds[0].id}')">🍽 Siguiente: regeneración / entrega</button>`:`<button class="btn btn-block btn-green" onclick="openRegenFor('${e.id}')">🍽 Siguiente: regeneración / entrega</button>`}</div>`:''}
     <div style="margin-top:12px;display:flex;gap:8px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModalAPPCC()">Cerrar</button>
-      ${e.evento_id?`<button class="btn btn-outline" style="flex:1" onclick="descargarEventoParaEva('${e.evento_id}')">⬇ Para Eva</button>`:''}
       <button class="btn" style="flex:2;background:#1a4fa8;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer" onclick="printExpedienteCompleto('${e.id}')">🖨 Imprimir expediente</button>
     </div>`);
 }
@@ -14170,13 +14170,13 @@ function renderRegen(){
 function openRegenFor(elabId){
   const r=(ld(K.elab)||[]).find(x=>x.id===elabId);
   if(!r)return openRegenModal();
-  window._regenRef={producto:r.producto,lote:r.lote,elabId:r.id,origen:'nevera'};
+  window._regenRef={producto:r.producto,lote:r.lote,elabId:r.id,origen:'nevera',evento_id:r.evento_id||null};
   _showRegenForm(r.producto,r.lote);
 }
 function openRegenForDescongel(descongelId){
   const r=(ld(K.descongel)||[]).find(x=>x.id===descongelId);
   if(!r)return openRegenModal();
-  window._regenRef={producto:r.producto||'',lote:r.lote_ref||'',descongelId:r.id,origen:'descongel'};
+  window._regenRef={producto:r.producto||'',lote:r.lote_ref||'',descongelId:r.id,elabId:r.elab_id||null,origen:'descongel'};
   _showRegenForm(r.producto||'',r.lote_ref||'');
 }
 function openRegenModal(){
@@ -14219,7 +14219,10 @@ function openRegenModal(){
 }
 function selRegenItem(it){
   if(it.tipo==='elab') window._regenRef={origen:'elab',elabId:it.id};
-  else window._regenRef={origen:'descongelado',descongelId:it.id};
+  else{
+    const desc=(ld(K.descongel)||[]).find(d=>d.id===it.id);
+    window._regenRef={origen:'descongelado',descongelId:it.id,elabId:desc?.elab_id||null};
+  }
   _showRegenForm(it.prod,it.lote,it.badge);
 }
 function _showRegenForm(producto,lote,origenBadge){
@@ -14276,6 +14279,9 @@ function completarPlanificacionEvaDesdeAPPCC(elabId,registroEntrega,tempOk){
   const hoja=(DB.hojas||[]).find(h=>h.id===elab.evento_id);if(!hoja)return false;
   const item=(hoja.menu||[]).find(m=>m.appcc_rec_id===elabId)||null;if(!item)return false;
   item.appcc_estado='completada';item.appcc_completada_en=registroEntrega.ts;item.appcc_entrega_id=registroEntrega.id;item.appcc_empleado_entrega=registroEntrega.emp;
+  item.appcc_fecha_entrega=registroEntrega.evento_fecha_entrega||registroEntrega.date;item.appcc_hora_entrega=registroEntrega.evento_hora_entrega||String(registroEntrega.ts||'').slice(11,16);
+  elab.entrega_id=registroEntrega.id;elab.entregado_en=registroEntrega.ts;elab.entrega_temperatura=registroEntrega.temp_centro;elab.entrega_tipo=registroEntrega.tipo_entrega;
+  const elabs=ld(K.elab),idx=elabs.findIndex(e=>e.id===elabId);if(idx>=0){elabs[idx]=elab;sv(K.elab,elabs);}
   saveDB();return true;
 }
 function saveRegen2(){
@@ -14291,9 +14297,18 @@ function saveRegen2(){
   if(!emp){alert('No hay trabajador activo');return;}
   const tempOk=tipo==='caliente'?temp>=70:temp<=8;
   const ref=window._regenRef||{};
+  const linkedElabId=ref.elabId||(ref.descongelId?(ld(K.descongel).find(d=>d.id===ref.descongelId)||{}).elab_id:null);
+  const linkedElab=(ld(K.elab)||[]).find(e=>e.id===linkedElabId)||{};
   const rec={id:genId(),ts:new Date().toISOString(),producto:prod,lote_ref:lote,temp_centro:temp,
     tipo_entrega:tipo,porciones:porc,emp,obs,date:today(),
-    elabId:ref.elabId||null,descongelId:ref.descongelId||null,origen:ref.origen||'manual'};
+    elabId:linkedElabId||null,descongelId:ref.descongelId||null,origen:ref.origen||'manual',
+    evento_id:linkedElab.evento_id||null,id_evento:linkedElab.id_evento||linkedElab.evento_id||null,
+    evento_cliente:linkedElab.evento_cliente||'',evento_empresa:linkedElab.evento_empresa||'',
+    evento_fecha:linkedElab.evento_fecha||'',evento_hora:linkedElab.evento_hora||'',
+    evento_fecha_entrega:linkedElab.evento_fecha_entrega||linkedElab.evento_fecha||today(),
+    evento_hora_entrega:linkedElab.evento_hora_entrega||linkedElab.evento_hora||String(new Date().toTimeString()).slice(0,5),
+    evento_lugar:linkedElab.evento_lugar||'',evento_servicio:linkedElab.evento_servicio||'',
+    evento_pax:linkedElab.evento_pax||0,evento_marca:linkedElab.evento_marca||''};
   if(!tempOk){
     const ncs=ld(K.noconf)||[];
     const msg=tipo==='caliente'
@@ -14341,7 +14356,7 @@ function saveRegen2(){
     }
   }
   const regens=ld(K.regen)||[];regens.push(rec);sv(K.regen,regens);
-  completarPlanificacionEvaDesdeAPPCC(ref.elabId||(ref.descongelId?(ld(K.descongel).find(d=>d.id===ref.descongelId)||{}).elab_id:null),rec,tempOk);
+  completarPlanificacionEvaDesdeAPPCC(linkedElabId,rec,tempOk);
   const regenDate=new Date().toLocaleDateString('es-ES');
   const entregaLabel=tipo==='caliente'?'🔥 Regenerado caliente':'❄ Entrega fría directa';
   setTimeout(()=>autoLabel({
