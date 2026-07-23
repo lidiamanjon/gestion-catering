@@ -5272,7 +5272,7 @@ function renderHojasTable(q=''){
         ${appccTotal?`<span class="badge" style="background:${appccDone===appccTotal?'#dcfce7':appccEnProceso?'#fff7ed':'#eef4ff'};color:${appccDone===appccTotal?'#166534':appccEnProceso?'#9a3412':'#1a4fa8'}">APPCC ${appccDone}/${appccTotal}${appccEnProceso?' · '+appccEnProceso+' en proceso':''}</span>`:''}
         ${h.fuente?`<span class="badge" style="background:rgba(99,102,241,.1);color:#4338ca;font-size:10px">${h.fuente==='alaboca'?'🍽 Alaboca':'🌿 PV'}</span>`:''}
         ${h.eva_revision_pendiente||h.eva_cambio_pendiente?`<span class="badge b-warn">✨ Revisión de Eva pendiente</span>${evaMissing.length?`<span class="badge" style="background:#fee2e2;color:#991b1b">Falta: ${evaMissing.join(', ')}</span>`:''}<button class="btn btn-sm btn-green" onclick="event.stopPropagation();aprobarPropuestaEva('${h.id}')">${evaMissing.length?'✏️ Completar datos':'✓ Revisar y aprobar'}</button><button class="btn btn-sm btn-del" onclick="event.stopPropagation();rechazarPropuestaEva('${h.id}')">Rechazar</button>`:h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`}
-        <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')" title="Abrir la hoja oficial de la marca, rellenada con los datos de EVA, para revisarla y descargarla en PDF">📄 Hoja oficial</button>
+        <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')" title="${h.documentos?.hoja_servicio_url?'Abrir el PDF final preparado por EVA':'El PDF de EVA todavía está pendiente'}">📄 PDF EVA</button>
         <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();cargarPedidoDesdeHoja('${h.id}')">🛒 Calcular pedido</button>
         <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();descargarEventoParaEva('${h.id}')">⬇ Expediente Eva</button>
         <button class="btn btn-sm btn-light" onclick="event.stopPropagation();editHoja('${h.id}')">✏️</button>
@@ -5713,44 +5713,12 @@ function exportarListaComprasPDF(h,byProv){
 
 function exportarHojaPDF(id){
   const h=DB.hojas.find(x=>x.id===id);if(!h)return;
-  const marcaTexto=[h.marca,h.fuente,h.empresa].filter(Boolean).join(' ').toLowerCase();
-  const esPV=/placeres|placer|pdv|\bpv\b/.test(marcaTexto);
-  const menuOficial=(h.menu||[]).map(m=>{
-    const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);
-    return{
-      nombre:elab?.nombre||m.nombre||'Elaboración',
-      raciones:parseInt(m.pax_override)||parseInt(h.pax)||1,
-      precio:Number(m.precio_venta??m.precio??0)||0
-    };
-  });
-  if(h.postre)menuOficial.push({nombre:'Postre: '+h.postre,raciones:parseInt(h.pax)||1,precio:0});
-  const preload={
-    schema:'albaraba.hoja-servicio-oficial.v1',
-    evento_id:h.id,
-    marca:esPV?'PV':'ALABOCA',
-    cliente:h.cliente||'',
-    empresa:h.empresa||'',
-    telefono:h.tel||h.telefono||'',
-    ubicacion:h.lugar||'',
-    fecha:h.fecha||'',
-    hora:h.hora||'13:00',
-    pax:parseInt(h.pax)||0,
-    veganos:parseInt(h.veganos||h.pax_veganos)||0,
-    sin_gluten:parseInt(h.sin_gluten||h.pax_sin_gluten)||0,
-    servicio:h.servicio||'',
-    menu:menuOficial,
-    indicaciones:h.indicaciones||'',
-    notas:h.notas||'',
-    precio_venta:Number(h.precio_venta||0)||0,
-    hoja_eva_url:String(h.documentos?.hoja_servicio_url||'').trim()
-  };
-  try{
-    localStorage.setItem('albaraba_hoja_oficial_preload_v1',JSON.stringify(preload));
-  }catch(err){
-    alert('No se pudieron preparar los datos de la hoja oficial. Vuelve a intentarlo.');
+  const hojaEvaUrl=String(h.documentos?.hoja_servicio_url||'').trim();
+  if(!/^https:\/\//i.test(hojaEvaUrl)){
+    alert('EVA todavía no ha creado o enlazado el PDF final de esta hoja de servicio. Pídele que lo prepare y actualice este mismo evento; no tienes que crear nada desde cero.');
     return;
   }
-  window.open(esPV?'Hoja_Servicio_PV.html?origen=eva':'Hoja_Servicio_ALABOCA.html?origen=eva','_blank','noopener');
+  window.open(hojaEvaUrl,'_blank','noopener');
 }
 
 function exportarHojaPDFGenerico(h){
