@@ -3415,6 +3415,7 @@ let _cloudSaveTimer=null;
 let _mainCloudRef=null;
 let _mainCloudListening=false;
 let _mainCloudApplying=false;
+const MAIN_DEVICE_MERGE_KEY='_albaraba_device_merge_v20260723';
 function _saveLocalRecoveryPoint(raw,reason,force=false){
   if(!raw)return;
   const now=Date.now(),last=parseInt(localStorage.getItem('_albaraba_backup_at')||'0');
@@ -3559,9 +3560,12 @@ function loadDB(){
       const data=snap.val();
       if(data){
         const pending=localStorage.getItem('_albaraba_pending_sync')==='1';
+        const recoverThisDevice=Boolean(raw)&&localStorage.getItem(MAIN_DEVICE_MERGE_KEY)!=='1';
         let mergedPending=false;
-        if(pending&&raw){
-          // Hubo trabajo sin conexión: conservar ambos lados y unir registros por id.
+        if((pending||recoverThisDevice)&&raw){
+          // Conserva el trabajo que ya estaba separado en este ordenador y
+          // fusiónalo una sola vez con la nube, aunque la versión anterior
+          // hubiera quitado por error la marca de pendiente.
           _saveLocalRecoveryPoint(JSON.stringify(data),'nube antes de fusionar',true);
           DB=_mergeDBPreservingRecords(data,DB);
           mergedPending=true;
@@ -3572,6 +3576,7 @@ function loadDB(){
         applyMigrations();
         _installBidfoodFichas();
         localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+        localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
         if(mergedPending)saveDB();else setSyncStatus('ok');
         if(fbAuth&&fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
         if(currentSection)nav(currentSection);else nav('dashboard');
@@ -10241,6 +10246,15 @@ function initAPPCCCloudSync(){
   _appccCloudRef.once('value').then(snap=>{
     const remoto=snap.val();
     if(remoto){
+      const recoveryKey='_appcc_device_merge_v20260723';
+      const recoverThisDevice=localStorage.getItem(recoveryKey)!=='1';
+      if(recoverThisDevice){
+        // La primera apertura con esta versión rescata todo lo que permanezca
+        // en el ordenador y lo fusiona mediante las transacciones de abajo.
+        Object.values(K).forEach(k=>{
+          if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&localStorage.getItem(k)!==null)localStorage.setItem('_appcc_pending_'+k,'1');
+        });
+      }
       const day=new Date().toISOString().slice(0,10);
       fbDB.ref('appcc_backups/'+day).transaction(current=>current||{creada_en:new Date().toISOString(),datos:remoto}).catch(()=>{});
       _appccCloudApplying=true;
@@ -10263,6 +10277,7 @@ function initAPPCCCloudSync(){
           });
         }catch(e){}
       });
+      localStorage.setItem(recoveryKey,'1');
     }else{
       const inicial={};Object.values(K).forEach(k=>{if(APPCC_DEVICE_LOCAL_KEYS.has(k))return;const raw=localStorage.getItem(k);if(raw!==null)try{inicial[k]=JSON.parse(raw)}catch(e){}});
       if(Object.keys(inicial).length)_appccCloudRef.set(inicial).then(()=>Object.keys(inicial).forEach(k=>localStorage.removeItem('_appcc_pending_'+k)));
