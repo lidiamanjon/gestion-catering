@@ -5256,8 +5256,9 @@ function renderHojasTable(q=''){
   if(!list.length){cont.innerHTML='<div class="empty" style="padding:40px"><div class="ic">📋</div><p>Sin hojas de servicio. Crea la primera.</p></div>';return}
   const sorted=[...list].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   cont.innerHTML=sorted.map(h=>{
-    const d=new Date(h.fecha+'T00:00:00');
-    const dateStr=d.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});
+    const d=h.fecha?new Date(h.fecha+'T00:00:00'):null;
+    const dateStr=d&&!Number.isNaN(d.getTime())?d.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}):'Fecha pendiente';
+    const evaMissing=[!h.fecha?'fecha':'',!(parseInt(h.pax)>0)?'pax':'',!h.cliente?'cliente':''].filter(Boolean);
     const appccTotal=(h.menu||[]).length,appccDone=(h.menu||[]).filter(m=>m.appcc_estado==='completada').length,appccEnProceso=(h.menu||[]).filter(m=>m.appcc_estado==='elaborada').length;
     return`<div class="hoja-card">
       <div class="hoja-header" onclick="toggleHojaBody('${h.id}')">
@@ -5266,12 +5267,12 @@ function renderHojasTable(q=''){
           <div style="font-size:15px;font-weight:700">${esc(h.cliente)}${h.empresa?` · <span style="color:var(--muted);font-weight:400">${esc(h.empresa)}</span>`:''}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr}${h.hora?` · ${esc(h.hora)}`:''}${h.lugar?` · 📍${esc(h.lugar)}`:''}</div>
         </div>
-        <span class="badge b-cat" style="font-size:13px">👥 ${h.pax} PAX</span>
+        <span class="badge b-cat" style="font-size:13px">👥 ${parseInt(h.pax)>0?h.pax+' PAX':'PAX pendiente'}</span>
         <span class="badge b-prov">${esc(h.servicio||'')}</span>
         ${appccTotal?`<span class="badge" style="background:${appccDone===appccTotal?'#dcfce7':appccEnProceso?'#fff7ed':'#eef4ff'};color:${appccDone===appccTotal?'#166534':appccEnProceso?'#9a3412':'#1a4fa8'}">APPCC ${appccDone}/${appccTotal}${appccEnProceso?' · '+appccEnProceso+' en proceso':''}</span>`:''}
         ${h.fuente?`<span class="badge" style="background:rgba(99,102,241,.1);color:#4338ca;font-size:10px">${h.fuente==='alaboca'?'🍽 Alaboca':'🌿 PV'}</span>`:''}
-        ${h.eva_revision_pendiente||h.eva_cambio_pendiente?`<span class="badge b-warn">✨ Revisión de Eva pendiente</span><button class="btn btn-sm btn-green" onclick="event.stopPropagation();aprobarPropuestaEva('${h.id}')">✓ Revisar y aprobar</button><button class="btn btn-sm btn-del" onclick="event.stopPropagation();rechazarPropuestaEva('${h.id}')">Rechazar</button>`:h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`}
-        <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')" title="${h.documentos?.hoja_servicio_url?'Abrir y descargar la hoja original preparada por EVA':'Descargar hoja generada con los datos aprobados'}">${h.documentos?.hoja_servicio_url?'📄 Hoja EVA':'📄 PDF'}</button>
+        ${h.eva_revision_pendiente||h.eva_cambio_pendiente?`<span class="badge b-warn">✨ Revisión de Eva pendiente</span>${evaMissing.length?`<span class="badge" style="background:#fee2e2;color:#991b1b">Falta: ${evaMissing.join(', ')}</span>`:''}<button class="btn btn-sm btn-green" onclick="event.stopPropagation();aprobarPropuestaEva('${h.id}')">${evaMissing.length?'✏️ Completar datos':'✓ Revisar y aprobar'}</button><button class="btn btn-sm btn-del" onclick="event.stopPropagation();rechazarPropuestaEva('${h.id}')">Rechazar</button>`:h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`}
+        <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')" title="Abrir la hoja oficial de la marca, rellenada con los datos de EVA, para revisarla y descargarla en PDF">📄 Hoja oficial</button>
         <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();cargarPedidoDesdeHoja('${h.id}')">🛒 Calcular pedido</button>
         <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();descargarEventoParaEva('${h.id}')">⬇ Expediente Eva</button>
         <button class="btn btn-sm btn-light" onclick="event.stopPropagation();editHoja('${h.id}')">✏️</button>
@@ -5712,6 +5713,47 @@ function exportarListaComprasPDF(h,byProv){
 
 function exportarHojaPDF(id){
   const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const marcaTexto=[h.marca,h.fuente,h.empresa].filter(Boolean).join(' ').toLowerCase();
+  const esPV=/placeres|placer|pdv|\bpv\b/.test(marcaTexto);
+  const menuOficial=(h.menu||[]).map(m=>{
+    const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);
+    return{
+      nombre:elab?.nombre||m.nombre||'Elaboración',
+      raciones:parseInt(m.pax_override)||parseInt(h.pax)||1,
+      precio:Number(m.precio_venta??m.precio??0)||0
+    };
+  });
+  if(h.postre)menuOficial.push({nombre:'Postre: '+h.postre,raciones:parseInt(h.pax)||1,precio:0});
+  const preload={
+    schema:'albaraba.hoja-servicio-oficial.v1',
+    evento_id:h.id,
+    marca:esPV?'PV':'ALABOCA',
+    cliente:h.cliente||'',
+    empresa:h.empresa||'',
+    telefono:h.tel||h.telefono||'',
+    ubicacion:h.lugar||'',
+    fecha:h.fecha||'',
+    hora:h.hora||'13:00',
+    pax:parseInt(h.pax)||0,
+    veganos:parseInt(h.veganos||h.pax_veganos)||0,
+    sin_gluten:parseInt(h.sin_gluten||h.pax_sin_gluten)||0,
+    servicio:h.servicio||'',
+    menu:menuOficial,
+    indicaciones:h.indicaciones||'',
+    notas:h.notas||'',
+    precio_venta:Number(h.precio_venta||0)||0,
+    hoja_eva_url:String(h.documentos?.hoja_servicio_url||'').trim()
+  };
+  try{
+    localStorage.setItem('albaraba_hoja_oficial_preload_v1',JSON.stringify(preload));
+  }catch(err){
+    alert('No se pudieron preparar los datos de la hoja oficial. Vuelve a intentarlo.');
+    return;
+  }
+  window.open(esPV?'Hoja_Servicio_PV.html?origen=eva':'Hoja_Servicio_ALABOCA.html?origen=eva','_blank','noopener');
+}
+
+function exportarHojaPDFGenerico(h){
   const hojaEvaUrl=String(h.documentos?.hoja_servicio_url||'').trim();
   if(/^https:\/\//i.test(hojaEvaUrl)){
     window.open(hojaEvaUrl,'_blank','noopener');
@@ -6741,9 +6783,10 @@ function initEvaBridgeSync(){
       }
       snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});return;
     }
-    if(msg.estado!=='pendiente_revision'||!msg.evento)return;
+    if(!['pendiente_revision','pendiente_datos'].includes(msg.estado)||!msg.evento)return;
     const hoja=normalizarHojaEva(msg.evento);hoja.eva_id=msg.id_evento||hoja.id;hoja.id=hoja.eva_id;
     hoja.eva_bridge_message_id=snap.key;hoja.eva_recibido_en=msg.recibido_en||new Date().toISOString();
+    hoja.eva_campos_pendientes=Array.isArray(msg.campos_pendientes)?msg.campos_pendientes:[];
     const existente=(DB.hojas||[]).find(h=>h.id===hoja.id||h.eva_id===hoja.eva_id);
     if(existente){
       if(existente.eva_bridge_message_id===snap.key||existente.eva_cambio_pendiente?.eva_bridge_message_id===snap.key)return;
@@ -6752,13 +6795,19 @@ function initEvaBridgeSync(){
       hoja.eva_revision_pendiente=true;hoja.estado='pendiente_revision_eva';hoja.realizado=false;DB.hojas.unshift(hoja);
     }
     saveDB();
-    snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});
+    snap.ref.update({estado:hoja.eva_campos_pendientes.length?'pendiente_datos_revision_humana':'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});
     if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
   },e=>console.error('Puente Eva:',e));
 }
 function aprobarPropuestaEva(id){
   const h=(DB.hojas||[]).find(x=>x.id===id);if(!h)return;
   const propuesta=h.eva_cambio_pendiente||h;
+  const faltan=[!propuesta.cliente?'cliente':'',!propuesta.fecha?'fecha':'',!(parseInt(propuesta.pax)>0)?'pax':''].filter(Boolean);
+  if(faltan.length){
+    alert('Completa antes los datos pendientes: '+faltan.join(', ')+'.');
+    editHoja(id);
+    return;
+  }
   window._evaBridgeReviewId=id;
   openModal(`<div class="modal-title">✨ Revisar propuesta recibida de Eva</div>${_evaPreviewHtml(propuesta)}
     <div class="notice info" style="margin-top:10px">Al aprobar, la app conservará la trazabilidad existente de las elaboraciones que no hayan cambiado. Los cambios de raciones volverán a quedar pendientes de APPCC.</div>

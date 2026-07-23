@@ -790,7 +790,44 @@ function selR(g, el, v) {
 }
 
 // Init: apply section based on default selected service type
-document.addEventListener('DOMContentLoaded', ()=>{ cambiarServicio(); });
+function cargarHojaOficialDesdeEvaA(){
+  let d=null;
+  try{
+    d=JSON.parse(localStorage.getItem('albaraba_hoja_oficial_preload_v1')||'null');
+    if(d?.marca!=='ALABOCA')return;
+    localStorage.removeItem('albaraba_hoja_oficial_preload_v1');
+  }catch(err){return;}
+  const poner=(id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined&&v!==null)el.value=v;};
+  poner('evt-a',[d.cliente,d.empresa].filter(Boolean).join(' · '));
+  poner('tel-a',d.telefono||'');
+  poner('ubic-a',d.ubicacion||'');
+  poner('fec-a',d.fecha||'');
+  poner('hora-a',d.hora||'13:00');
+  poner('pax-a',Number(d.pax)||1);
+  poner('nveg-a',Number(d.veganos)||0);
+  poner('nsg-a',Number(d.sin_gluten)||0);
+  const s=String(d.servicio||'').toLowerCase();
+  let tipo='LUNCH';
+  if(/coffee|café|cafe|desayuno/.test(s))tipo='COFFEE';
+  else if(/blusas/.test(s))tipo='MENU_BLUSAS';
+  else if(/degust/.test(s))tipo='MENU_DEGUSTACION';
+  else if(/caja/.test(s))tipo='CAJAS';
+  else if(/raci|recogida|entrega|carta/.test(s))tipo='RACIONES';
+  poner('srv-a',tipo);
+  cambiarServicio();
+  poner('extras-cocina-a',(d.menu||[]).map(m=>`${m.nombre} x ${Number(m.raciones)||Number(d.pax)||1}`).join('\n'));
+  const detalles=[
+    d.indicaciones||'',
+    d.notas?`Notas de EVA: ${d.notas}`:'',
+    d.precio_venta?`Precio de venta total: ${Number(d.precio_venta).toFixed(2)} €`:''
+  ].filter(Boolean);
+  poner('obs-a',detalles.join('\n'));
+  if(Number(d.pax)>0){
+    calcular();
+    setTimeout(()=>document.getElementById('resultados-a')?.scrollIntoView({behavior:'smooth',block:'start'}),100);
+  }
+}
+document.addEventListener('DOMContentLoaded', ()=>{ cambiarServicio(); cargarHojaOficialDesdeEvaA(); });
 
 document.querySelectorAll('.check-item input[type=checkbox]').forEach(inp=>{
   inp.addEventListener('change',e=>e.target.closest('.check-item').classList.toggle('activo',e.target.checked));
