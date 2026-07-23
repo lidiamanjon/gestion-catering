@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260723-device-sync1';
+const CACHE_NAME = 'albaraba-appcc-v20260723-device-recovery2';
 const APP_SHELL = [
   './',
   './index.html',
