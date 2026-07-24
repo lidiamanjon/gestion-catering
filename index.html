@@ -141,11 +141,17 @@ textarea.fc{resize:vertical;min-height:70px}
 .al-item.checked{background:rgba(201,162,39,.08);border-color:var(--gold)}
 /* INGREDIENTS */
 .ing-list{display:flex;flex-direction:column;gap:6px}
-.ing-row{display:flex;gap:6px;align-items:center;background:#f8fafc;border-radius:8px;padding:8px}
+.ing-row{display:flex;gap:6px;align-items:center;background:#f8fafc;border-radius:8px;padding:8px;flex-wrap:wrap}
 .ing-row select,.ing-row input{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none}
 .ing-row select{flex:2}
 .ing-row .qty{width:70px;text-align:center}
 .ing-row .unit{width:70px}
+.ing-prod-card{display:flex;align-items:center;gap:8px;flex:1 1 260px;min-width:240px}
+.ing-prod-photo{width:46px;height:46px;border-radius:8px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;font-size:20px}
+.ing-prod-photo img{width:100%;height:100%;object-fit:cover}
+.ing-prod-main{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.ing-fifo{flex:1 1 100%;font-size:11px;line-height:1.35;background:#fff;border:1px solid var(--border);border-radius:8px;padding:6px 8px;color:var(--muted)}
+.ing-fifo strong{color:#166534}
 .ing-del{background:none;border:none;cursor:pointer;color:#ef4444;font-size:16px;padding:2px 4px}
 /* ORDER */
 .order-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f8fafc;border-radius:8px;margin-bottom:6px}
@@ -4645,9 +4651,12 @@ function addIngRow(ing=null){
   const rowId='ing-'+Date.now()+ingCounter++;
   const prodOpts=DB.productos.length?DB.productos.map(p=>`<option value="${p.id}"${ing&&ing.producto_id===p.id?' selected':''}>${esc(p.nombre)}${p.rendimiento>0?' (1'+( p.unidad||'ud')+' → '+p.rendimiento+' '+(p.rendimiento_desc||'porc.')+')'  :''}</option>`).join(''):'<option value="">Sin productos añadidos</option>';
   const div=document.createElement('div');div.className='ing-row';div.id=rowId;
-  div.innerHTML=`<div style="display:flex;flex-direction:column;flex:2;gap:3px">
+  div.innerHTML=`<div class="ing-prod-card">
+    <div class="ing-prod-photo" id="foto-${rowId}">📦</div>
+    <div class="ing-prod-main">
     <select onchange="actualizarHintIng('${rowId}',this.value)"><option value="">Seleccionar producto...</option>${prodOpts}</select>
     <div id="hint-${rowId}" style="font-size:10px;color:#166534;font-weight:600;min-height:13px;padding:0 2px"></div>
+    </div>
   </div>
     <input class="qty" type="number" step="0.01" placeholder="Cant." value="${ing?ing.cantidad:''}" title="Cantidad del ingrediente">
     <select class="unit">
@@ -4659,15 +4668,27 @@ function addIngRow(ing=null){
     </select>
     <button class="ing-del" onclick="this.closest('.ing-row').remove()">✕</button>`;
   list.appendChild(div);
+  div.insertAdjacentHTML('beforeend',`<input type="hidden" class="fifo-lote" value="${esc(ing?.lote_sugerido_fifo||ing?.lote||'')}"><div class="ing-fifo" id="fifo-${rowId}">Selecciona un producto para ver foto, stock y lote FIFO.</div>`);
   // Show hint for pre-loaded ingredient
   if(ing&&ing.producto_id) actualizarHintIng(rowId,ing.producto_id);
 }
 function actualizarHintIng(rowId,prodId){
   const hint=document.getElementById('hint-'+rowId);
+  const foto=document.getElementById('foto-'+rowId);
+  const fifo=document.getElementById('fifo-'+rowId);
+  const row=document.getElementById(rowId);
+  const fifoInput=row?row.querySelector('.fifo-lote'):null;
   if(!hint)return;
-  if(!prodId){hint.textContent='';return;}
+  if(!prodId){
+    hint.textContent='';
+    if(foto)foto.innerHTML='📦';
+    if(fifo)fifo.textContent='Selecciona un producto para ver foto, stock y lote FIFO.';
+    if(fifoInput)fifoInput.value='';
+    return;
+  }
   const p=DB.productos.find(x=>x.id===prodId);
   if(!p){hint.textContent='';return;}
+  if(foto)foto.innerHTML=p.foto?`<img src="${p.foto}" alt="">`:'📦';
   if(p.rendimiento>0){
     const desc=p.rendimiento_desc||'porciones';
     const unidad=p.unidad||'ud';
@@ -4679,11 +4700,41 @@ function actualizarHintIng(rowId,prodId){
   } else {
     hint.innerHTML=`<span style="color:#f59e0b">⚠️ Rendimiento no definido — define cuántas porciones salen de 1 ${p.unidad||'unidad'} en Productos</span>`;
   }
+  const lote=_loteFifoProductoGestion(p);
+  if(fifoInput)fifoInput.value=lote?.lote||'';
+  if(fifo){
+    const stock=parseFloat(p.stock_actual)||0;
+    fifo.innerHTML=lote
+      ? `FIFO sugerido: <strong>${esc(lote.lote||'sin lote')}</strong> · ${esc(lote.origen||'stock')} · ${esc(lote.fecha||'sin fecha')} · stock producto: <strong>${stock} ${esc(p.unidad||'')}</strong><br><span style="color:#92400e">En APPCC, al elaborar, confirma este lote o cámbialo por el real usado.</span>`
+      : `Sin lote FIFO registrado para este producto. Stock actual: <strong>${stock} ${esc(p.unidad||'')}</strong>. Registra recepción/albarán con lote para que aparezca aquí.`;
+  }
+}
+function _loteFifoProductoGestion(prod){
+  if(!prod)return null;
+  const norm=_normNombreCatalogo(prod.nombre);
+  const lotes=[];
+  if(typeof ld==='function'&&typeof K!=='undefined'){
+    (ld(K.recep)||[]).forEach(r=>{
+      const rn=_normNombreCatalogo(r.producto||r.nombre||'');
+      if((r.producto_id&&r.producto_id===prod.id)||(norm&&rn&&(rn===norm||rn.includes(norm)||norm.includes(rn)))){
+        lotes.push({lote:r.lote||'',fecha:r.dlc||r.caducidad||r.fecha||r.ts||'',origen:'APPCC recepción',rawDate:r.dlc||r.caducidad||r.ts||r.fecha||''});
+      }
+    });
+  }
+  (DB.movimientos_stock||[]).forEach(m=>{
+    if(m.producto_id===prod.id&&m.lote){
+      lotes.push({lote:m.lote,fecha:m.fecha||'',origen:'Stock/albarán',rawDate:m.fecha||''});
+    }
+  });
+  if(prod.ultimo_lote)lotes.push({lote:prod.ultimo_lote,fecha:prod.stock_actualizado_en||'',origen:'Último lote producto',rawDate:prod.stock_actualizado_en||''});
+  const validos=lotes.filter(x=>x.lote);
+  validos.sort((a,b)=>String(a.rawDate||'9999').localeCompare(String(b.rawDate||'9999')));
+  return validos[0]||null;
 }
 function getIngredientes(){
   return [...document.getElementById('ing-list').querySelectorAll('.ing-row')].map(row=>{
     const selects=row.querySelectorAll('select');const inputs=row.querySelectorAll('input');
-    return{producto_id:selects[0].value,cantidad:parseFloat(inputs[0].value)||0,unidad:selects[1].value,modo_cantidad:(row.querySelector('.qty-mode')||{}).value||'total_receta'};
+    return{producto_id:selects[0].value,cantidad:parseFloat(inputs[0].value)||0,unidad:selects[1].value,modo_cantidad:(row.querySelector('.qty-mode')||{}).value||'total_receta',lote_sugerido_fifo:(row.querySelector('.fifo-lote')||{}).value||''};
   }).filter(i=>i.producto_id);
 }
 function cantidadIngredienteCompra(ing,raciones,elab,prod){
