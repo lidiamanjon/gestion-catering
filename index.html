@@ -6700,6 +6700,17 @@ function doLogin(){
     });
 }
 
+function showCloudRequiredError(){
+  const overlay=document.getElementById('login-overlay');
+  if(overlay)overlay.style.display='flex';
+  const err=document.getElementById('login-error');
+  if(err){
+    err.innerHTML='No se ha cargado la sincronizaciÃ³n. Abre con internet, actualiza la app y vuelve a entrar. No trabajes en modo local.';
+    err.style.color='#dc2626';
+  }
+  setSyncStatus('error');
+}
+
 let _pwaUpdateAccepted=false;
 async function forceAppRefresh(){
   try{
@@ -10114,6 +10125,10 @@ window.addEventListener('DOMContentLoaded',()=>{
         if(overlay)overlay.style.display='flex';
       }
     });
+  } else if(FB_READY&&!fbAuth){
+    // Firebase estÃ¡ configurado, asÃ­ que no permitimos modo local silencioso.
+    // Si los scripts no cargan en un mÃ³vil/tablet, hay que avisar y no mostrar datos vacÃ­os.
+    showCloudRequiredError();
   } else {
     // Sin Firebase configurado: entrar directamente (modo local)
     const overlay=document.getElementById('login-overlay');
