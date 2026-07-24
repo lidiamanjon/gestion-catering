@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260724-rendimiento-racion1';
+const CACHE_NAME = 'albaraba-appcc-v20260724-planificacion-viva1';
 const APP_SHELL = [
   './',
   './index.html',
