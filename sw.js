@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260724-estados-eva1';
+const CACHE_NAME = 'albaraba-appcc-v20260724-force-refresh1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
   );
 });
 
