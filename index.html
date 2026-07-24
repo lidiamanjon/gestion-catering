@@ -4589,7 +4589,8 @@ function saveProducto(){
   const rendVal=parseInt(document.getElementById('prod-rendimiento').value)||0;
   const obj={id,nombre,categoria:document.getElementById('prod-cat').value,proveedor_id:document.getElementById('prod-prov').value,unidad:document.getElementById('prod-unidad').value,precio:document.getElementById('prod-precio').value,stock_actual:parseFloat(document.getElementById('prod-stock').value)||0,stock_min:parseFloat(document.getElementById('prod-stock-min').value)||0,referencia:document.getElementById('prod-ref').value,notas:document.getElementById('prod-notas').value,foto:document.getElementById('prod-foto-data').value,alergenos:getCheckedAlergenos('al-grid-prod'),rendimiento:rendVal,rendimiento_desc:document.getElementById('prod-rendimiento-desc').value};
   const idx=DB.productos.findIndex(x=>x.id===id);
-  if(idx>=0)DB.productos[idx]=obj;else DB.productos.push(obj);
+  if(idx>=0)DB.productos[idx]={...DB.productos[idx],...obj};else DB.productos.push(obj);
+  marcarPedidosParaRecalcular('Producto o stock modificado: '+nombre,p=>!p.totales||Boolean(p.totales[id]));
   saveDB();closeModal('modal-prod');renderProdTable();
 }
 function deleteProducto(id){
@@ -4693,6 +4694,50 @@ function cantidadIngredienteCompra(ing,raciones,elab,prod){
   const rendimiento=Math.max(0,parseFloat(prod?.rendimiento)||0);
   return rendimiento>0?Math.ceil(cantidadInterior/rendimiento):Math.round(cantidadInterior*1000)/1000;
 }
+function _normNombreCatalogo(v){
+  return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,' ').trim();
+}
+function buscarProductoCatalogo(nombre){
+  const buscado=_normNombreCatalogo(nombre);
+  if(!buscado)return null;
+  const exacto=(DB.productos||[]).find(p=>_normNombreCatalogo(p.nombre)===buscado);
+  if(exacto)return exacto;
+  const palabras=buscado.split(' ').filter(x=>x.length>2);
+  const candidatos=(DB.productos||[]).filter(p=>{
+    const n=_normNombreCatalogo(p.nombre);
+    return palabras.length&&palabras.every(x=>n.includes(x));
+  });
+  return candidatos.length===1?candidatos[0]:null;
+}
+function marcarPedidosParaRecalcular(motivo,filtro=()=>true){
+  const ahora=new Date().toISOString();
+  (DB.pedidos||[]).forEach(p=>{
+    if(!['recibido','cerrado','completado'].includes(p.estado)&&filtro(p)){
+      p.desactualizado=true;
+      p.motivo_desactualizacion=motivo;
+      p.actualizado_en=ahora;
+    }
+  });
+}
+function registrarEntradaStockGestion({producto,cantidad,unidad,lote,recepcionId}){
+  const p=buscarProductoCatalogo(producto);
+  if(!p)return null;
+  const entrada=Math.max(0,parseFloat(cantidad)||0);
+  if(!entrada)return p;
+  p.stock_actual=Math.round(((parseFloat(p.stock_actual)||0)+entrada)*1000)/1000;
+  p.stock_actualizado_en=new Date().toISOString();
+  if(lote)p.ultimo_lote=lote;
+  if(!DB.movimientos_stock)DB.movimientos_stock=[];
+  DB.movimientos_stock.push({
+    id:uid(),tipo:'entrada_recepcion',producto_id:p.id,producto:p.nombre,
+    cantidad:entrada,unidad:unidad||p.unidad||'',lote:lote||'',
+    recepcion_id:recepcionId||'',fecha:p.stock_actualizado_en
+  });
+  DB.movimientos_stock=DB.movimientos_stock.slice(-2000);
+  marcarPedidosParaRecalcular('Mercancía recibida: '+p.nombre,ped=>!ped.totales||Boolean(ped.totales[p.id]));
+  return p;
+}
 function openElabModal(){
   document.getElementById('elab-id').value='';
   document.getElementById('elab-nombre').value='';
@@ -4728,6 +4773,7 @@ function saveElaboracion(){
   const obj={id,nombre,categoria:document.getElementById('elab-cat').value,raciones_base:parseInt(document.getElementById('elab-raciones').value)||10,ingredientes:getIngredientes(),proceso:document.getElementById('elab-proceso').value,notas:document.getElementById('elab-notas').value,foto:document.getElementById('elab-foto-data').value};
   const idx=DB.elaboraciones.findIndex(x=>x.id===id);
   if(idx>=0)DB.elaboraciones[idx]=obj;else DB.elaboraciones.push(obj);
+  marcarPedidosParaRecalcular('Receta modificada: '+nombre,p=>(p.elaboraciones||[]).some(e=>e.id===id));
   saveDB();closeModal('modal-elab');renderElabTable();
 }
 function deleteElaboracion(id){
@@ -4742,6 +4788,9 @@ const pedidoSeleccionadas={};
 function renderPedidoSection(){
   renderElabSelect();
   renderSelectedList();
+  if(window._pedidoResultadoActivo&&Object.keys(pedidoSeleccionadas).length){
+    setTimeout(()=>calcularPedido({guardar:false,silencioso:true}),0);
+  }
 }
 function renderElabSelect(q=''){
   let list=DB.elaboraciones;
@@ -4777,9 +4826,10 @@ function renderSelectedList(){
     </div>`;
   }).join('');
 }
-function calcularPedido(){
+function calcularPedido(opciones={}){
+  const guardar=opciones.guardar!==false;
   const keys=Object.keys(pedidoSeleccionadas);
-  if(!keys.length){alert('Selecciona al menos una elaboración');return}
+  if(!keys.length){if(!opciones.silencioso)alert('Selecciona al menos una elaboración');return}
 
   // ── 1. Calcular necesidades totales por producto ────────────────────────
   const totales={};
@@ -4872,12 +4922,21 @@ function calcularPedido(){
     });
   }
 
-  // Save
+  // Guardar o actualizar el mismo cálculo, sin crear duplicados.
   const eventos=[...new Set(Object.values(pedidoSeleccionadas).flatMap(v=>v.eventos||[]))];
-  const pedidoObj={id:uid(),fecha:new Date().toISOString(),
+  const firma=Object.entries(pedidoSeleccionadas).sort(([a],[b])=>a.localeCompare(b))
+    .map(([id,v])=>id+':'+(parseFloat(v.raciones)||0)).join('|')+'#'+eventos.slice().sort().join('|');
+  const pedidoObj={fecha:new Date().toISOString(),firma,
     elaboraciones:Object.entries(pedidoSeleccionadas).map(([id,v])=>({id,raciones:v.raciones,nombre:DB.elaboraciones.find(x=>x.id===id)?.nombre||''})),
     eventos,estado:'calculado',desactualizado:false,byProv,totales};
-  DB.pedidos.push(pedidoObj);saveDB();
+  if(guardar){
+    const existente=(DB.pedidos||[]).find(p=>p.firma===firma&&!['recibido','cerrado','completado'].includes(p.estado));
+    if(existente)Object.assign(existente,pedidoObj,{id:existente.id,recalculado_en:new Date().toISOString()});
+    else DB.pedidos.push({id:uid(),...pedidoObj});
+    saveDB();
+  }
+  window._pedidoResultadoActivo=true;
+  html=`<div style="font-size:11px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:7px 10px;margin-bottom:10px">🔄 Cálculo vivo actualizado ${new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})}. Cambia automáticamente con stock, recetas, pax y menús.</div>`+html;
   document.getElementById('pedido-result-content').innerHTML=html;
   document.getElementById('pedido-result').style.display='';
   document.getElementById('pedido-result').scrollIntoView({behavior:'smooth'});
@@ -5014,7 +5073,12 @@ function actualizarStock(id){
   const val=parseFloat(document.getElementById('st-'+id).value);
   if(isNaN(val)){alert('Introduce una cantidad válida');return}
   const idx=DB.productos.findIndex(x=>x.id===id);
-  if(idx>=0){DB.productos[idx].stock_actual=val;saveDB();renderStockTable();}
+  if(idx>=0){
+    DB.productos[idx].stock_actual=val;
+    DB.productos[idx].stock_actualizado_en=new Date().toISOString();
+    marcarPedidosParaRecalcular('Stock actualizado: '+DB.productos[idx].nombre,p=>!p.totales||Boolean(p.totales[id]));
+    saveDB();renderStockTable();
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -5333,7 +5397,8 @@ function renderHojaBody(h){
   const menuItems=(h.menu||[]).map(m=>`<li style="margin-bottom:6px">${m.appcc_estado==='completada'?'✅':m.appcc_estado==='elaborada'?'⏳':'○'} ${esc(m.nombre)}${m.pax_override?` <span class="badge b-cat">${m.pax_override} rac.</span>`:''}<span style="font-size:10px;color:${m.appcc_estado==='completada'?'#166534':m.appcc_estado==='elaborada'?'#d97706':'#888'};margin-left:6px">${m.appcc_estado==='completada'?'Trazabilidad finalizada':m.appcc_estado==='elaborada'?'En proceso APPCC':'Pendiente'}</span></li>`).join('');
   const stockHTML=check.length?`
     <div style="margin-bottom:14px">
-      <div style="font-weight:600;font-size:13px;margin-bottom:8px">📊 Estado de stock para este servicio</div>
+      <div style="font-weight:600;font-size:13px;margin-bottom:4px">📊 Estado de stock para este servicio</div>
+      <div style="font-size:10px;color:#166534;margin-bottom:8px">🔄 Cálculo vivo: se actualiza al recibir mercancía y al cambiar recetas, pax o menú.</div>
       ${check.map(item=>`
         <div class="stock-check-item ${item.status}">
           <span style="font-size:16px">${item.status==='stock-ok'?'✅':item.status==='stock-low'?'⚠️':'❌'}</span>
@@ -5610,6 +5675,7 @@ function confirmarServicioRealizado(id){
       DB.productos[idx].stock_actual=Math.max(0,(DB.productos[idx].stock_actual||0)-Math.ceil(cant*100)/100);
     }
   });
+  marcarPedidosParaRecalcular('Stock consumido por el servicio: '+(h.cliente||h.id),p=>!p.totales||Object.keys(descuentos).some(pid=>Boolean(p.totales?.[pid])));
   // Mark as done
   const idx=DB.hojas.findIndex(x=>x.id===id);
   if(idx>=0){DB.hojas[idx].realizado=true;DB.hojas[idx].fecha_realizado=new Date().toISOString();DB.hojas[idx].cierre_con_avisos=appccPendientes.length>0;DB.hojas[idx].appcc_pendientes_al_cierre=appccPendientes.map(m=>m.nombre);}
@@ -11668,7 +11734,7 @@ function confirmarRecepOCR(){
   // Create reception records
   const emp=localStorage.getItem(K.wActive)||ld(K.emp)?.[0]||'';
   const recs=ld(K.recep)||[];
-  let added=0;
+  let added=0,stockActualizado=0,pendientesCatalogo=0;
 
   confirmed.forEach(l=>{
     // Actualizar precio en DB.productos si coincide
@@ -11694,6 +11760,11 @@ function confirmarRecepOCR(){
       conforme:true
     };
     recs.push(rec);
+    const vinculado=registrarEntradaStockGestion({
+      producto:rec.producto,cantidad:rec.cajas||rec.cantidad,unidad:rec.unidad,
+      lote:rec.lote,recepcionId:rec.id
+    });
+    if(vinculado)stockActualizado++;else{rec.catalogo_pendiente=true;pendientesCatalogo++;}
     if(l.lote||l.cant){
       addToLabelQueue({
         tipo:'📦 RECEPCIÓN', producto:rec.producto,
@@ -11706,13 +11777,14 @@ function confirmarRecepOCR(){
   });
 
   sv(K.recep,recs);
+  if(stockActualizado||confirmed.some(l=>l.precio>0))saveDB();
   updateScoreChip();
   closeModalAPPCC();
   renderRecep();
   setTimeout(()=>{
     const t=document.createElement('div');
     t.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);background:#27ae60;color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:9999';
-    t.textContent=`✓ ${added} producto${added!==1?'s':''} registrados · memoria actualizada`;
+    t.textContent=`✓ ${added} producto${added!==1?'s':''} registrados · stock actualizado${pendientesCatalogo?` · ${pendientesCatalogo} pendiente${pendientesCatalogo!==1?'s':''} de vincular`:''}`;
     document.body.appendChild(t);setTimeout(()=>t.remove(),2800);
   },200);
 }
@@ -12031,7 +12103,13 @@ function saveRecep(cat){
     temp:temp!==''?tempVal:undefined,lote,caducidad:cad,emp,obs,
     conforme:isNaN(tempVal)||tempVal<=7
   };
-  recs.push(rec);sv(K.recep,recs);
+  recs.push(rec);
+  const productoVinculado=registrarEntradaStockGestion({
+    producto:prod,cantidad:cajas||cant,unidad:unit,lote,recepcionId:rec.id
+  });
+  if(productoVinculado)saveDB();
+  else rec.catalogo_pendiente=true;
+  sv(K.recep,recs);
   // No conformidad si temp > 7°C
   if(!isNaN(tempVal)&&tempVal>7){
     const ncs=ld(K.noconf)||[];
