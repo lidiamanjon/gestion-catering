@@ -4648,9 +4648,13 @@ function addIngRow(ing=null){
     <select onchange="actualizarHintIng('${rowId}',this.value)"><option value="">Seleccionar producto...</option>${prodOpts}</select>
     <div id="hint-${rowId}" style="font-size:10px;color:#166534;font-weight:600;min-height:13px;padding:0 2px"></div>
   </div>
-    <input class="qty" type="number" step="0.01" placeholder="Cant." value="${ing?ing.cantidad:''}">
+    <input class="qty" type="number" step="0.01" placeholder="Cant." value="${ing?ing.cantidad:''}" title="Cantidad del ingrediente">
     <select class="unit">
       ${['ud','kg','g','l','ml','caja','rac'].map(u=>`<option${ing&&ing.unidad===u?' selected':''}>${u}</option>`).join('')}
+    </select>
+    <select class="qty-mode" title="Cómo se aplica esta cantidad" style="font-size:11px;min-width:105px">
+      <option value="total_receta"${!ing||ing.modo_cantidad!=='por_racion'?' selected':''}>Total receta</option>
+      <option value="por_racion"${ing&&ing.modo_cantidad==='por_racion'?' selected':''}>Por ración</option>
     </select>
     <button class="ing-del" onclick="this.closest('.ing-row').remove()">✕</button>`;
   list.appendChild(div);
@@ -4678,8 +4682,16 @@ function actualizarHintIng(rowId,prodId){
 function getIngredientes(){
   return [...document.getElementById('ing-list').querySelectorAll('.ing-row')].map(row=>{
     const selects=row.querySelectorAll('select');const inputs=row.querySelectorAll('input');
-    return{producto_id:selects[0].value,cantidad:parseFloat(inputs[0].value)||0,unidad:selects[1].value};
+    return{producto_id:selects[0].value,cantidad:parseFloat(inputs[0].value)||0,unidad:selects[1].value,modo_cantidad:(row.querySelector('.qty-mode')||{}).value||'total_receta'};
   }).filter(i=>i.producto_id);
+}
+function cantidadIngredienteCompra(ing,raciones,elab,prod){
+  const cantidad=parseFloat(ing?.cantidad)||0;
+  const rac=Math.max(0,parseFloat(raciones)||0);
+  const base=Math.max(1,parseFloat(elab?.raciones_base)||10);
+  const cantidadInterior=ing?.modo_cantidad==='por_racion'?cantidad*rac:cantidad*(rac/base);
+  const rendimiento=Math.max(0,parseFloat(prod?.rendimiento)||0);
+  return rendimiento>0?Math.ceil(cantidadInterior/rendimiento):Math.round(cantidadInterior*1000)/1000;
 }
 function openElabModal(){
   document.getElementById('elab-id').value='';
@@ -4773,13 +4785,12 @@ function calcularPedido(){
   const totales={};
   keys.forEach(id=>{
     const e=DB.elaboraciones.find(x=>x.id===id);if(!e||!e.ingredientes)return;
-    const factor=(pedidoSeleccionadas[id].raciones||10)/(e.raciones_base||10);
+    const racionesPedido=pedidoSeleccionadas[id].raciones||10;
     e.ingredientes.forEach(ing=>{
       if(!ing.producto_id)return;
       const prod=DB.productos.find(x=>x.id===ing.producto_id);
-      let cantidadNecesaria=ing.cantidad*factor;
-      if(prod&&prod.rendimiento>0){cantidadNecesaria=Math.ceil((ing.cantidad*factor)/prod.rendimiento);}
-      if(!totales[ing.producto_id])totales[ing.producto_id]={necesario:0,unidad:ing.unidad,elaboraciones:[]};
+      const cantidadNecesaria=cantidadIngredienteCompra(ing,racionesPedido,e,prod);
+      if(!totales[ing.producto_id])totales[ing.producto_id]={necesario:0,unidad:prod?.rendimiento>0?(prod.unidad||ing.unidad):ing.unidad,elaboraciones:[]};
       totales[ing.producto_id].necesario+=cantidadNecesaria;
       totales[ing.producto_id].elaboraciones.push(e.nombre);
     });
@@ -5371,13 +5382,11 @@ function checkStockHoja(h){
     const elabId=m.elab_id;if(!elabId)return;
     const elab=DB.elaboraciones.find(x=>x.id===elabId);if(!elab||!elab.ingredientes)return;
     const racPedidas=m.pax_override||pax;
-    const factor=racPedidas/(elab.raciones_base||10);
     elab.ingredientes.forEach(ing=>{
       if(!ing.producto_id)return;
       const prod=DB.productos.find(x=>x.id===ing.producto_id);
-      let cantNec=ing.cantidad*factor;
-      if(prod&&prod.rendimiento>0)cantNec=Math.ceil(cantNec/prod.rendimiento);
-      if(!totalesProd[ing.producto_id])totalesProd[ing.producto_id]={necesario:0,unidad:ing.unidad};
+      const cantNec=cantidadIngredienteCompra(ing,racPedidas,elab,prod);
+      if(!totalesProd[ing.producto_id])totalesProd[ing.producto_id]={necesario:0,unidad:prod?.rendimiento>0?(prod.unidad||ing.unidad):ing.unidad};
       totalesProd[ing.producto_id].necesario+=cantNec;
     });
   });
@@ -5576,12 +5585,10 @@ function confirmarServicioRealizado(id){
   (h.menu||[]).forEach(m=>{
     const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);if(!elab||!elab.ingredientes)return;
     const racPedidas=m.pax_override||pax;
-    const factor=racPedidas/(elab.raciones_base||10);
     elab.ingredientes.forEach(ing=>{
       if(!ing.producto_id)return;
       const prod=DB.productos.find(x=>x.id===ing.producto_id);
-      let cantNec=ing.cantidad*factor;
-      if(prod&&prod.rendimiento>0)cantNec=Math.ceil(cantNec/prod.rendimiento);
+      const cantNec=cantidadIngredienteCompra(ing,racPedidas,elab,prod);
       if(!descuentos[ing.producto_id])descuentos[ing.producto_id]=0;
       descuentos[ing.producto_id]+=cantNec;
     });
@@ -5649,13 +5656,11 @@ function listaComprasDesdeHoja(id){
   (h.menu||[]).forEach(m=>{
     const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);if(!elab||!elab.ingredientes)return;
     const racPedidas=m.pax_override||pax;
-    const factor=racPedidas/(elab.raciones_base||10);
     elab.ingredientes.forEach(ing=>{
       if(!ing.producto_id)return;
       const prod=DB.productos.find(x=>x.id===ing.producto_id);
-      let cantNec=ing.cantidad*factor;
-      if(prod&&prod.rendimiento>0)cantNec=Math.ceil(cantNec/prod.rendimiento);
-      if(!totalesProd[ing.producto_id])totalesProd[ing.producto_id]={necesario:0,unidad:ing.unidad};
+      const cantNec=cantidadIngredienteCompra(ing,racPedidas,elab,prod);
+      if(!totalesProd[ing.producto_id])totalesProd[ing.producto_id]={necesario:0,unidad:prod?.rendimiento>0?(prod.unidad||ing.unidad):ing.unidad};
       totalesProd[ing.producto_id].necesario+=cantNec;
     });
   });
@@ -5816,12 +5821,10 @@ function calcCostoHoja(h){
   (h.menu||[]).forEach(m=>{
     const elab=DB.elaboraciones.find(x=>x.id===m.elab_id);if(!elab||!elab.ingredientes)return;
     const racPedidas=m.pax_override||pax;
-    const factor=racPedidas/(elab.raciones_base||10);
     elab.ingredientes.forEach(ing=>{
       if(!ing.producto_id)return;
       const prod=DB.productos.find(x=>x.id===ing.producto_id);if(!prod)return;
-      let cantNec=ing.cantidad*factor;
-      if(prod.rendimiento>0)cantNec=Math.ceil(cantNec/prod.rendimiento);
+      const cantNec=cantidadIngredienteCompra(ing,racPedidas,elab,prod);
       const precio=parseFloat(prod.precio_compra||prod.precio)||0;
       const coste=cantNec*precio;
       total+=coste;
@@ -12665,7 +12668,8 @@ function calcularIngredientesElab(){
   const factor=raciones/base;
   const stock=ld(K.recep)||[];
   const calcs=(receta.ingredientes||[]).map(ing=>{
-    const needed=Math.round((parseFloat(ing.cantidad)||0)*factor*100)/100;
+    const prod=(DB.productos||[]).find(p=>p.id===ing.producto_id);
+    const needed=cantidadIngredienteCompra(ing,raciones,receta,prod);
     const nameQ=_normIngr(ing.nombre||ing.producto||'');
     const words=nameQ.split(' ').filter(w=>w.length>2);
     // FIFO: sort by fecha entrada (oldest first)
@@ -12675,7 +12679,7 @@ function calcularIngredientesElab(){
     }).sort((a,b)=>new Date(a.ts||a.fecha||'2099-01-01')-new Date(b.ts||b.fecha||'2099-01-01'));
     const selectedMatch=matches[0]||null;
     const totalStock=matches.reduce((s,m)=>s+(parseFloat(m.cantidad)||0),0);
-    return {nombre:ing.nombre||ing.producto||'',needed,unidad:ing.unidad||'kg',matches,selectedMatch,totalStock,confirmed:!!selectedMatch};
+    return {nombre:ing.nombre||ing.producto||prod?.nombre||'',needed,unidad:prod?.rendimiento>0?(prod.unidad||ing.unidad||'ud'):(ing.unidad||'kg'),matches,selectedMatch,totalStock,confirmed:!!selectedMatch};
   });
   window._elabRacionesData={raciones,factor,calcs};
   // Auto-sync _elabIngredientes from confirmed FIFO matches
