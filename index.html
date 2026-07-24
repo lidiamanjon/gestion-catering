@@ -1,6 +1,21 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260722-eva-bridge2 -->
+<!-- VERSION: v20260724-mobile-reset1 -->
 <script>
+if(new URLSearchParams(location.search).get('resetApp')==='1'){
+  (async function(){
+    try{
+      if('serviceWorker' in navigator){
+        const regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r=>r.unregister()));
+      }
+      if(window.caches){
+        const keys=await caches.keys();
+        await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
+      }
+    }catch(e){console.warn('Reset app cache:',e);}
+    location.replace(location.origin+location.pathname+'?v=20260724-mobile-reset1');
+  })();
+}
 // Desregistrar service workers antiguos y limpiar caché
 // ═══ APP SWITCHER — definido aquí para garantizar que siempre carga ═══
 window.switchApp = function(app){

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260724-cloud-required1';
+const CACHE_NAME = 'albaraba-appcc-v20260724-mobile-reset1';
 const APP_SHELL = [
   './',
   './index.html',
