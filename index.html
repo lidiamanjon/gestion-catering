@@ -493,14 +493,14 @@ html,body{height:100%;color-scheme:light!important}
 </div>
 
 <!-- ═══ APP SWITCHER BAR ═══ -->
-<div id="app-update-banner" onclick="window.location.reload(true)">🔄 Nueva versión disponible — toca para actualizar</div>
+<div id="app-update-banner" onclick="forceAppRefresh()">🔄 Nueva versión disponible — toca para actualizar</div>
 <div id="app-switcher">
   <div class="sw-logo">🍽 Albaraba</div>
   <div class="sw-tabs">
     <button class="sw-tab active" id="sw-gestion" onclick="switchApp('gestion')">📋 GESTIÓN</button>
     <button class="sw-tab" id="sw-appcc"   onclick="switchApp('appcc')">🛡 APPCC FOOD SAFETY</button>
   </div>
-  <button class="sw-reload" onclick="window.location.reload(true)" title="Actualizar app">🔄</button>
+  <button class="sw-reload" onclick="forceAppRefresh()" title="Actualizar app sin borrar datos">🔄</button>
 </div>
 
 <div id="app-gestion">
@@ -6701,12 +6701,33 @@ function doLogin(){
 }
 
 let _pwaUpdateAccepted=false;
+async function forceAppRefresh(){
+  try{
+    if('serviceWorker' in navigator){
+      const reg=await navigator.serviceWorker.getRegistration('./');
+      if(reg){
+        await reg.update().catch(()=>{});
+        if(reg.waiting){
+          _pwaUpdateAccepted=true;
+          reg.waiting.postMessage({type:'SKIP_WAITING'});
+          return;
+        }
+      }
+    }
+    if(window.caches){
+      const keys=await caches.keys();
+      await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
+    }
+  }catch(e){console.warn('ActualizaciÃ³n segura no disponible:',e);}
+  const base=location.origin+location.pathname;
+  location.replace(base+'?v='+Date.now());
+}
 function showPwaUpdateReady(reg){
   if(document.getElementById('pwa-update-ready'))return;
   const bar=document.createElement('div');bar.id='pwa-update-ready';
   bar.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:20000;background:#1a1a2e;color:#fff;padding:12px 14px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.35);display:flex;align-items:center;gap:10px;max-width:92%;font-size:13px';
   bar.innerHTML='<span>✨ Nueva versión preparada. Tus datos están guardados.</span><button style="border:0;border-radius:8px;background:#c9a227;color:#fff;padding:8px 12px;font-weight:700;cursor:pointer;white-space:nowrap">Actualizar ahora</button>';
-  bar.querySelector('button').onclick=()=>{_pwaUpdateAccepted=true;if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING'});else location.reload();};
+  bar.querySelector('button').onclick=()=>forceAppRefresh();
   document.body.appendChild(bar);
 }
 if('serviceWorker' in navigator){
@@ -12488,7 +12509,7 @@ function renderElab(){
       <div class="list-right">
         <span class="list-badge ${stCls}">${stLbl}</span>
         <div style="display:flex;gap:4px;margin-top:6px">
-          <button class="btn-icon" onclick="addToLabelQueue({producto:r.producto,lote:r.lote,dlc:r.dlc,ts:r.ts,destino:r.destino||'nevera',proceso:r.proceso||[]})" title="Etiqueta">🏷</button>
+          <button class="btn-icon" onclick="_printElabLabel('${r.id}')" title="Imprimir etiqueta">🏷</button>
           <button class="btn-icon" onclick="editElabDlc('${r.id}')" title="Editar caducidad" style="color:#e67e22">📅</button>
           <button class="btn-icon" onclick="viewTrazDetail('${r.id}')" title="Ver expediente completo" style="font-size:13px">📋</button>
         </div>
@@ -13771,9 +13792,36 @@ function _printLabelQueue(){
 }
 
 // Keep autoLabel for backward compatibility — redirects to queue
+function printLabelWithCopies(payload){
+  window._labelCopyPayload=payload;
+  openModalAPPCC(`
+    <div class="modal-title" style="text-align:center">🖨 ¿Cuántas copias?</div>
+    <div style="background:#f8faff;border:1.5px solid #dbeafe;border-radius:12px;padding:12px;margin:12px 0;text-align:center">
+      <div style="font-size:16px;font-weight:900;color:#111">${payload?.r?.producto||'Etiqueta'}</div>
+      ${payload?.r?.lote?`<div style="font-size:13px;font-family:monospace;color:#1a4fa8;margin-top:4px">LOTE: ${payload.r.lote}</div>`:''}
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:18px 0">
+      <button onclick="adjCopias('label-direct',-1)" style="width:46px;height:46px;border:2px solid #1a4fa8;border-radius:12px;background:#fff;font-size:24px;cursor:pointer;color:#1a4fa8;font-weight:900">−</button>
+      <span id="cop-label-direct" style="font-size:42px;font-weight:900;min-width:64px;text-align:center;color:#1a4fa8">1</span>
+      <button onclick="adjCopias('label-direct',1)" style="width:46px;height:46px;border:2px solid #1a4fa8;border-radius:12px;background:#fff;font-size:24px;cursor:pointer;color:#1a4fa8;font-weight:900">+</button>
+    </div>
+    <div class="modal-row">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModalAPPCC()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="_confirmLabelCopies()">Imprimir</button>
+    </div>
+  `);
+}
+function _confirmLabelCopies(){
+  const p=window._labelCopyPayload;if(!p||!p.r){closeModalAPPCC();return;}
+  const cop=parseInt((document.getElementById('cop-label-direct')||{}).textContent)||1;
+  window._labelCopyPayload=null;
+  closeModalAPPCC();
+  setTimeout(()=>_batchPrint([{r:p.r,cop,tipo:p.tipo||'elab'}]),150);
+}
+
 function _printElabLabel(id){
   const e=(ld(K.elab)||[]).find(x=>x.id===id);if(!e)return;
-  _batchPrint([{r:{
+  printLabelWithCopies({r:{
     tipo:'🍳 ELABORACIÓN',
     producto:e.producto,
     lote:e.lote||'',
@@ -13782,7 +13830,7 @@ function _printElabLabel(id){
     ts:e.ts||new Date().toISOString(),
     destino:e.destino||'nevera',
     proceso:(e.proceso||[]).concat(['🍳 Elaborado · '+new Date(e.ts||Date.now()).toLocaleDateString('es-ES')])
-  },cop:1,tipo:'elab'}]);
+  },tipo:'elab'});
 }
 function autoLabel(data){
   addToLabelQueue(data);
@@ -15875,7 +15923,7 @@ function renderCfg(){
         </div>
         <div class="fc-group"><label class="fc-label">Tamaño de etiqueta predeterminado</label>
           <select class="fc" onchange="localStorage.setItem('a_lbl_size',this.value);renderEtiquetas&&renderEtiquetas()">
-            ${Object.entries(LBL_SIZES).map(([s,cfg])=>`<option value="${s}" ${(localStorage.getItem('a_lbl_size')||'QL-62x100mm')===s?'selected':''}>${cfg.label||s}</option>`).join('')}
+            ${Object.entries(LBL_SIZES).map(([s,cfg])=>`<option value="${s}" ${(localStorage.getItem('a_lbl_size')||'QL-62mm-cont')===s?'selected':''}>${cfg.label||s}</option>`).join('')}
           </select>
           <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
             <button class="btn btn-sm btn-outline" onclick="setLabelSizePreset('QL-29x90mm')">Pequeña 29×90</button>
@@ -17190,7 +17238,7 @@ function savePlagas(){
 const LBL_SIZES={
   'QL-62x100mm':{label:'Brother QL grande 62×100mm',w:'62mm',h:'100mm',hPrint:'100mm',wpx:234,hpx:378,brother:true},
   'QL-29x90mm': {label:'Brother QL pequeña 29×90mm', w:'29mm',h:'90mm', hPrint:'90mm', wpx:110,hpx:340,brother:true,narrow:true},
-  'QL-62mm-cont':{label:'Brother QL rollo continuo 62mm',w:'62mm',h:'auto',hPrint:'100mm',wpx:234,hpx:0,brother:true,cont:true},
+  'QL-62mm-cont':{label:'Brother QL rollo continuo 62mm corto',w:'62mm',h:'auto',hPrint:'60mm',wpx:234,hpx:0,brother:true,cont:true},
   'QL-29mm-cont':{label:'Brother QL rollo continuo 29mm',w:'29mm',h:'auto',hPrint:'90mm',wpx:110,hpx:0,brother:true,cont:true,narrow:true},
   'QL-62x60mm': {label:'Brother QL 62×60mm', w:'62mm',h:'60mm', hPrint:'60mm', wpx:234,hpx:227,brother:true},
   'QL-62x29mm': {label:'Brother QL 62×29mm', w:'62mm',h:'29mm', hPrint:'29mm', wpx:234,hpx:110,brother:true},
@@ -17199,7 +17247,7 @@ const LBL_SIZES={
   '100x150mm':  {label:'Genérica 100×150mm',  w:'100mm',h:'150mm',hPrint:'150mm',wpx:378,hpx:567}
 };
 function getLabelSize(){
-  const key=localStorage.getItem('a_lbl_size')||'QL-62x100mm';
+  const key=localStorage.getItem('a_lbl_size')||'QL-62mm-cont';
   const cfg=LBL_SIZES[key]||LBL_SIZES['QL-62x100mm'];
   return Object.assign({key},cfg,{hPrint:cfg.hPrint||((cfg.h&&cfg.h!=='auto')?cfg.h:'100mm')});
 }
@@ -17427,7 +17475,7 @@ async function _batchPrint(items, orient){
   const wMm = parseFloat(lblSize.w);
   // Rollo Brother QL 62mm — siempre portrait 62×100mm
   orient = 'portrait';
-  const isLand = false;
+  const isLand = lblSize.cont||parseFloat(lblSize.hPrint||'100')<=70;
   const PAGE_W = lblSize.w;
   const PAGE_H = lblSize.hPrint||'100mm';
   const QR_MM  = Math.max(12,Math.min(18,wMm*0.29));
@@ -17521,7 +17569,7 @@ async function _batchPrint(items, orient){
     }
     .label{
       width:${PAGE_W};height:${PAGE_H};
-      padding:2.5mm;background:#fff;
+      padding:${isLand?'2mm':'2.5mm'};background:#fff;
       border:0.5mm solid #bbb;
       margin:4mm auto;
       display:flex;
@@ -17535,12 +17583,12 @@ async function _batchPrint(items, orient){
     .col-left{flex:1;display:flex;flex-direction:column;gap:1mm;min-width:0;overflow:hidden}
     .col-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;flex-shrink:0}
     .emp{font-size:2mm;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-    .title{font-size:${isLand?'5.5mm':'5mm'};font-weight:900;color:#111;line-height:1.2;word-break:break-word;max-height:${isLand?'14mm':'13mm'};overflow:hidden}
-    .dest{font-size:3.5mm;font-weight:900;padding:1mm 2mm;border-radius:1.5mm;text-align:center;letter-spacing:.3px;flex-shrink:0}
-    .lote{font-size:2.5mm;font-family:monospace;font-weight:700;color:#333;background:#f0f0f0;padding:.5mm 1.5mm;border-radius:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .small-lbl{font-size:2mm;color:#999}
+    .title{font-size:${isLand?'6.8mm':'5mm'};font-weight:900;color:#111;line-height:1.05;word-break:break-word;max-height:${isLand?'16mm':'13mm'};overflow:hidden}
+    .dest{font-size:${isLand?'4mm':'3.5mm'};font-weight:900;padding:1mm 2mm;border-radius:1.5mm;text-align:center;letter-spacing:.3px;flex-shrink:0}
+    .lote{font-size:${isLand?'3.5mm':'2.5mm'};font-family:monospace;font-weight:900;color:#111;background:#f0f0f0;padding:.7mm 1.7mm;border-radius:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .small-lbl{font-size:${isLand?'2.5mm':'2mm'};color:#555;font-weight:700}
     .cad-lbl{font-size:2mm;color:#888;text-transform:uppercase;letter-spacing:.3px}
-    .cad{font-size:${isLand?'8mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:1;letter-spacing:.5px}
+    .cad{font-size:${isLand?'7mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:1;letter-spacing:.5px}
     .sep{height:.3mm;background:#e8e8e8;flex-shrink:0;margin:0.5mm 0}
     .qr-row{display:flex;flex-direction:row;align-items:center;gap:2mm;flex-shrink:0;margin-top:auto}
     .proc{font-size:1.8mm;color:#888;line-height:1.4;white-space:pre-line;max-width:${isLand?'60mm':'28mm'}}
