@@ -13831,6 +13831,18 @@ function printExpedienteCompleto(id){
   const ds=ld(K.descongel).filter(x=>x.elabId===id||x.lote===e.lote||x.elab_id===id);
   const rs=ld(K.regen).filter(x=>x.elabId===id||x.lote_ref===e.lote);
   const fmtDT2=ts=>{try{const d=new Date(ts);return isNaN(d.getTime())?ts:d.toLocaleString('es-ES');}catch(e){return ts||'—';}};
+  const eventoHtml=e.evento_id?`<h2>📅 CLIENTE / EVENTO VINCULADO</h2>
+  <div class="event-box">
+    <div class="event-title">${e.evento_cliente||'Cliente pendiente'}${e.evento_empresa?' · '+e.evento_empresa:''}</div>
+    <div class="event-grid">
+      <div><span>Fecha entrega</span><strong>${e.evento_fecha_entrega||e.evento_fecha||'—'} ${e.evento_hora_entrega||e.evento_hora||''}</strong></div>
+      <div><span>Lugar</span><strong>${e.evento_lugar||'—'}</strong></div>
+      <div><span>Servicio</span><strong>${e.evento_servicio||'—'}</strong></div>
+      <div><span>Pax</span><strong>${e.evento_pax||'—'}</strong></div>
+      <div><span>Marca</span><strong>${e.evento_marca||'—'}</strong></div>
+      <div><span>ID evento</span><strong>${e.id_evento||e.evento_id||'—'}</strong></div>
+    </div>
+  </div>`:'';
   const w=window.open('','_blank','width=800,height=900');
   const mpRows=ingrs.map((ing,i)=>{
     const r=ingrInfo[i].rec;
@@ -13874,6 +13886,12 @@ function printExpedienteCompleto(id){
     .footer{margin-top:20px;padding-top:8px;border-top:1px solid #ddd;font-size:10px;color:#999;display:flex;justify-content:space-between}
     .alert-ok{background:#f0fff4;border:1px solid #86efac;padding:4px 8px;border-radius:4px;color:#166534}
     .alert-warn{background:#fef2f2;border:1px solid #fca5a5;padding:4px 8px;border-radius:4px;color:#dc2626}
+    .event-box{background:#fff7ed;border:1px solid #fdba74;border-radius:8px;padding:10px 12px;margin-bottom:12px}
+    .event-title{font-size:14px;font-weight:900;color:#9a3412;margin-bottom:8px}
+    .event-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .event-grid div{background:#fff;padding:6px 8px;border-radius:6px;border:1px solid #fed7aa}
+    .event-grid span{display:block;font-size:9px;color:#9a3412;text-transform:uppercase;font-weight:700}
+    .event-grid strong{display:block;font-size:11px;color:#111;margin-top:2px}
     @media print{body{padding:10px}.no-print{display:none}}
   </style></head><body>
   <div class="hdr">
@@ -13888,6 +13906,7 @@ function printExpedienteCompleto(id){
     </div>
   </div>
   <h1>📋 ${e.producto}</h1>
+  ${eventoHtml}
   <div class="info-grid">
     <div class="info-cell"><div class="label">Fecha elaboración</div><div class="val">${fmtDT2(e.ts)}</div></div>
     <div class="info-cell"><div class="label">Trabajador</div><div class="val">${e.emp||'—'}</div></div>
