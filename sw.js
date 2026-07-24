@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260724-force-refresh1';
+const CACHE_NAME = 'albaraba-appcc-v20260724-brother-ql1';
 const APP_SHELL = [
   './',
   './index.html',

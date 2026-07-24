@@ -13092,11 +13092,13 @@ function saveElab(){
 }
 function printElabLabel(rid){
   const r=ld(K.elab).find(x=>x.id===rid);if(!r)return;
+  const size=getLabelSize();
   const w=window.open('','_blank','width=420,height=340');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>body{font-family:Arial,sans-serif;margin:0;padding:0}
+  @page{size:${size.w} ${size.hPrint};margin:0}
   @media print{body{margin:0;padding:0}}
-  .label{width:62mm;min-height:100mm;padding:4mm;border:1px solid #000;box-sizing:border-box}
+  .label{width:${size.w};min-height:${size.hPrint};padding:4mm;border:1px solid #000;box-sizing:border-box}
   .lb-brand{font-size:14px;font-weight:900;color:#1a4fa8;letter-spacing:1px}
   .lb-prod{font-size:18px;font-weight:700;margin:3mm 0;color:#000}
   .lb-lot{font-family:monospace;font-size:12px;background:#f0f0f0;padding:2mm 4mm;border-radius:2mm;display:inline-block}
@@ -13573,14 +13575,15 @@ function viewTrazDetail(id){
 function printStepLabel(data){
   // data: {tipo, producto, lote, emp, fecha, linea2, linea3, dlc, color}
   const col=data.color||'#1a4fa8';
+  const size=getLabelSize();
   const w=window.open('','_blank','width=420,height=340');
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#fff}
-    @page{size:62mm 100mm;margin:0}
+    @page{size:${size.w} ${size.hPrint};margin:0}
     @media print{body{margin:0}}
-    .lb{width:62mm;min-height:100mm;padding:3mm;border:2px solid ${col};display:flex;flex-direction:column;gap:1.5mm}
+    .lb{width:${size.w};min-height:${size.hPrint};padding:3mm;border:2px solid ${col};display:flex;flex-direction:column;gap:1.5mm}
     .lb-tipo{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:${col};border-bottom:1px solid ${col};padding-bottom:2mm}
     .lb-brand{font-size:11px;font-weight:900;color:${col}}
     .lb-prod{font-size:16px;font-weight:700;color:#000;margin:1mm 0}
@@ -13661,9 +13664,17 @@ function _quickCopiesData(data){
 let _labelQueue = [];
 
 function _updatePrintBadge(){
-  const badge = document.getElementById('print-badge');
+  let badge = document.getElementById('print-badge');
+  if(!badge){
+    badge=document.createElement('button');
+    badge.id='print-badge';
+    badge.type='button';
+    badge.onclick=_printLabelQueue;
+    badge.style.cssText='position:fixed;right:14px;bottom:92px;z-index:9999;display:none;align-items:center;gap:8px;background:#1a4fa8;color:#fff;border:none;border-radius:999px;padding:12px 16px;font-size:13px;font-weight:900;box-shadow:0 6px 22px rgba(0,0,0,.28);cursor:pointer';
+    badge.innerHTML='<span style="font-size:17px">🖨</span><span id="print-badge-count">0 etiquetas</span>';
+    document.body.appendChild(badge);
+  }
   const count = document.getElementById('print-badge-count');
-  if(!badge) return;
   if(_labelQueue.length === 0){
     badge.style.display = 'none';
   } else {
@@ -13762,7 +13773,7 @@ function _printLabelQueue(){
 // Keep autoLabel for backward compatibility — redirects to queue
 function _printElabLabel(id){
   const e=(ld(K.elab)||[]).find(x=>x.id===id);if(!e)return;
-  addToLabelQueue({
+  _batchPrint([{r:{
     tipo:'🍳 ELABORACIÓN',
     producto:e.producto,
     lote:e.lote||'',
@@ -13771,8 +13782,7 @@ function _printElabLabel(id){
     ts:e.ts||new Date().toISOString(),
     destino:e.destino||'nevera',
     proceso:(e.proceso||[]).concat(['🍳 Elaborado · '+new Date(e.ts||Date.now()).toLocaleDateString('es-ES')])
-  });
-  showMod('etiq');
+  },cop:1,tipo:'elab'}]);
 }
 function autoLabel(data){
   addToLabelQueue(data);
@@ -15865,15 +15875,20 @@ function renderCfg(){
         </div>
         <div class="fc-group"><label class="fc-label">Tamaño de etiqueta predeterminado</label>
           <select class="fc" onchange="localStorage.setItem('a_lbl_size',this.value);renderEtiquetas&&renderEtiquetas()">
-            ${Object.keys(LBL_SIZES).map(s=>`<option value="${s}" ${(localStorage.getItem('a_lbl_size')||'QL-62mm-cont')===s?'selected':''}>${s}</option>`).join('')}
+            ${Object.entries(LBL_SIZES).map(([s,cfg])=>`<option value="${s}" ${(localStorage.getItem('a_lbl_size')||'QL-62x100mm')===s?'selected':''}>${cfg.label||s}</option>`).join('')}
           </select>
+          <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-outline" onclick="setLabelSizePreset('QL-29x90mm')">Pequeña 29×90</button>
+            <button class="btn btn-sm btn-outline" onclick="setLabelSizePreset('QL-62x100mm')">Grande 62×100</button>
+            <button class="btn btn-sm btn-outline" onclick="setLabelSizePreset('QL-62mm-cont')">Rollo continuo 62mm</button>
+          </div>
         </div>
         <div class="alert-box alert-ok" style="font-size:12px;font-weight:400">
           <strong>Configuración Brother QL:</strong>
           <div style="margin-top:6px">1. Conecta la impresora a tu red WiFi (ajustes del panel Brother)</div>
           <div>2. Anota la IP que aparece en su pantalla o en el informe de red</div>
           <div>3. Pon esa IP arriba y pulsa Guardar</div>
-          <div style="margin-top:6px">Las etiquetas se generan en <strong>formato 29×90mm</strong>. Al pulsar Imprimir se abrirá el diálogo del sistema — selecciona tu impresora Brother QL</div>
+          <div style="margin-top:6px">Elige arriba el <strong>mismo tamaño de rollo</strong> que tengas metido en la Brother. Si cambias de etiqueta pequeña a grande, cambia también este selector antes de imprimir.</div>
         </div>
         <div class="fc-group"><label class="fc-label">Etiquetas automáticas al registrar</label>
           <div class="moment-row">
@@ -15881,7 +15896,7 @@ function renderCfg(){
             <button class="moment-pill ${localStorage.getItem('a_label_auto')==='off'?'sel':''}" id="lbl-off" onclick="setLabelAuto(false)">✗ Desactivadas</button>
           </div>
         </div>
-        <button class="btn btn-green btn-block" onclick="testPrint()">🖨 Imprimir etiqueta de prueba (29×90mm)</button>
+        <button class="btn btn-green btn-block" onclick="testPrint()">🖨 Imprimir prueba con tamaño seleccionado</button>
       </div>
     </div>
     <div class="card">
@@ -15895,22 +15910,23 @@ function renderCfg(){
     </div>`;
 }
 function testPrint(){
-  const size=LBL_SIZES['QL-62x100mm'];
+  const size=getLabelSize();
   const wMm=parseFloat(size.w);
+  const hPrint=size.hPrint||'100mm';
   const fTitle=Math.max(3.5,wMm*0.165)+'mm';
   const fLot  =Math.max(2.8,wMm*0.12)+'mm';
   const fDate =Math.max(2.8,wMm*0.115)+'mm';
   const fSmall=Math.max(1.8,wMm*0.075)+'mm';
   const pad   =Math.max(1.5,wMm*0.05)+'mm';
-  const w=window.open('','_blank','width=200,height=420');
+  const w=window.open('','_blank','width=360,height=520');
   if(!w){alert('Permite ventanas emergentes para imprimir');return;}
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    html,body{width:29mm;height:90mm;background:#fff;font-family:Arial,Helvetica,sans-serif}
-    @page{size:29mm 90mm;margin:0}
-    @media print{html,body{width:29mm;height:90mm}.no-print{display:none!important}}
-    .label{width:29mm;height:90mm;padding:${pad};display:flex;flex-direction:column;gap:0.8mm;overflow:hidden;border:0.3mm solid #000}
+    html,body{width:${size.w};height:${hPrint};background:#fff;font-family:Arial,Helvetica,sans-serif}
+    @page{size:${size.w} ${hPrint};margin:0}
+    @media print{html,body{width:${size.w};height:${hPrint}}.no-print{display:none!important}}
+    .label{width:${size.w};height:${hPrint};padding:${pad};display:flex;flex-direction:column;gap:0.8mm;overflow:hidden;border:0.3mm solid #000}
     .f-tipo{font-size:${fSmall};font-weight:900;color:#1a4fa8;text-transform:uppercase;letter-spacing:0.3px;background:#e3efff;padding:0.3mm 1mm;border-radius:0.5mm;display:inline-block;margin-bottom:0.5mm}
     .f-proc{font-size:${fSmall};color:#888;line-height:1.2;margin-bottom:0.5mm}
     .f-co{font-size:${fSmall};font-weight:900;color:#1a4fa8;text-transform:uppercase}
@@ -15925,7 +15941,7 @@ function testPrint(){
     <div class="label">
       <div class="f-co">ALBARABA SL</div>
       <div class="sep"></div>
-      <div class="f-title">⭐ Etiqueta de Prueba</div>
+      <div class="f-title">⭐ Prueba ${size.label||size.key}</div>
       <div class="f-lot">LOTE: TEST-2026</div>
       <div class="f-date">Entrada: ${new Date().toLocaleDateString('es-ES')}</div>
       <div class="f-dlc">⏱ Consumir antes: 30/06/2026</div>
@@ -17172,16 +17188,28 @@ function savePlagas(){
 // DISEÑADOR DE ETIQUETAS PERSONALIZADAS
 // ============================================================
 const LBL_SIZES={
-  'QL-62mm-cont':{w:'62mm',h:'auto',wpx:234,hpx:0,brother:true,cont:true},
-  'QL-29mm-cont':{w:'29mm',h:'auto',wpx:110,hpx:0,brother:true,cont:true,narrow:true},
-  'QL-29x90mm': {w:'29mm',h:'90mm', wpx:110,hpx:340,brother:true,narrow:true},
-  'QL-62x100mm':{w:'62mm',h:'100mm',wpx:234,hpx:378,brother:true},
-  'QL-62x60mm': {w:'62mm',h:'60mm', wpx:234,hpx:227,brother:true},
-  'QL-62x29mm': {w:'62mm',h:'29mm', wpx:234,hpx:110,brother:true},
-  '58x40mm':    {w:'58mm',h:'40mm', wpx:220,hpx:151},
-  '100x60mm':   {w:'100mm',h:'60mm',wpx:378,hpx:227},
-  '100x150mm':  {w:'100mm',h:'150mm',wpx:378,hpx:567}
+  'QL-62x100mm':{label:'Brother QL grande 62×100mm',w:'62mm',h:'100mm',hPrint:'100mm',wpx:234,hpx:378,brother:true},
+  'QL-29x90mm': {label:'Brother QL pequeña 29×90mm', w:'29mm',h:'90mm', hPrint:'90mm', wpx:110,hpx:340,brother:true,narrow:true},
+  'QL-62mm-cont':{label:'Brother QL rollo continuo 62mm',w:'62mm',h:'auto',hPrint:'100mm',wpx:234,hpx:0,brother:true,cont:true},
+  'QL-29mm-cont':{label:'Brother QL rollo continuo 29mm',w:'29mm',h:'auto',hPrint:'90mm',wpx:110,hpx:0,brother:true,cont:true,narrow:true},
+  'QL-62x60mm': {label:'Brother QL 62×60mm', w:'62mm',h:'60mm', hPrint:'60mm', wpx:234,hpx:227,brother:true},
+  'QL-62x29mm': {label:'Brother QL 62×29mm', w:'62mm',h:'29mm', hPrint:'29mm', wpx:234,hpx:110,brother:true},
+  '58x40mm':    {label:'Genérica 58×40mm',    w:'58mm',h:'40mm', hPrint:'40mm', wpx:220,hpx:151},
+  '100x60mm':   {label:'Genérica 100×60mm',   w:'100mm',h:'60mm',hPrint:'60mm',wpx:378,hpx:227},
+  '100x150mm':  {label:'Genérica 100×150mm',  w:'100mm',h:'150mm',hPrint:'150mm',wpx:378,hpx:567}
 };
+function getLabelSize(){
+  const key=localStorage.getItem('a_lbl_size')||'QL-62x100mm';
+  const cfg=LBL_SIZES[key]||LBL_SIZES['QL-62x100mm'];
+  return Object.assign({key},cfg,{hPrint:cfg.hPrint||((cfg.h&&cfg.h!=='auto')?cfg.h:'100mm')});
+}
+function setLabelSizePreset(key){
+  localStorage.setItem('a_lbl_size',key);
+  const name=(LBL_SIZES[key]&&LBL_SIZES[key].label)||key;
+  if(typeof toast==='function')toast('Tamaño de etiqueta: '+name);
+  if(typeof renderCfg==='function')renderCfg();
+  if(typeof renderEtiquetas==='function')renderEtiquetas();
+}
 const LBL_PLANTILLAS=[
   {id:'producto',nombre:'Etiqueta Producto',campos:['empresa','producto','lote','fecha','dlc','alergenos','emp']},
   {id:'recepcion',nombre:'Recepción Mercancía',campos:['empresa','producto','proveedor','lote','fecha','dlc']},
@@ -17191,6 +17219,7 @@ const LBL_PLANTILLAS=[
 ];
 function renderEtiquetas(){
   const savedOrient=localStorage.getItem('a_lbl_orient')||'portrait';
+  const lblSize=getLabelSize();
   const elabs=(ld(K.elab)||[]).filter(e=>e.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50);
   const openSections=JSON.parse(localStorage.getItem('a_etq_open')||'{"elab":true,"manual":false}');
 
@@ -17234,7 +17263,7 @@ function renderEtiquetas(){
     <div style="padding:10px 14px 6px;display:flex;align-items:center;gap:6px">
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;background:#e3efff;border-radius:8px;padding:5px 10px">
         <span style="font-size:13px">🖨</span>
-        <span style="font-size:12px;font-weight:700;color:#1a4fa8">Brother QL · 62mm</span>
+        <span style="font-size:12px;font-weight:700;color:#1a4fa8">${lblSize.label||lblSize.key}</span>
       </div>
       <button class="btn btn-green" style="flex:1;padding:8px;font-size:14px;font-weight:700" onclick="_printSelected('all')">🖨 IMPRIMIR MARCADOS</button>
     </div>
@@ -17394,13 +17423,15 @@ async function _batchPrint(items, orient){
   if(!w){alert('⚠ Activa las ventanas emergentes en el navegador para imprimir');return;}
 
   const empresa = getCfgEmp().razon || 'ALBARABA SL';
+  const lblSize = getLabelSize();
+  const wMm = parseFloat(lblSize.w);
   // Rollo Brother QL 62mm — siempre portrait 62×100mm
   orient = 'portrait';
   const isLand = false;
-  const PAGE_W = '62mm';
-  const PAGE_H = '100mm';
-  const QR_MM  = 18;
-  const qrPx   = 90;
+  const PAGE_W = lblSize.w;
+  const PAGE_H = lblSize.hPrint||'100mm';
+  const QR_MM  = Math.max(12,Math.min(18,wMm*0.29));
+  const qrPx   = Math.round(QR_MM*5);
 
   // Loading screen while we generate QR codes
   w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -17526,7 +17557,7 @@ async function _batchPrint(items, orient){
     <title>Etiquetas</title><style>${css}</style></head><body>
     ${labelsHtml}
     <div class="no-print">
-      <span style="font-size:12px;color:#888">${totalCopies} etiqueta${totalCopies===1?'':'s'} · 62mm×100mm</span>
+      <span style="font-size:12px;color:#888">${totalCopies} etiqueta${totalCopies===1?'':'s'} · ${lblSize.label||lblSize.key}</span>
       <button class="btn-p" onclick="window.print()">🖨 Imprimir</button>
       <button class="btn-c" onclick="window.close()">✕ Cerrar</button>
     </div>
