@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260724-mobile-reset1 -->
+<!-- VERSION: v20260724-login-first1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -10157,7 +10157,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 <!-- LOGIN OVERLAY -->
-<div id="login-overlay" style="position:fixed;inset:0;background:var(--primary);z-index:9999;display:none;align-items:center;justify-content:center">
+<div id="login-overlay" style="position:fixed;inset:0;background:var(--primary);z-index:9999;display:flex;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:360px;margin:20px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
     <div style="text-align:center;margin-bottom:24px">
       <div style="font-size:48px;margin-bottom:8px">🍽</div>
@@ -10171,7 +10171,7 @@ window.addEventListener('DOMContentLoaded',()=>{
       <input id="login-pwd" type="password" class="fc" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button id="login-btn" class="btn btn-gold" style="width:100%;justify-content:center;padding:12px;font-size:15px;margin-top:4px" onclick="doLogin()">Entrar →</button>
-    <div id="login-error" style="color:#dc2626;font-size:12px;text-align:center;margin-top:10px;min-height:18px"></div>
+    <div id="login-error" style="color:#64748b;font-size:12px;text-align:center;margin-top:10px;min-height:18px">Conectando sincronización segura...</div>
     <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--muted)">🔒 Acceso seguro con Firebase</div>
   </div>
 </div>
