@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-sync-diagnostic1 -->
+<!-- VERSION: v20260726-sync-panel1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -480,6 +480,18 @@ html,body{height:100%;color-scheme:light!important}
 }
 #app-switcher .sw-tab:hover{color:#fff;background:rgba(255,255,255,.1);}
 #app-switcher .sw-tab.active{color:#fff;border-bottom-color:#7eb3ff;}
+#app-switcher .sw-reload,#app-switcher .sw-sync{
+  height:32px;margin-right:8px;border:1px solid rgba(255,255,255,.35);
+  background:rgba(255,255,255,.14);color:#fff;border-radius:10px;
+  font-weight:800;cursor:pointer;padding:0 10px;white-space:nowrap;
+}
+#app-switcher .sw-sync{background:#d49b13;border-color:#f5cf67;color:#101225}
+@media(max-width:640px){
+  #app-switcher .sw-logo{font-size:11px;padding:0 8px}
+  #app-switcher .sw-tab{font-size:11px}
+  #app-switcher .sw-sync .sync-text{display:none}
+  #app-switcher .sw-reload,#app-switcher .sw-sync{padding:0 8px;margin-right:4px}
+}
 
 /* ── GESTION adjustments ── */
 #app-gestion{padding-top:44px;min-height:100vh;}
@@ -515,6 +527,7 @@ html,body{height:100%;color-scheme:light!important}
     <button class="sw-tab active" id="sw-gestion" onclick="switchApp('gestion')">📋 GESTIÓN</button>
     <button class="sw-tab" id="sw-appcc"   onclick="switchApp('appcc')">🛡 APPCC FOOD SAFETY</button>
   </div>
+  <button class="sw-sync" onclick="openSyncRescuePanel()" title="Sincronizar datos entre ordenador, móvil y tablet">☁️ <span class="sync-text">Sync</span></button>
   <button class="sw-reload" onclick="forceAppRefresh()" title="Actualizar app sin borrar datos">🔄</button>
 </div>
 
@@ -3554,6 +3567,67 @@ async function forceUploadLocalMainDBToCloud(){
     setSyncStatus('error');
     alert('No se pudo subir a la nube. Revisa internet/sesiÃ³n y vuelve a intentarlo.');
   }
+}
+
+function _mainDBSummaryForPanel(d){
+  d=d&&typeof d==='object'?d:{};
+  return {
+    total:_dbRecordScore(d),
+    hojas:(d.hojas||[]).length,
+    productos:(d.productos||[]).length,
+    elaboraciones:(d.elaboraciones||[]).length,
+    pedidos:(d.pedidos||[]).length,
+    recetas:(d.recetas||[]).length
+  };
+}
+function closeSyncRescuePanel(){
+  const modal=document.getElementById('sync-rescue-modal');
+  if(modal)modal.remove();
+}
+function openSyncRescuePanel(){
+  let local={};
+  try{
+    const raw=localStorage.getItem('albaraba_v2');
+    if(raw)local=JSON.parse(raw);
+  }catch(e){}
+  const c=_mainDBSummaryForPanel(local);
+  const user=(fbAuth&&fbAuth.currentUser)?(fbAuth.currentUser.email||'(usuario sin email)'):'SIN SESION';
+  const status=((document.getElementById('sync-label')||{}).textContent||'');
+  closeSyncRescuePanel();
+  const modal=document.createElement('div');
+  modal.id='sync-rescue-modal';
+  modal.style.cssText='position:fixed;inset:0;z-index:25000;background:rgba(15,23,42,.62);display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML=`
+    <div style="width:min(520px,96vw);background:#fff;border-radius:18px;box-shadow:0 22px 70px rgba(0,0,0,.35);overflow:hidden;font-family:Arial,Helvetica,sans-serif">
+      <div style="background:#10224a;color:#fff;padding:16px 18px;font-weight:900;font-size:18px;display:flex;justify-content:space-between;gap:12px;align-items:center">
+        <span>☁️ Sincronizar dispositivos</span>
+        <button onclick="closeSyncRescuePanel()" style="border:0;background:rgba(255,255,255,.18);color:#fff;border-radius:9px;padding:6px 10px;font-weight:900;cursor:pointer">✕</button>
+      </div>
+      <div style="padding:16px 18px;color:#172033">
+        <div style="font-size:13px;line-height:1.45;background:#f6f8ff;border:1px solid #dbeafe;border-radius:12px;padding:10px 12px;margin-bottom:12px">
+          <div><strong>Usuario:</strong> ${esc(user)}</div>
+          <div><strong>Estado:</strong> ${esc(status||'sin estado')}</div>
+          <div><strong>Datos en este dispositivo:</strong> ${c.total} total · ${c.productos} productos · ${c.elaboraciones} elaboraciones · ${c.pedidos} pedidos · ${c.hojas} eventos</div>
+        </div>
+        <p style="margin:0 0 12px;font-size:14px;line-height:1.45">
+          Si este es el ordenador donde están los datos buenos, pulsa <strong>Subir/fusionar a nube</strong>.
+          No borra registros: mezcla lo local con lo que haya en la nube.
+        </p>
+        <div style="display:grid;gap:9px">
+          <button onclick="closeSyncRescuePanel();forceUploadLocalMainDBToCloud()" style="border:0;background:#16a34a;color:white;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:900;cursor:pointer">☁️ Subir/fusionar este dispositivo a nube</button>
+          <button onclick="showSyncDiagnostic()" style="border:1px solid #bfd0ee;background:#eef5ff;color:#10224a;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🔎 Ver diagnóstico de nube/local</button>
+          <button onclick="forceAppRefresh()" style="border:1px solid #f3c15e;background:#fff7df;color:#6b4500;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🔄 Actualizar app sin borrar datos</button>
+          <button onclick="forceLogoutAndAskLogin()" style="border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🚪 Salir y volver a pedir usuario</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+function forceLogoutAndAskLogin(){
+  try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
+  const go=()=>{location.href=location.pathname+'?v=20260726-sync-panel1&resetApp=1&login=1';};
+  if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
+  else go();
 }
 
 function restoreLatestAutoBackup(){
