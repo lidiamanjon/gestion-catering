@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-sync-panel1 -->
+<!-- VERSION: v20260726-firebase2026-1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -1317,13 +1317,13 @@ html,body{height:100%;color-scheme:light!important}
 // FIREBASE CONFIG — rellena con tu proyecto Firebase
 // ═══════════════════════════════════════════════════
 const FB_CONFIG={
-  apiKey:"AIzaSyBe7hKPXIanf49ZUgJ3NiXp8CHvjcGsw0M",
-  authDomain:"albaraba-gestion.firebaseapp.com",
-  databaseURL:"https://albaraba-gestion-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:"albaraba-gestion",
-  storageBucket:"albaraba-gestion.firebasestorage.app",
-  messagingSenderId:"336714171454",
-  appId:"1:336714171454:web:0ee465fdbd7897da5bbd6f"
+  apiKey:"AIzaSyCKCSg5n6cBVikz1NSYdxI2y5GiD2yqaqk",
+  authDomain:"albaraba-gestion-2026.firebaseapp.com",
+  databaseURL:"https://albaraba-gestion-2026-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"albaraba-gestion-2026",
+  storageBucket:"albaraba-gestion-2026.firebasestorage.app",
+  messagingSenderId:"927165160966",
+  appId:"1:927165160966:web:bd8b03f85342697054ed87"
 };
 const FB_READY=!FB_CONFIG.apiKey.startsWith('FIREBASE');
 let fbAuth=null,fbDB=null;
@@ -3625,7 +3625,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260726-sync-panel1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260726-firebase2026-1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
