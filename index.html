@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-elab-stock1 -->
+<!-- VERSION: v20260726-worker-lock2 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260726-elab-stock1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260726-worker-lock2'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3479,6 +3479,23 @@ function _saveLocalRecoveryPoint(raw,reason,force=false){
     localStorage.setItem('_albaraba_backup_at',String(now));
   }catch(e){try{localStorage.removeItem('_albaraba_backup_2');}catch(_){}console.warn('No se pudo crear copia local:',e);}
 }
+function _normalizeUserRolesInDB(d){
+  if(!d||typeof d!=='object')return d;
+  const norm=e=>String(e||'').toLowerCase().trim();
+  const byEmail=new Map();
+  (Array.isArray(d.usuarios)?d.usuarios:[]).forEach(u=>{
+    const email=norm(u&&u.email);if(!email)return;
+    const prev=byEmail.get(email)||{};
+    const role=(u.role==='trabajador'||prev.role==='trabajador')?'trabajador':(u.role==='admin'||prev.role==='admin')?'admin':(u.role||prev.role||'trabajador');
+    byEmail.set(email,{...prev,...u,email,role});
+  });
+  d.usuarios=[...byEmail.values()];
+  const workerEmails=new Set(d.usuarios.filter(u=>u.role==='trabajador').map(u=>norm(u.email)));
+  d.admins=[...new Set((Array.isArray(d.admins)?d.admins:['contacto@alaboca.es']).map(norm).filter(Boolean))]
+    .filter(e=>e==='contacto@alaboca.es'||!workerEmails.has(e));
+  if(!d.admins.includes('contacto@alaboca.es'))d.admins.unshift('contacto@alaboca.es');
+  return d;
+}
 function _mergeDBPreservingRecords(remote,local){
   const merge=(a,b)=>{
     if(Array.isArray(a)||Array.isArray(b)){
@@ -3493,7 +3510,7 @@ function _mergeDBPreservingRecords(remote,local){
     }
     return b===undefined?a:b;
   };
-  return merge(remote||{},local||{});
+  return _normalizeUserRolesInDB(merge(remote||{},local||{}));
 }
 function _dbRecordScore(d){
   if(!d||typeof d!=='object')return 0;
@@ -3642,7 +3659,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260726-elab-stock1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260726-worker-lock2&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -3707,7 +3724,7 @@ function initMainCloudRealtime(){
       _installBidfoodFichas();
       localStorage.setItem('albaraba_v2',JSON.stringify(DB));
       setSyncStatus('ok');
-      if(fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
+      if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
       if(currentSection)nav(currentSection);else nav('dashboard');
     }finally{
       _mainCloudApplying=false;
@@ -3748,7 +3765,7 @@ function loadDB(){
           localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
           localStorage.removeItem('_albaraba_pending_sync');
           setSyncStatus('ok');
-          if(fbAuth&&fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
+          if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
           if(currentSection)nav(currentSection);else nav('dashboard');
           return;
         }
@@ -3773,7 +3790,7 @@ function loadDB(){
         localStorage.setItem('albaraba_v2',JSON.stringify(DB));
         localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
         if(mergedPending)saveDB();else setSyncStatus('ok');
-        if(fbAuth&&fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
+        if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
         if(currentSection)nav(currentSection);else nav('dashboard');
       } else if(raw){
         // Firebase vacío pero tenemos datos locales → subirlos
@@ -6583,17 +6600,38 @@ let userRole=(localStorage.getItem('_albaraba_role')||'trabajador');
 let currentUserEmail=localStorage.getItem('_albaraba_email')||'';
 let currentUserName=localStorage.getItem('_albaraba_name')||'';
 function _normEmail(e){return String(e||'').toLowerCase().trim();}
-function _userRecordByEmail(email){const target=_normEmail(email);return (DB.usuarios||[]).find(u=>_normEmail(u.email)===target)||null;}
+function _userRecordsByEmail(email){const target=_normEmail(email);return (DB.usuarios||[]).filter(u=>_normEmail(u.email)===target);}
+function _userRecordByEmail(email){
+  const list=_userRecordsByEmail(email);
+  return list.find(u=>u.role==='trabajador')||list.find(u=>u.role==='admin')||list[0]||null;
+}
+function _workerLockKey(email){return '_albaraba_worker_lock_'+_normEmail(email);}
+function _hasWorkerLock(email){
+  email=_normEmail(email);
+  return email&&email!=='contacto@alaboca.es'&&(localStorage.getItem(_workerLockKey(email))==='1'||_userRecordsByEmail(email).some(u=>u.role==='trabajador'));
+}
+function _enforceWorkerLock(email){
+  email=_normEmail(email);
+  if(!email||email==='contacto@alaboca.es')return false;
+  if(!_hasWorkerLock(email))return false;
+  if(!DB.usuarios)DB.usuarios=[];
+  let found=false;
+  DB.usuarios.forEach(u=>{if(_normEmail(u.email)===email){u.email=email;u.role='trabajador';found=true;}});
+  if(!found)DB.usuarios.push({email,nombre:email.split('@')[0],fecha:new Date().toISOString().slice(0,10),role:'trabajador'});
+  DB.admins=(DB.admins||[]).map(_normEmail).filter(e=>e!==email);
+  return true;
+}
 function _isLockedWorker(email){const u=_userRecordByEmail(email);return Boolean(u&&u.role==='trabajador'&&_normEmail(email)!=='contacto@alaboca.es');}
 function applyRole(email){
   if(email)currentUserEmail=_normEmail(email);
+  _enforceWorkerLock(currentUserEmail);
   // contacto@alaboca.es es SIEMPRE admin - hardcoded
   if(currentUserEmail==='contacto@alaboca.es'){
     userRole='admin';
   } else {
     const userRec=_userRecordByEmail(currentUserEmail);
     const admins=(DB.admins||[]).map(_normEmail);
-    if(userRec&&userRec.role==='trabajador')userRole='trabajador';
+    if(_hasWorkerLock(currentUserEmail)||userRec&&userRec.role==='trabajador')userRole='trabajador';
     else if(userRec&&userRec.role==='admin')userRole='admin';
     else userRole=admins.includes(currentUserEmail)?'admin':'trabajador';
   }
@@ -6666,6 +6704,7 @@ function hacerAdmin(email){
   if(!confirm('¿Dar permisos de admin a '+email+'?'))return;
   if(!DB.admins)DB.admins=['contacto@alaboca.es'];
   if(!DB.admins.map(_normEmail).includes(email))DB.admins.push(email);
+  localStorage.removeItem(_workerLockKey(email));
   const u=_userRecordByEmail(email);
   if(u)u.role='admin';
   saveDB();renderUsuarios();
@@ -6674,6 +6713,7 @@ function hacerTrabajador(email){
   email=_normEmail(email);
   if(email==='contacto@alaboca.es'){alert('No puedes quitar el admin principal');return;}
   if(!confirm('¿Pasar a '+email+' a trabajador?'))return;
+  localStorage.setItem(_workerLockKey(email),'1');
   DB.admins=(DB.admins||[]).map(_normEmail).filter(e=>e!==email);
   if(!DB.usuarios)DB.usuarios=[];
   const u=_userRecordByEmail(email);
@@ -6686,6 +6726,7 @@ function hacerTrabajador(email){
 function eliminarUsuario(email){
   email=_normEmail(email);
   if(!confirm('¿Eliminar a '+email+' de la lista?\n\nNota: su cuenta de acceso seguirá activa en Firebase. Para borrarla completamente ve a Firebase Console.'))return;
+  localStorage.removeItem(_workerLockKey(email));
   DB.usuarios=(DB.usuarios||[]).filter(u=>_normEmail(u.email)!==email);
   saveDB();renderUsuarios();
 }
@@ -6695,6 +6736,7 @@ function addAdmin(){
   if(!DB.admins)DB.admins=['contacto@alaboca.es'];
   if(DB.admins.map(_normEmail).includes(email)){alert('Ya es administrador');return;}
   DB.admins.push(email);
+  localStorage.removeItem(_workerLockKey(email));
   const u=_userRecordByEmail(email);
   if(u)u.role='admin';
   saveDB();renderUsuarios();
@@ -6729,12 +6771,13 @@ async function crearUsuario(){
     if(!DB.usuarios)DB.usuarios=[];
     const low=_normEmail(email);
     const existingUser=_userRecordByEmail(low);
-    if(existingUser){
+  if(existingUser){
       existingUser.nombre=nombre||existingUser.nombre;
       existingUser.role='trabajador';
     } else {
       DB.usuarios.push({email:low,nombre,fecha:new Date().toISOString().slice(0,10),role:'trabajador'});
     }
+    localStorage.setItem(_workerLockKey(low),'1');
     saveDB();
     document.getElementById('usr-nombre').value='';
     document.getElementById('usr-email').value='';
@@ -6754,6 +6797,7 @@ async function crearUsuario(){
       } else {
         DB.usuarios.push({email:low,nombre,fecha:new Date().toISOString().slice(0,10),role:'trabajador'});
       }
+      localStorage.setItem(_workerLockKey(low),'1');
       DB.admins=(DB.admins||[]).map(_normEmail).filter(e=>e!==low);
       saveDB();renderUsuarios();
       msg.style.color='#16a34a';
