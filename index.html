@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260724-login-first1 -->
+<!-- VERSION: v20260726-upload-local1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -3487,6 +3487,45 @@ function saveDB(){
         .catch(()=>setSyncStatus('error'));
     },250);
   }else setSyncStatus('offline');
+}
+
+async function forceUploadLocalMainDBToCloud(){
+  if(!fbDB||!fbAuth||!fbAuth.currentUser){
+    alert('No hay sesiÃ³n de nube activa. Primero entra con usuario y contraseÃ±a en este ordenador.');
+    return;
+  }
+  const raw=localStorage.getItem('albaraba_v2');
+  if(!raw){
+    alert('Este dispositivo no tiene datos locales de gestiÃ³n para subir.');
+    return;
+  }
+  let local;
+  try{local=JSON.parse(raw);}catch(e){alert('No se pudieron leer los datos locales.');return;}
+  const resumen=[
+    (local.hojas||[]).length+' eventos/hojas',
+    (local.productos||[]).length+' productos',
+    (local.elaboraciones||[]).length+' elaboraciones',
+    (local.pedidos||[]).length+' pedidos',
+    (local.recetas||[]).length+' recetas'
+  ].join(' · ');
+  if(!confirm('SUBIR DATOS DE ESTE ORDENADOR A LA NUBE\n\nSe fusionarÃ¡n con la nube sin borrar registros existentes.\n\nContenido local: '+resumen+'\n\nÂ¿Continuar?'))return;
+  try{
+    setSyncStatus('saving');
+    local._sync={...(local._sync||{}),actualizado_en:new Date().toISOString(),subido_manual:true,subido_por:fbAuth.currentUser.email||'',dispositivo:navigator.userAgent.slice(0,80)};
+    _saveLocalRecoveryPoint(raw,'antes de subida manual a nube',true);
+    await _backupCloudOnce(local);
+    await fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,local));
+    DB=_mergeDBPreservingRecords(DB,local);
+    applyMigrations();
+    localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+    localStorage.removeItem('_albaraba_pending_sync');
+    setSyncStatus('ok');
+    alert('✅ Datos subidos a la nube.\n\nAhora abre el móvil con el enlace nuevo y espera a que ponga Sincronizado.');
+  }catch(e){
+    console.error('Subida manual nube:',e);
+    setSyncStatus('error');
+    alert('No se pudo subir a la nube. Revisa internet/sesiÃ³n y vuelve a intentarlo.');
+  }
 }
 
 function restoreLatestAutoBackup(){
@@ -15980,6 +16019,8 @@ function renderCfg(){
     <div class="card">
       <div class="card-head"><h3>💾 Datos</h3></div>
       <div class="card-body" style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn btn-green btn-block" onclick="forceUploadLocalMainDBToCloud()">☁️ Subir datos de este ordenador a la nube</button>
+        <div style="font-size:11px;color:#64748b;line-height:1.4;background:#f8faff;border:1px solid #dbeafe;border-radius:8px;padding:8px 10px">Usa este botón solo en el ordenador donde están los datos buenos. Sirve para que móviles y tablets vean Planificación Eva, precios, productos y cantidades.</div>
         <button class="btn btn-outline btn-block" onclick="exportDataAPPCC()">📤 Exportar backup (JSON)</button>
         <button class="btn btn-outline btn-block" onclick="document.getElementById('imp-file').click()">📥 Importar backup</button>
         <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importDataAPPCC(event)">
