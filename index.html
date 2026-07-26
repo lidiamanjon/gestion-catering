@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-auto-merge-local1 -->
+<!-- VERSION: v20260726-sync-diagnostic1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -554,6 +554,8 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni" id="ni-appcc-worker" onclick="switchApp('appcc')"><span class="ic">🔬</span> App APPCC →</div>
     <div class="ni admin-only" id="ni-usuarios" onclick="nav('usuarios')"><span class="ic">👥</span> Usuarios</div>
     <div class="nav-label admin-only">Datos</div>
+    <div class="ni admin-only" onclick="forceUploadLocalMainDBToCloud()"><span class="ic">☁️</span> Subir datos a nube</div>
+    <div class="ni admin-only" onclick="showSyncDiagnostic()"><span class="ic">🔎</span> Diagnóstico sync</div>
     <div class="ni admin-only" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
     <div class="ni admin-only" onclick="restoreLatestAutoBackup()"><span class="ic">🛟</span> Recuperar copia automática</div>
     <div class="ni admin-only" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
@@ -3467,6 +3469,27 @@ function _dbRecordScore(d){
   if(!d||typeof d!=='object')return 0;
   const keys=['hojas','productos','elaboraciones','pedidos','recetas','proveedores','fichasProveedor','albaranesLog','tareas','mejoras'];
   return keys.reduce((s,k)=>s+(Array.isArray(d[k])?d[k].length:0),0);
+}
+async function showSyncDiagnostic(){
+  const localRaw=localStorage.getItem('albaraba_v2');
+  let local={};try{if(localRaw)local=JSON.parse(localRaw)}catch(e){}
+  const localScore=_dbRecordScore(local);
+  const user=fbAuth&&fbAuth.currentUser?fbAuth.currentUser.email:'SIN SESIÃ“N';
+  let cloudText='No comprobada';
+  try{
+    if(fbDB&&fbAuth&&fbAuth.currentUser){
+      const snap=await fbDB.ref('albaraba_v2').once('value');
+      const cloud=snap.val()||{};
+      cloudText=[
+        _dbRecordScore(cloud)+' registros totales',
+        (cloud.hojas||[]).length+' eventos',
+        (cloud.productos||[]).length+' productos',
+        (cloud.elaboraciones||[]).length+' elaboraciones',
+        (cloud.pedidos||[]).length+' pedidos'
+      ].join(' · ');
+    }else cloudText='Sin sesiÃ³n de nube activa';
+  }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260726-sync-diagnostic1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
