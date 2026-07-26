@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-firebase2026-1 -->
+<!-- VERSION: v20260726-roles-firebase1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -977,7 +977,7 @@ html,body{height:100%;color-scheme:light!important}
       <div class="card-head"><h3>🔑 Administradores</h3></div>
       <div style="padding:14px">
         <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Los administradores ven todas las áreas disponibles. Los trabajadores ven Catálogo, Pedidos, Stock, Mejoras, Tareas y APPCC; no ven Dashboard, Informes, Gastos ni Datos.</p>
-        <a href="https://console.firebase.google.com/project/albaraba-gestion/authentication/users" target="_blank" class="btn" style="width:100%;justify-content:center;margin-bottom:12px;text-decoration:none;font-size:12px">🔗 Borrar cuenta en Firebase Console</a>
+        <a href="https://console.firebase.google.com/project/albaraba-gestion-2026/authentication/users" target="_blank" class="btn" style="width:100%;justify-content:center;margin-bottom:12px;text-decoration:none;font-size:12px">🔗 Borrar cuenta en Firebase Console</a>
         <div id="admins-list" style="margin-bottom:12px"></div>
     <div style="font-size:11px;color:var(--muted);margin-top:8px">Trabajadores registrados:</div>
     <div id="workers-list" style="margin-top:4px"></div>
@@ -1319,7 +1319,7 @@ html,body{height:100%;color-scheme:light!important}
 const FB_CONFIG={
   apiKey:"AIzaSyCKCSg5n6cBVikz1NSYdxI2y5GiD2yqaqk",
   authDomain:"albaraba-gestion-2026.firebaseapp.com",
-  databaseURL:"https://albaraba-gestion-2026-default-rtdb.europe-west1.firebasedatabase.app",
+  databaseURL:"https://albaraba-gestion-2026-default-rtdb.firebaseio.com",
   projectId:"albaraba-gestion-2026",
   storageBucket:"albaraba-gestion-2026.firebasestorage.app",
   messagingSenderId:"927165160966",
@@ -3625,7 +3625,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260726-firebase2026-1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260726-roles-firebase1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6438,7 +6438,7 @@ function exportarAppccExcel(){
 // ROLES Y USUARIOS
 // ═══════════════════════════════════════════════════
 // Recuperar rol guardado en localStorage para evitar parpadeo al cargar
-let userRole=(localStorage.getItem('_albaraba_role')||'admin');
+let userRole=(localStorage.getItem('_albaraba_role')||'trabajador');
 let currentUserEmail=localStorage.getItem('_albaraba_email')||'';
 let currentUserName=localStorage.getItem('_albaraba_name')||'';
 function applyRole(email){
@@ -6495,7 +6495,7 @@ function renderUsuarios(){
   const admins=DB.admins||[];
   list.innerHTML=admins.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
     <span style="font-size:13px">🔑 ${esc(e)}</span>
-    ${e!=='contacto@alaboca.es'?`<button class="btn btn-sm btn-del" onclick="removeAdmin('${esc(e)}')">🗑</button>`:'<span style="font-size:11px;color:var(--muted)">Principal</span>'}
+    ${e!=='contacto@alaboca.es'?`<div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="hacerTrabajador('${esc(e)}')">Pasar a trabajador</button><button class="btn btn-sm btn-del" onclick="removeAdmin('${esc(e)}')">🗑</button></div>`:'<span style="font-size:11px;color:var(--muted)">Principal</span>'}
   </div>`).join('');
   // Lista de trabajadores
   const wlist=document.getElementById('workers-list');
@@ -6518,6 +6518,19 @@ function hacerAdmin(email){
   if(!DB.admins)DB.admins=['contacto@alaboca.es'];
   if(!DB.admins.includes(email))DB.admins.push(email);
   saveDB();renderUsuarios();
+}
+function hacerTrabajador(email){
+  email=(email||'').toLowerCase().trim();
+  if(email==='contacto@alaboca.es'){alert('No puedes quitar el admin principal');return;}
+  if(!confirm('¿Pasar a '+email+' a trabajador?'))return;
+  DB.admins=(DB.admins||[]).filter(e=>(e||'').toLowerCase().trim()!==email);
+  if(!DB.usuarios)DB.usuarios=[];
+  if(!DB.usuarios.find(u=>(u.email||'').toLowerCase().trim()===email)){
+    DB.usuarios.push({email,nombre:email.split('@')[0],fecha:new Date().toISOString().slice(0,10)});
+  }
+  saveDB();
+  if(currentUserEmail===email)applyRole(email);
+  renderUsuarios();
 }
 function eliminarUsuario(email){
   if(!confirm('¿Eliminar a '+email+' de la lista?\n\nNota: su cuenta de acceso seguirá activa en Firebase. Para borrarla completamente ve a Firebase Console.'))return;
@@ -6567,7 +6580,17 @@ async function crearUsuario(){
     setTimeout(()=>{ fbAuth.signOut(); },2500);
   }catch(e){
     msg.style.color='#dc2626';
-    if(e.code==='auth/email-already-in-use')msg.textContent='Este email ya tiene cuenta';
+    if(e.code==='auth/email-already-in-use'){
+      if(!DB.usuarios)DB.usuarios=[];
+      const low=email.toLowerCase();
+      if(!DB.usuarios.find(u=>(u.email||'').toLowerCase()===low)){
+        DB.usuarios.push({email:low,nombre,fecha:new Date().toISOString().slice(0,10)});
+      }
+      DB.admins=(DB.admins||[]).filter(e=>(e||'').toLowerCase().trim()!==low);
+      saveDB();renderUsuarios();
+      msg.style.color='#16a34a';
+      msg.textContent='✅ Ese email ya existía en Firebase. Lo he dejado registrado como trabajador en la app.';
+    }
     else if(e.code==='auth/invalid-email')msg.textContent='Email no válido';
     else msg.textContent='Error: '+e.message;
   }
