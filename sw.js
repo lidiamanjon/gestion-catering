@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260726-etiquetas-productos1';
+const CACHE_NAME = 'albaraba-appcc-v20260726-lotes-auto1';
 const APP_SHELL = [
   './',
   './index.html',
