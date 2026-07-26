@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-worker-lock2 -->
+<!-- VERSION: v20260726-etiquetas-productos1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260726-worker-lock2'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260726-etiquetas-productos1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3659,7 +3659,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260726-worker-lock2&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260726-etiquetas-productos1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -17675,11 +17675,32 @@ const LBL_PLANTILLAS=[
   {id:'alergeno',nombre:'Aviso Alérgeno',campos:['producto','alergenos','texto_libre']},
   {id:'libre',nombre:'Etiqueta libre',campos:['empresa','texto1','texto2','texto3','fecha','emp']}
 ];
+function _etqNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();}
+function _etqDefaultDlc(){return addDays(today(),5);}
+function _etqCurrentWorker(){return currentUserName||currentUserEmail||localStorage.getItem(K.wActive)||'Equipo ALBARABA';}
+function _buildEtiquetaProductRows(){
+  const productos=(DB.productos||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
+  const receps=(ld(K.recep)||[]).slice().sort((a,b)=>new Date(b.ts||b.date)-new Date(a.ts||a.date));
+  const rows=[];
+  productos.forEach(p=>{
+    const pn=_etqNorm(p.nombre),usedLots=new Set();
+    const lots=receps.filter(r=>_etqNorm(r.producto)===pn&&(r.lote||r.caducidad||r.dlc)).slice(0,12);
+    lots.forEach((r,i)=>{
+      const key=(r.lote||'')+'|'+(r.caducidad||r.dlc||'');
+      if(usedLots.has(key))return;usedLots.add(key);
+      rows.push({id:'prod-'+rows.length,producto:p.nombre||r.producto||'Producto',producto_id:p.id||'',lote:r.lote||'',dlc:r.caducidad||r.dlc||_etqDefaultDlc(),caducidad:r.caducidad||r.dlc||_etqDefaultDlc(),proveedor:r.proveedor||p.proveedor||'',destino:'nevera',ts:new Date().toISOString(),origen:'catálogo + lote',etqEmp:_etqCurrentWorker()});
+    });
+    if(!lots.length)rows.push({id:'prod-'+rows.length,producto:p.nombre||'Producto',producto_id:p.id||'',lote:'',dlc:_etqDefaultDlc(),caducidad:_etqDefaultDlc(),proveedor:p.proveedor||'',destino:'nevera',ts:new Date().toISOString(),origen:'catálogo',etqEmp:_etqCurrentWorker()});
+  });
+  window._etqProductRows=rows;
+  return rows;
+}
 function renderEtiquetas(){
   const savedOrient=localStorage.getItem('a_lbl_orient')||'portrait';
   const lblSize=getLabelSize();
   const elabs=(ld(K.elab)||[]).filter(e=>e.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50);
-  const openSections=JSON.parse(localStorage.getItem('a_etq_open')||'{"elab":true,"manual":false}');
+  const productRows=_buildEtiquetaProductRows();
+  const openSections=JSON.parse(localStorage.getItem('a_etq_open')||'{"prod":true,"elab":true,"manual":false}');
 
   function destBadge(def){
     const opts=[
@@ -17695,7 +17716,7 @@ function renderEtiquetas(){
   function itemRow(r, tipo, def){
     const sub = tipo==='elab'
       ? (r.lote?'L:'+r.lote+' · ':'')+(r.dlc?'Cad:'+fmtDate(r.dlc):'')
-      : (r.lote?'L:'+r.lote+' · ':'')+(r.proveedor||'')+(r.date?' · '+r.date:'');
+      : (r.lote?'L:'+r.lote+' · ':'')+(r.dlc||r.caducidad?'Cad:'+fmtDate(r.dlc||r.caducidad)+' · ':'')+(r.proveedor||'')+(r.origen?' · '+r.origen:(r.date?' · '+r.date:''));
     return `<div style="border-bottom:1px solid #f0f0f0">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
         <input type="checkbox" id="chk-${tipo}-${r.id}" style="width:20px;height:20px;flex-shrink:0;accent-color:#1a4fa8">
@@ -17724,6 +17745,21 @@ function renderEtiquetas(){
         <span style="font-size:12px;font-weight:700;color:#1a4fa8">${lblSize.label||lblSize.key}</span>
       </div>
       <button class="btn btn-green" style="flex:1;padding:8px;font-size:14px;font-weight:700" onclick="_printSelected('all')">🖨 IMPRIMIR MARCADOS</button>
+    </div>
+
+    <!-- SECCIÓN: PRODUCTOS DEL CATÁLOGO -->
+    <div class="card" style="margin-top:8px;overflow:hidden;border:2px solid #d6b029">
+      <div onclick="toggleEtqSection('prod')" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#fffbeb;border-bottom:${openSections.prod?'1px solid #f3e6b0':'none'}">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">📦</span>
+          <div>
+            <div style="font-size:14px;font-weight:800;color:#9a6b00">Productos del catálogo</div>
+            <div style="font-size:11px;color:#8a6a16">${productRows.length} opciones · lotes reales cuando existan · caducidad por defecto 5 días</div>
+          </div>
+        </div>
+        <span style="font-size:20px;color:#9a6b00;font-weight:700">${openSections.prod?'▲':'▼'}</span>
+      </div>
+      ${openSections.prod ? `<div style="padding:10px 12px;border-bottom:1px solid #f3e6b0;background:#fffdf5"><input class="fc" id="etq-prod-search" placeholder="🔍 Buscar producto o lote..." oninput="filterEtqProductos()" style="width:100%"></div><div id="etq-prod-list" style="max-height:360px;overflow:auto">${productRows.length ? productRows.map(r=>`<div class="etq-prod-row" data-search="${esc(_etqNorm([r.producto,r.lote,r.proveedor].join(' ')))}">${itemRow(r,'prod',r.destino||'nevera')}</div>`).join('') : '<div style="padding:14px;color:#aaa;text-align:center;font-size:13px">No hay productos en catálogo</div>'}</div>` : ''}
     </div>
 
     <!-- SECCIÓN: RECIENTES (últimas recepciones + elaboraciones del día) -->
@@ -17796,12 +17832,18 @@ function renderEtiquetas(){
 }
 
 function toggleEtqSection(key){
-  const open=JSON.parse(localStorage.getItem('a_etq_open')||'{"elab":true,"prod":false}');
+  const open=JSON.parse(localStorage.getItem('a_etq_open')||'{"prod":true,"elab":true,"manual":false}');
   open[key]=!open[key];
   localStorage.setItem('a_etq_open',JSON.stringify(open));
   renderEtiquetas();
 }
 
+function filterEtqProductos(){
+  const q=_etqNorm((document.getElementById('etq-prod-search')||{}).value||'');
+  document.querySelectorAll('.etq-prod-row').forEach(row=>{
+    row.style.display=!q||String(row.getAttribute('data-search')||'').includes(q)?'block':'none';
+  });
+}
 
 function adjCopias(key, delta){
   const el=document.getElementById('cop-'+key);
@@ -17833,25 +17875,26 @@ function selectDest(btn,val){
 function _printManual(){
   const prod=(document.getElementById('etq-man-prod')||{}).value||'';
   if(!prod){alert('Introduce el nombre del producto');return;}
-  const cad=(document.getElementById('etq-man-cad')||{}).value||'';
+  const cad=(document.getElementById('etq-man-cad')||{}).value||_etqDefaultDlc();
   const lote=(document.getElementById('etq-man-lote')||{}).value||'';
   const destino=(document.getElementById('etq-man-dest')||{}).value||'nevera';
   const cop=parseInt((document.getElementById('cop-etq-man')||{}).textContent)||1;
-  _batchPrint([{r:{producto:prod,lote,dlc:cad,caducidad:cad,destino,ts:new Date().toISOString(),proceso:[]},cop,tipo:'manual'}]);
+  _batchPrint([{r:{producto:prod,lote,dlc:cad,caducidad:cad,destino,ts:new Date().toISOString(),etqEmp:_etqCurrentWorker(),proceso:[]},cop,tipo:'manual'}]);
 }
 
 function _printSelected(tipo){
   const items=[];
-  const tipos=tipo==='all'?['elab','recep']:[tipo];
+  const tipos=tipo==='all'?['prod','elab','recep']:[tipo];
   tipos.forEach(t=>{
-    const src_=t==='elab'?ld(K.elab)||[]:ld(K.recep)||[];
+    const src_=t==='prod'?(window._etqProductRows||[]):t==='elab'?ld(K.elab)||[]:ld(K.recep)||[];
     src_.forEach(r=>{
       const chk=document.getElementById('chk-'+t+'-'+r.id);
       if(!chk||!chk.checked)return;
       const cop=parseInt((document.getElementById('cop-'+t+'-'+r.id)||{}).textContent)||1;
       const destEl=document.getElementById('dest-'+t+'-'+r.id);
       const destino=destEl?destEl.value:(r.destino||'nevera');
-      items.push({r:Object.assign({},r,{destino}),cop,tipo:t});
+      const cad=r.dlc||r.caducidad||_etqDefaultDlc();
+      items.push({r:Object.assign({},r,{destino,dlc:cad,caducidad:cad,ts:new Date().toISOString(),etqEmp:_etqCurrentWorker()}),cop,tipo:t});
     });
   });
   if(!items.length){alert('Marca al menos un producto con el checkbox');return;}
@@ -17911,28 +17954,31 @@ async function _batchPrint(items, orient){
   for(const {r, cop, tipo} of items){
     const producto = r.producto || '';
     const lote     = r.lote     || '';
-    const dlc      = r.dlc      || r.caducidad || '';
-    const fecha    = r.ts ? new Date(r.ts).toLocaleDateString('es-ES') : (r.date || today());
+    const dlc      = r.dlc      || r.caducidad || _etqDefaultDlc();
+    const fecha    = new Date().toLocaleDateString('es-ES');
+    const emp      = r.etqEmp || _etqCurrentWorker();
     const proceso  = r.proceso  || [];
     const qrParts  = ['PRODUCTO: '+producto];
     if(lote)        qrParts.push('LOTE: '+lote);
     if(dlc)         qrParts.push('CADUCIDAD: '+dlc);
     if(r.proveedor) qrParts.push('PROVEEDOR: '+r.proveedor);
     qrParts.push('EMPRESA: '+empresa);
-    qrParts.push('FECHA: '+fecha);
+    qrParts.push('ETIQUETA CREADA: '+fecha);
+    qrParts.push('HECHA POR: '+emp);
     if(proceso.length) qrParts.push('PROCESO: '+proceso.join(' > '));
     const qrUrl = await _generateQRDataURL(qrParts.join('\n'), qrPx);
-    allItems.push({r, cop:cop||1, tipo, qrUrl, fecha});
+    allItems.push({r:Object.assign({},r,{dlc,caducidad:dlc,etqEmp:emp}), cop:cop||1, tipo, qrUrl, fecha});
   }
 
   let labelsHtml = '';
   allItems.forEach(({r, cop, tipo, qrUrl, fecha}) => {
     const producto = r.producto || '';
     const lote     = r.lote     || '';
-    const dlc      = r.dlc      || r.caducidad || '';
+    const dlc      = r.dlc      || r.caducidad || _etqDefaultDlc();
     const destino  = r.destino  || 'nevera';
     const ds       = DEST_STYLES[destino] || DEST_STYLES.nevera;
     const proceso  = r.proceso  || [];
+    const emp      = r.etqEmp || _etqCurrentWorker();
     const dlcFmt   = dlc ? fmtDate(dlc) : '—';
     const qrImg    = qrUrl ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm">` : '';
     for(let i=0;i<cop;i++){
@@ -17942,7 +17988,7 @@ async function _batchPrint(items, orient){
           <div class="title">${producto}</div>
           <div class="dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
           ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
-          <div class="small-lbl">ELABORADO: ${fecha}</div>
+          <div class="small-lbl">CREADA: ${fecha} · ${emp}</div>
           <div class="cad-lbl">CONSUMIR ANTES DE:</div>
           <div class="cad">${dlcFmt}</div>
         </div><div class="col-right">${qrImg}
@@ -17955,7 +18001,8 @@ async function _batchPrint(items, orient){
           <div class="title">${producto}</div>
           <div class="dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
           ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
-          <div class="small-lbl">ELABORADO: ${fecha}</div>
+          <div class="small-lbl">CREADA: ${fecha}</div>
+          <div class="small-lbl">HECHA POR: ${emp}</div>
           <div class="sep"></div>
           <div class="cad-lbl">CONSUMIR ANTES DE:</div>
           <div class="cad">${dlcFmt}</div>
