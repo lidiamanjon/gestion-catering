@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260726-roles-firebase1';
+const CACHE_NAME = 'albaraba-appcc-v20260726-tablet-sync1';
 const APP_SHELL = [
   './',
   './index.html',
