@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-upload-local1 -->
+<!-- VERSION: v20260726-auto-merge-local1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -3463,6 +3463,11 @@ function _mergeDBPreservingRecords(remote,local){
   };
   return merge(remote||{},local||{});
 }
+function _dbRecordScore(d){
+  if(!d||typeof d!=='object')return 0;
+  const keys=['hojas','productos','elaboraciones','pedidos','recetas','proveedores','fichasProveedor','albaranesLog','tareas','mejoras'];
+  return keys.reduce((s,k)=>s+(Array.isArray(d[k])?d[k].length:0),0);
+}
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
   const day=new Date().toISOString().slice(0,10),marker='_albaraba_cloud_backup_'+day;
@@ -3621,8 +3626,10 @@ function loadDB(){
       if(data){
         const pending=localStorage.getItem('_albaraba_pending_sync')==='1';
         const recoverThisDevice=Boolean(raw)&&localStorage.getItem(MAIN_DEVICE_MERGE_KEY)!=='1';
+        const localScore=_dbRecordScore(DB),cloudScore=_dbRecordScore(data);
+        const localLooksRicher=Boolean(raw)&&localScore>cloudScore+2;
         let mergedPending=false;
-        if((pending||recoverThisDevice)&&raw){
+        if((pending||recoverThisDevice||localLooksRicher)&&raw){
           // Conserva el trabajo que ya estaba separado en este ordenador y
           // fusiónalo una sola vez con la nube, aunque la versión anterior
           // hubiera quitado por error la marca de pendiente.
