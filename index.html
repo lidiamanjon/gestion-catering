@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-tablet-sync1 -->
+<!-- VERSION: v20260726-roles-lock1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260726-tablet-sync1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260726-roles-lock1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3626,7 +3626,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260726-tablet-sync1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260726-roles-lock1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6456,14 +6456,20 @@ function exportarAppccExcel(){
 let userRole=(localStorage.getItem('_albaraba_role')||'trabajador');
 let currentUserEmail=localStorage.getItem('_albaraba_email')||'';
 let currentUserName=localStorage.getItem('_albaraba_name')||'';
+function _normEmail(e){return String(e||'').toLowerCase().trim();}
+function _userRecordByEmail(email){const target=_normEmail(email);return (DB.usuarios||[]).find(u=>_normEmail(u.email)===target)||null;}
+function _isLockedWorker(email){const u=_userRecordByEmail(email);return Boolean(u&&u.role==='trabajador'&&_normEmail(email)!=='contacto@alaboca.es');}
 function applyRole(email){
-  if(email)currentUserEmail=(email||'').toLowerCase().trim();
+  if(email)currentUserEmail=_normEmail(email);
   // contacto@alaboca.es es SIEMPRE admin - hardcoded
   if(currentUserEmail==='contacto@alaboca.es'){
     userRole='admin';
   } else {
-    const admins=(DB.admins||[]).map(e=>e.toLowerCase().trim());
-    userRole=admins.includes(currentUserEmail)?'admin':'trabajador';
+    const userRec=_userRecordByEmail(currentUserEmail);
+    const admins=(DB.admins||[]).map(_normEmail);
+    if(userRec&&userRec.role==='trabajador')userRole='trabajador';
+    else if(userRec&&userRec.role==='admin')userRole='admin';
+    else userRole=admins.includes(currentUserEmail)?'admin':'trabajador';
   }
   // Buscar nombre en DB.usuarios
   const u=(DB.usuarios||[]).find(x=>(x.email||'').toLowerCase()===currentUserEmail);
@@ -6507,7 +6513,8 @@ function _applyRoleDOM(){
 function renderUsuarios(){
   const list=document.getElementById('admins-list');
   if(!list)return;
-  const admins=DB.admins||[];
+  const admins=(DB.admins||[]).map(_normEmail).filter((e,i,a)=>e&&a.indexOf(e)===i&&!_isLockedWorker(e));
+  DB.admins=admins;
   list.innerHTML=admins.map(e=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
     <span style="font-size:13px">🔑 ${esc(e)}</span>
     ${e!=='contacto@alaboca.es'?`<div style="display:flex;gap:6px"><button class="btn btn-sm" onclick="hacerTrabajador('${esc(e)}')">Pasar a trabajador</button><button class="btn btn-sm btn-del" onclick="removeAdmin('${esc(e)}')">🗑</button></div>`:'<span style="font-size:11px;color:var(--muted)">Principal</span>'}
@@ -6515,7 +6522,7 @@ function renderUsuarios(){
   // Lista de trabajadores
   const wlist=document.getElementById('workers-list');
   if(!wlist)return;
-  const workers=(DB.usuarios||[]).filter(u=>!admins.includes(u.email));
+  const workers=(DB.usuarios||[]).filter(u=>_normEmail(u.email)!=='contacto@alaboca.es'&&(u.role==='trabajador'||!admins.includes(_normEmail(u.email))));
   wlist.innerHTML=workers.length?workers.map(u=>`
     <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
       <div>
@@ -6529,41 +6536,52 @@ function renderUsuarios(){
     </div>`).join(''):'<div style="font-size:13px;color:var(--muted);padding:8px 0">Sin trabajadores creados aún</div>';
 }
 function hacerAdmin(email){
+  email=_normEmail(email);
   if(!confirm('¿Dar permisos de admin a '+email+'?'))return;
   if(!DB.admins)DB.admins=['contacto@alaboca.es'];
-  if(!DB.admins.includes(email))DB.admins.push(email);
+  if(!DB.admins.map(_normEmail).includes(email))DB.admins.push(email);
+  const u=_userRecordByEmail(email);
+  if(u)u.role='admin';
   saveDB();renderUsuarios();
 }
 function hacerTrabajador(email){
-  email=(email||'').toLowerCase().trim();
+  email=_normEmail(email);
   if(email==='contacto@alaboca.es'){alert('No puedes quitar el admin principal');return;}
   if(!confirm('¿Pasar a '+email+' a trabajador?'))return;
-  DB.admins=(DB.admins||[]).filter(e=>(e||'').toLowerCase().trim()!==email);
+  DB.admins=(DB.admins||[]).map(_normEmail).filter(e=>e!==email);
   if(!DB.usuarios)DB.usuarios=[];
-  if(!DB.usuarios.find(u=>(u.email||'').toLowerCase().trim()===email)){
-    DB.usuarios.push({email,nombre:email.split('@')[0],fecha:new Date().toISOString().slice(0,10)});
-  }
+  const u=_userRecordByEmail(email);
+  if(u){u.email=email;u.role='trabajador';}
+  else DB.usuarios.push({email,nombre:email.split('@')[0],fecha:new Date().toISOString().slice(0,10),role:'trabajador'});
   saveDB();
   if(currentUserEmail===email)applyRole(email);
   renderUsuarios();
 }
 function eliminarUsuario(email){
+  email=_normEmail(email);
   if(!confirm('¿Eliminar a '+email+' de la lista?\n\nNota: su cuenta de acceso seguirá activa en Firebase. Para borrarla completamente ve a Firebase Console.'))return;
-  DB.usuarios=(DB.usuarios||[]).filter(u=>u.email!==email);
+  DB.usuarios=(DB.usuarios||[]).filter(u=>_normEmail(u.email)!==email);
   saveDB();renderUsuarios();
 }
 function addAdmin(){
-  const email=document.getElementById('new-admin-email').value.trim().toLowerCase();
+  const email=_normEmail(document.getElementById('new-admin-email').value);
   if(!email){alert('Escribe un email');return;}
   if(!DB.admins)DB.admins=['contacto@alaboca.es'];
-  if(DB.admins.includes(email)){alert('Ya es administrador');return;}
-  DB.admins.push(email);saveDB();renderUsuarios();
+  if(DB.admins.map(_normEmail).includes(email)){alert('Ya es administrador');return;}
+  DB.admins.push(email);
+  const u=_userRecordByEmail(email);
+  if(u)u.role='admin';
+  saveDB();renderUsuarios();
   document.getElementById('new-admin-email').value='';
 }
 function removeAdmin(email){
+  email=_normEmail(email);
   if(email==='contacto@alaboca.es'){alert('No puedes eliminar el admin principal');return;}
   if(!confirm('¿Quitar a '+email+' como administrador?'))return;
-  DB.admins=DB.admins.filter(e=>e!==email);saveDB();renderUsuarios();
+  DB.admins=(DB.admins||[]).map(_normEmail).filter(e=>e!==email);
+  const u=_userRecordByEmail(email);
+  if(u)u.role='trabajador';
+  saveDB();renderUsuarios();
 }
 async function crearUsuario(){
   const nombre=document.getElementById('usr-nombre').value.trim();
@@ -6583,8 +6601,13 @@ async function crearUsuario(){
     await fbAuth.createUserWithEmailAndPassword(email,pwd);
     // Registrar en DB.usuarios
     if(!DB.usuarios)DB.usuarios=[];
-    if(!DB.usuarios.find(u=>u.email===email.toLowerCase())){
-      DB.usuarios.push({email:email.toLowerCase(),nombre,fecha:new Date().toISOString().slice(0,10)});
+    const low=_normEmail(email);
+    const existingUser=_userRecordByEmail(low);
+    if(existingUser){
+      existingUser.nombre=nombre||existingUser.nombre;
+      existingUser.role='trabajador';
+    } else {
+      DB.usuarios.push({email:low,nombre,fecha:new Date().toISOString().slice(0,10),role:'trabajador'});
     }
     saveDB();
     document.getElementById('usr-nombre').value='';
@@ -6597,11 +6620,15 @@ async function crearUsuario(){
     msg.style.color='#dc2626';
     if(e.code==='auth/email-already-in-use'){
       if(!DB.usuarios)DB.usuarios=[];
-      const low=email.toLowerCase();
-      if(!DB.usuarios.find(u=>(u.email||'').toLowerCase()===low)){
-        DB.usuarios.push({email:low,nombre,fecha:new Date().toISOString().slice(0,10)});
+      const low=_normEmail(email);
+      const existingUser=_userRecordByEmail(low);
+      if(existingUser){
+        existingUser.nombre=nombre||existingUser.nombre;
+        existingUser.role='trabajador';
+      } else {
+        DB.usuarios.push({email:low,nombre,fecha:new Date().toISOString().slice(0,10),role:'trabajador'});
       }
-      DB.admins=(DB.admins||[]).filter(e=>(e||'').toLowerCase().trim()!==low);
+      DB.admins=(DB.admins||[]).map(_normEmail).filter(e=>e!==low);
       saveDB();renderUsuarios();
       msg.style.color='#16a34a';
       msg.textContent='✅ Ese email ya existía en Firebase. Lo he dejado registrado como trabajador en la app.';
