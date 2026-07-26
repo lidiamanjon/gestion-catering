@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260726-roles-lock1 -->
+<!-- VERSION: v20260726-elab-stock1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260726-roles-lock1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260726-elab-stock1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -556,6 +556,7 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni admin-only" id="ni-hojas" onclick="nav('hojas')"><span class="ic">📅</span> Planificación Eva</div>
     <div class="ni" id="ni-pedidos" onclick="nav('pedidos')"><span class="ic">🛒</span> Generar Pedido</div>
     <div class="ni" id="ni-stock" onclick="nav('stock')"><span class="ic">📦</span> Stock</div>
+    <div class="ni" id="ni-nevera-elab" onclick="nav('nevera-elab')"><span class="ic">❄️</span> Stock Nevera</div>
     <div class="ni" id="ni-congelador" onclick="nav('congelador')"><span class="ic">🧊</span> Stock Congelador</div>
     <div class="nav-label admin-only">Documentos</div>
     <div class="ni admin-only" id="ni-informes" onclick="nav('informes')"><span class="ic">📄</span> Informes</div>
@@ -741,9 +742,24 @@ html,body{height:100%;color-scheme:light!important}
 <div class="section" id="section-congelador">
   <div class="topbar">
     <div><div class="pg-title">🧊 Stock Congelador</div><div class="pg-sub">Elaboraciones en congelador · unidades disponibles</div></div>
-    <button class="btn btn-outline" onclick="renderCongeladorStock()">🔄 Actualizar</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="renderCongeladorStock()">🔄 Actualizar</button>
+      <button class="btn btn-gold" onclick="openElabStockManual('congelador')">+ Añadir elaboración</button>
+    </div>
   </div>
   <div id="congelador-stock-body"></div>
+</div>
+
+<!-- STOCK NEVERA ELABORACIONES -->
+<div class="section" id="section-nevera-elab">
+  <div class="topbar">
+    <div><div class="pg-title">❄️ Stock Nevera</div><div class="pg-sub">Elaboraciones terminadas en nevera · separado de productos recibidos</div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline" onclick="renderNeveraElabStock()">🔄 Actualizar</button>
+      <button class="btn btn-gold" onclick="openElabStockManual('nevera')">+ Añadir elaboración</button>
+    </div>
+  </div>
+  <div id="nevera-elab-stock-body"></div>
 </div>
 
 <!-- INFORMES -->
@@ -3626,7 +3642,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260726-roles-lock1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260726-elab-stock1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4326,7 +4342,7 @@ window.addEventListener('storage',function(e){
 // NAVIGATION
 // ═══════════════════════════════════════════════════
 let currentSection='dashboard';
-const WORKER_ALLOWED_SECTIONS=new Set(['dashboard','proveedores','productos','elaboraciones','pedidos','stock','congelador','mejoras','tareas','recetas','albaranes']);
+const WORKER_ALLOWED_SECTIONS=new Set(['dashboard','proveedores','productos','elaboraciones','pedidos','stock','nevera-elab','congelador','mejoras','tareas','recetas','albaranes']);
 function nav(s){
   if(typeof userRole!=='undefined'&&userRole==='trabajador'&&!WORKER_ALLOWED_SECTIONS.has(s)){
     alert('Este apartado está reservado para jefes y oficina.');return;
@@ -4347,6 +4363,7 @@ function nav(s){
   else if(s==='hojas'){syncExternalHojas();updateEvaPlanSummary();if(typeof setHojasTab==='function')setHojasTab(_hojasTab||'pendientes');else renderHojasTable();}
   else if(s==='pedidos')renderPedidoSection();
   else if(s==='stock')renderStockTable();
+  else if(s==='nevera-elab')renderNeveraElabStock();
   else if(s==='congelador')renderCongeladorStock();
   else if(s==='informes')renderInformes();
   else if(s==='gastos')renderGastos();
@@ -5292,6 +5309,115 @@ function renderCongeladorStock(){
     </div>`;
 }
 
+function _storageDestLabel(destino){
+  return destino==='congelador'
+    ? {body:'congelador-stock-body',icon:'🧊',title:'Elaboraciones en congelador',empty:'El congelador está vacío',color:'#1a4fa8'}
+    : {body:'nevera-elab-stock-body',icon:'❄️',title:'Elaboraciones en nevera',empty:'La nevera de elaboraciones está vacía',color:'#0ea5e9'};
+}
+function _buildElabStorageList(destino){
+  const elabBatches=ld(K.elab).filter(x=>(x.destino||'nevera')===destino&&x.estado!=='servido'&&x.estado!=='regenerado');
+  const regenRecs=ld(K.regen);
+  const items={};
+  elabBatches.forEach(b=>{
+    const key=(b.producto||b.nombre||'?')+'|'+(b.lote||'');
+    if(!items[key])items[key]={producto:b.producto||b.nombre||'?',lote:b.lote||'',cantTotal:0,regenTotal:0,fechas:[],dlcs:[],ids:[]};
+    items[key].ids.push(b.id);
+    items[key].cantTotal+=parseFloat(b.cantidad)||parseFloat(b.cantNum)||1;
+    if(b.ts)items[key].fechas.push(b.ts);
+    if(b.dlc)items[key].dlcs.push(b.dlc);
+  });
+  regenRecs.forEach(rg=>{
+    const prod=rg.producto||'',lote=rg.lote_ref||rg.lote||'',key=prod+'|'+lote;
+    const used=parseFloat(rg.porciones)||1;
+    if(items[key])items[key].regenTotal+=used;
+    else{
+      const keyP=Object.keys(items).find(k=>k.startsWith(prod+'|'));
+      if(keyP)items[keyP].regenTotal+=used;
+    }
+  });
+  return Object.values(items).filter(x=>x.cantTotal-x.regenTotal>0).sort((a,b)=>a.producto.localeCompare(b.producto));
+}
+function renderElabStorageStock(destino){
+  const cfg=_storageDestLabel(destino);
+  const body=document.getElementById(cfg.body);
+  if(!body)return;
+  const list=_buildElabStorageList(destino);
+  if(!list.length){
+    body.innerHTML=`<div class="card"><div style="padding:20px;text-align:center;color:#aaa">${cfg.icon} ${cfg.empty}<br><button class="btn btn-sm btn-gold" style="margin-top:12px" onclick="openElabStockManual('${destino}')">+ Añadir elaboración manualmente</button></div></div>`;
+    return;
+  }
+  const totalItems=list.length,totalUnits=list.reduce((s,x)=>s+Math.max(0,x.cantTotal-x.regenTotal),0);
+  body.innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div class="card"><div class="card-body" style="text-align:center"><div style="font-size:28px;font-weight:700;color:${cfg.color}">${totalItems}</div><div style="font-size:12px;color:#888">Elaboraciones distintas</div></div></div>
+      <div class="card"><div class="card-body" style="text-align:center"><div style="font-size:28px;font-weight:700;color:${cfg.color}">${Math.round(totalUnits)}</div><div style="font-size:12px;color:#888">Raciones / unidades disponibles</div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>${cfg.icon} ${cfg.title}</h3><button class="btn btn-sm btn-gold" onclick="openElabStockManual('${destino}')">+ Añadir manual</button></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Elaboración</th><th>Lote</th><th>Entrada</th><th>Usado</th><th style="color:${cfg.color};font-weight:700">Disponible</th><th>DLC</th><th>Última entrada</th><th></th></tr></thead>
+        <tbody>${list.map(x=>{
+          const disp=Math.max(0,x.cantTotal-x.regenTotal);
+          const lastDate=x.fechas.length?new Date(Math.max(...x.fechas.map(d=>new Date(d).getTime()))).toLocaleDateString('es-ES'):'—';
+          const dlc=x.dlcs.sort()[0]||'—';
+          const pct=x.cantTotal>0?Math.round(disp/x.cantTotal*100):0;
+          const barColor=pct>50?cfg.color:pct>20?'#e67e22':'#e74c3c';
+          return`<tr>
+            <td><strong>${esc(x.producto)}</strong></td>
+            <td><span class="lot-code" style="font-size:11px">${x.lote||'—'}</span></td>
+            <td style="text-align:center">${Math.round(x.cantTotal)}</td>
+            <td style="text-align:center;color:#e74c3c">${Math.round(x.regenTotal)}</td>
+            <td style="text-align:center"><strong style="font-size:15px;color:${barColor}">${Math.round(disp)}</strong><div style="height:4px;background:#eee;border-radius:2px;margin-top:3px;width:60px"><div style="height:4px;width:${pct}%;background:${barColor};border-radius:2px"></div></div></td>
+            <td style="font-size:12px;color:#555">${dlc}</td>
+            <td style="font-size:12px;color:#888">${lastDate}</td>
+            <td><button class="btn btn-sm btn-outline" onclick="openElabStockManual('${destino}','${esc(x.producto)}','${esc(x.lote)}')">+ Entrada</button></td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>
+    </div>`;
+}
+function renderCongeladorStock(){renderElabStorageStock('congelador');}
+function renderNeveraElabStock(){renderElabStorageStock('nevera');}
+function openElabStockManual(destino,producto='',lote=''){
+  const cfg=_storageDestLabel(destino);
+  const defaultDlc=destino==='congelador'?addDays(today(),ELAB_DLC_CONGELADOR||365):addDays(today(),ELAB_DLC_NEVERA||4);
+  const opts=(DB.elaboraciones||[]).map(e=>`<option value="${esc(e.nombre)}">`).join('');
+  openModal(`<div class="mh"><h2>${cfg.icon} Añadir elaboración a ${destino==='congelador'?'congelador':'nevera'}</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <datalist id="elab-stock-opciones">${opts}</datalist>
+    <div class="fg"><label class="fl">Elaboración *</label><input class="fc" id="elab-stock-prod" list="elab-stock-opciones" value="${esc(producto)}" placeholder="Ej: Alitas de pollo preparadas"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Cantidad / raciones *</label><input class="fc" id="elab-stock-cant" type="number" step="0.01" min="0" value="1"></div>
+      <div class="fg"><label class="fl">Unidad</label><input class="fc" id="elab-stock-unidad" value="raciones" placeholder="raciones, uds, bandejas..."></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Lote</label><input class="fc" id="elab-stock-lote" value="${esc(lote||genLot())}"></div>
+      <div class="fg"><label class="fl">Consumir antes de / DLC</label><input class="fc" id="elab-stock-dlc" type="date" value="${defaultDlc}"></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Fecha elaboración</label><input class="fc" id="elab-stock-fecha" type="datetime-local" value="${new Date().toISOString().slice(0,16)}"></div>
+      <div class="fg"><label class="fl">Empleado</label><input class="fc" id="elab-stock-emp" value="${esc(currentUserName||currentUserEmail||'')}"></div>
+    </div>
+    <div class="fg"><label class="fl">Observaciones</label><input class="fc" id="elab-stock-obs" placeholder="Ej: añadido por inventario inicial"></div>
+    <div class="notice info" style="margin-top:8px">Esto queda guardado como elaboración APPCC real en ${destino==='congelador'?'Stock Congelador':'Stock Nevera'}, separado del stock de productos/proveedores.</div>
+    <div class="frow" style="justify-content:flex-end;margin-top:14px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-gold" onclick="saveElabStockManual('${destino}')">Guardar</button></div>`, 'lg');
+}
+function saveElabStockManual(destino){
+  const producto=(document.getElementById('elab-stock-prod')||{}).value?.trim();
+  const cantidad=parseFloat((document.getElementById('elab-stock-cant')||{}).value);
+  if(!producto||!cantidad||cantidad<=0){alert('Pon elaboración y cantidad válida');return;}
+  const unidad=(document.getElementById('elab-stock-unidad')||{}).value?.trim()||'raciones';
+  const lote=(document.getElementById('elab-stock-lote')||{}).value?.trim()||genLot();
+  const dlc=(document.getElementById('elab-stock-dlc')||{}).value||'';
+  const fecha=(document.getElementById('elab-stock-fecha')||{}).value;
+  const emp=(document.getElementById('elab-stock-emp')||{}).value?.trim()||currentUserName||currentUserEmail||'';
+  const obs=(document.getElementById('elab-stock-obs')||{}).value?.trim()||'Entrada manual de stock de elaboración';
+  const recs=ld(K.elab);
+  recs.push({id:genId(),producto,cantidad,unidad,lote,dlc,emp,obs,destino,estado:'en_stock',ts:fecha?new Date(fecha).toISOString():new Date().toISOString(),manual:true,proceso:[`${destino==='congelador'?'🧊':'❄️'} Entrada manual en ${destino} · ${new Date().toLocaleDateString('es-ES')}`]});
+  sv(K.elab,recs);
+  closeModal('modal-universal');
+  if(destino==='congelador')renderCongeladorStock();else renderNeveraElabStock();
+  alert('✅ Elaboración añadida al stock de '+(destino==='congelador'?'congelador':'nevera'));
+}
 
 function actualizarStock(id){
   const val=parseFloat(document.getElementById('st-'+id).value);

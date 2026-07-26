@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260726-roles-lock1';
+const CACHE_NAME = 'albaraba-appcc-v20260726-elab-stock1';
 const APP_SHELL = [
   './',
   './index.html',
