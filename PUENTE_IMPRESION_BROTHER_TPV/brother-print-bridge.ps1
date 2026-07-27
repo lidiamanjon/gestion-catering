@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260727-cola-visible"
+$BridgeVersion = "20260727-edge-silencioso"
 
 function Save-BridgeConfig {
   Write-Host "Primer arranque del puente Brother ALBARABA." -ForegroundColor Cyan
@@ -139,8 +139,19 @@ function Print-HtmlJob($job,$token,$printerName) {
   [IO.File]::WriteAllText($file, [string]$job.data.html, [Text.UTF8Encoding]::new($false))
   $edge = Get-EdgePath
   $uri = (New-Object System.Uri($file)).AbsoluteUri
-  $proc = Start-Process -FilePath $edge -ArgumentList @("--kiosk-printing","--new-window",$uri) -PassThru -WindowStyle Minimized
-  Start-Sleep -Seconds 8
+  $profileDir = Join-Path $env:TEMP "albaraba-edge-print-profile"
+  New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+  $args = @(
+    "--kiosk-printing",
+    "--disable-print-preview",
+    "--no-first-run",
+    "--disable-features=PrintCompositorLPAC",
+    "--user-data-dir=$profileDir",
+    "--new-window",
+    $uri
+  )
+  $proc = Start-Process -FilePath $edge -ArgumentList $args -PassThru -WindowStyle Minimized
+  Start-Sleep -Seconds 10
   try {
     if(!$proc.HasExited){
       $proc.CloseMainWindow() | Out-Null
@@ -202,5 +213,6 @@ while ($true) {
   }
   Start-Sleep -Seconds $IntervalSeconds
 }
+
 
 
