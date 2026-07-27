@@ -17765,6 +17765,8 @@ function renderEtiquetas(){
         <span style="font-size:12px;font-weight:700;color:#1a4fa8">${lblSize.label||lblSize.key}</span>
       </div>
       <button class="btn btn-green" style="flex:1;padding:8px;font-size:14px;font-weight:700" onclick="_printSelected('all')">🖨 IMPRIMIR MARCADOS</button>
+      <button class="btn btn-outline" style="padding:8px;font-size:12px;font-weight:700" onclick="_repeatLastLabelBatch()">↻ Última tanda</button>
+      <button class="btn btn-light" style="padding:8px;font-size:12px;font-weight:700" onclick="_clearEtqSelections()">Limpiar</button>
     </div>
 
     <!-- SECCIÓN: PRODUCTOS DEL CATÁLOGO -->
@@ -17902,7 +17904,31 @@ function _printManual(){
   _batchPrint([{r:{producto:prod,lote,dlc:cad,caducidad:cad,destino,ts:new Date().toISOString(),etqEmp:_etqCurrentWorker(),proceso:[]},cop,tipo:'manual'}]);
 }
 
-function _printSelected(tipo){
+const ETQ_LAST_BATCH_KEY='a_etq_last_print_batch';
+function _saveLastLabelBatch(items){
+  try{localStorage.setItem(ETQ_LAST_BATCH_KEY,JSON.stringify({ts:new Date().toISOString(),items}));}catch(e){}
+}
+function _clearEtqSelections(){
+  document.querySelectorAll('#etiquetas-body input[type=checkbox][id^="chk-"]').forEach(chk=>{chk.checked=false;});
+  if(typeof toast==='function')toast('Selección de etiquetas limpiada');
+}
+function _clearEtqSelectionsForItems(items){
+  (items||[]).forEach(it=>{
+    const id=it&&it.r&&it.r.id;
+    if(!id)return;
+    const chk=document.getElementById('chk-'+it.tipo+'-'+id);
+    if(chk)chk.checked=false;
+  });
+}
+async function _repeatLastLabelBatch(){
+  let saved=null;
+  try{saved=JSON.parse(localStorage.getItem(ETQ_LAST_BATCH_KEY)||'null');}catch(e){}
+  if(!saved||!saved.items||!saved.items.length){alert('No hay una tanda anterior para repetir');return;}
+  const n=saved.items.reduce((sum,x)=>sum+(parseInt(x.cop)||1),0);
+  if(!confirm('Reimprimir última tanda ('+n+' etiqueta'+(n===1?'':'s')+')?'))return;
+  await _batchPrint(saved.items);
+}
+async function _printSelected(tipo){
   const items=[];
   const tipos=tipo==='all'?['prod','elab','recep']:[tipo];
   tipos.forEach(t=>{
@@ -17919,9 +17945,23 @@ function _printSelected(tipo){
     });
   });
   if(!items.length){alert('Marca al menos un producto con el checkbox');return;}
-  _batchPrint(items);
+  const totalEtiq=items.reduce((sum,it)=>sum+(parseInt(it.cop)||1),0);
+  const resumen=items.slice(0,18).map(it=>{
+    const r=it.r||{};
+    const nombre=r.producto||'Etiqueta';
+    const lote=r.lote?(' · lote '+r.lote):'';
+    const cad=(r.dlc||r.caducidad)?(' · cad '+(r.dlc||r.caducidad)):'';
+    return '- '+(parseInt(it.cop)||1)+' x '+nombre+lote+cad;
+  }).join('\n');
+  const extra=items.length>18?'\n... y '+(items.length-18)+' linea(s) mas':'';
+  if(!confirm('RESUMEN DE ETIQUETAS\n\nSe enviaran '+totalEtiq+' etiqueta(s):\n\n'+resumen+extra+'\n\nAceptar = imprimir / Cancelar = volver para modificar'))return;
+  _saveLastLabelBatch(items);
+  const ok=await _batchPrint(items);
+  if(ok){
+    _clearEtqSelectionsForItems(items);
+    if(typeof toast==='function')toast('Etiquetas enviadas. Selección limpiada. Puedes repetir con Última tanda.');
+  }
 }
-
 function _generateQRDataURL(text, sizePx){
   return new Promise(resolve=>{
     const div=document.createElement('div');
@@ -17943,7 +17983,7 @@ async function _batchPrint(items, orient){
   const useBridge=localStorage.getItem('a_print_bridge')!=='0'&&fbDB&&fbAuth&&fbAuth.currentUser;
   // Si no hay puente/nube, mantenemos impresión normal del navegador.
   const w = useBridge ? null : window.open('','_blank','width=600,height=800');
-  if(!useBridge&&!w){alert('⚠ Activa las ventanas emergentes en el navegador para imprimir');return;}
+  if(!useBridge&&!w){alert('⚠ Activa las ventanas emergentes en el navegador para imprimir');return false;}
 
   const empresa = getCfgEmp().razon || 'ALBARABA SL';
   const lblSize = getLabelSize();
@@ -18119,13 +18159,13 @@ async function _batchPrint(items, orient){
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
       else alert('🖨 Enviado a la cola Brother');
-      return;
+      return true;
     }catch(e){
       console.error('Print bridge queue error:',e);
       alert('No se pudo enviar a la cola Brother. Se abrirá impresión normal.');
       const wf=window.open('','_blank','width=600,height=800');
-      if(!wf)return;
-      wf.document.write(finalHtml);wf.document.close();return;
+      if(!wf)return false;
+      wf.document.write(finalHtml);wf.document.close();return false;
     }
   }
 
@@ -18133,6 +18173,7 @@ async function _batchPrint(items, orient){
   w.document.open();
   w.document.write(finalHtml);
   w.document.close();
+  return true;
 }
 
 

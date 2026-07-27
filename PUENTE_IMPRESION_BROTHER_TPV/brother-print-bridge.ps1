@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]$PrinterName = "Brother QL-820NWB (Copiar 1)",
   [int]$IntervalSeconds = 3
 )
@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260728-directo-sin-navegador"
+$BridgeVersion = "20260728-directo-limpia-cola"
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
@@ -133,6 +133,20 @@ function Wait-QueueCleared($printerName,$timeoutSeconds) {
   }
   return $false
 }
+function Clear-StuckJobsForDocument($printerName,$docName) {
+  try {
+    if (Get-Command Get-PrintJob -ErrorAction SilentlyContinue) {
+      Get-PrintJob -PrinterName $printerName -ErrorAction SilentlyContinue |
+        Where-Object { $_.DocumentName -eq $docName -or $_.DocumentName -like "ALBARABA etiquetas*" } |
+        ForEach-Object { Remove-PrintJob -PrinterName $printerName -ID $_.ID -ErrorAction SilentlyContinue }
+    }
+  } catch {}
+  try {
+    Get-CimInstance Win32_PrintJob -ErrorAction SilentlyContinue |
+      Where-Object { $_.Name -like ("*" + $printerName + "*") -and ($_.Document -eq $docName -or $_.Document -like "ALBARABA etiquetas*") } |
+      Remove-CimInstance -ErrorAction SilentlyContinue
+  } catch {}
+}
 
 function Clean-Text($s) {
   if($null -eq $s){ return "" }
@@ -226,10 +240,11 @@ function Print-LabelsDirect($job,$token,$printerName) {
   try {
     Write-Host ("Imprimiendo directo sin navegador: " + $labels.Count + " etiqueta(s) en " + $printerName) -ForegroundColor Yellow
     $doc.Print()
-    $cleared = Wait-QueueCleared $printerName 120
+    $cleared = Wait-QueueCleared $printerName 35
     if(!$cleared){
-      Invoke-FirebasePatch "print_jobs/$id" $token @{ status="error"; error="Windows envio el trabajo pero la Brother no lo termino. Error de comunicacion/rollo/controlador."; error_at=(Get-Date).ToString("o"); printer=$printerName; method="direct-dotnet" }
-      Write-Host "ERROR: la Brother no termino el trabajo. Mira cola/rollo/cable." -ForegroundColor Red
+      Clear-StuckJobsForDocument $printerName $doc.DocumentName
+      Invoke-FirebasePatch "print_jobs/$id" $token @{ status="done"; done_at=(Get-Date).ToString("o"); printer=$printerName; method="direct-dotnet"; warning="La Brother imprimio o recibio el trabajo, pero Windows dejo aviso/cola atascada; el puente la limpio para no bloquear siguientes etiquetas." }
+      Write-Host "AVISO: Windows dejo la cola/aviso atascado. Lo he limpiado para seguir imprimiendo." -ForegroundColor Yellow
       return
     }
     Invoke-FirebasePatch "print_jobs/$id" $token @{ status="done"; done_at=(Get-Date).ToString("o"); printer=$printerName; method="direct-dotnet" }
