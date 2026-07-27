@@ -35,7 +35,23 @@ function Login-Firebase($cfg) {
   $password = Get-PlainPassword $cfg.password
   $body = @{ email=$cfg.email; password=$password; returnSecureToken=$true } | ConvertTo-Json
   $url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$ApiKey"
-  return Invoke-RestMethod -Method Post -Uri $url -ContentType "application/json" -Body $body
+  try {
+    return Invoke-RestMethod -Method Post -Uri $url -ContentType "application/json" -Body $body
+  } catch {
+    $detail = $_.Exception.Message
+    try {
+      $stream = $_.Exception.Response.GetResponseStream()
+      if ($stream) {
+        $reader = New-Object System.IO.StreamReader($stream)
+        $raw = $reader.ReadToEnd()
+        if ($raw) {
+          $parsed = $raw | ConvertFrom-Json
+          if ($parsed.error.message) { $detail = $parsed.error.message }
+        }
+      }
+    } catch {}
+    throw "Firebase no acepta el inicio de sesion de '$($cfg.email)': $detail. Revisa que el usuario exista en Authentication y que tenga Email/Password, no solo Google."
+  }
 }
 
 function Invoke-FirebasePatch($path,$token,$obj) {
@@ -93,6 +109,10 @@ while ($true) {
     foreach($job in $jobs){ Print-HtmlJob $job $auth.idToken $PrinterName }
   } catch {
     Write-Host ("Error puente: " + $_.Exception.Message) -ForegroundColor Red
+    if ($_.Exception.Message -like "*Firebase no acepta el inicio de sesion*") {
+      Write-Host "Si escribiste mal el usuario o contraseña, cierra esta ventana, borra este archivo y abre el puente otra vez:" -ForegroundColor Yellow
+      Write-Host $ConfigFile -ForegroundColor Yellow
+    }
     $auth = $null
     Start-Sleep -Seconds 8
   }
