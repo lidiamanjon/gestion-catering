@@ -12,29 +12,28 @@ New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
 
 function Save-BridgeConfig {
   Write-Host "Primer arranque del puente Brother ALBARABA." -ForegroundColor Cyan
-  $email = Read-Host "Email Firebase autorizado"
-  $secure = Read-Host "Contraseña" -AsSecureString
-  $enc = ConvertFrom-SecureString $secure
-  @{ email=$email; password=$enc; printer=$PrinterName } | ConvertTo-Json | Set-Content -LiteralPath $ConfigFile -Encoding UTF8
-  Write-Host "Configuración guardada en $ConfigFile" -ForegroundColor Green
+  Write-Host "Modo cocina/TPV: no necesita correo ni contrasena." -ForegroundColor Yellow
+  Write-Host "Solo lee la cola de impresion y manda las etiquetas a la impresora predeterminada." -ForegroundColor Yellow
+  @{ mode="anonymous"; printer=$PrinterName; created_at=(Get-Date).ToString("o") } |
+    ConvertTo-Json |
+    Set-Content -LiteralPath $ConfigFile -Encoding UTF8
+  Write-Host "Configuracion guardada en $ConfigFile" -ForegroundColor Green
 }
 
 function Load-BridgeConfig {
   if (!(Test-Path -LiteralPath $ConfigFile)) { Save-BridgeConfig }
-  return Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json
+  $cfg = Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json
+  if (!$cfg.mode -or $cfg.email -or $cfg.password) {
+    Write-Host "Detectada configuracion antigua con usuario. La cambio a modo anonimo sin contrasena." -ForegroundColor Yellow
+    Save-BridgeConfig
+    $cfg = Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json
+  }
+  return $cfg
 }
 
-function Get-PlainPassword($encrypted) {
-  $secure = ConvertTo-SecureString $encrypted
-  $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
-  try { [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr) }
-  finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr) }
-}
-
-function Login-Firebase($cfg) {
-  $password = Get-PlainPassword $cfg.password
-  $body = @{ email=$cfg.email; password=$password; returnSecureToken=$true } | ConvertTo-Json
-  $url = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=$ApiKey"
+function Login-FirebaseAnonymous {
+  $body = @{ returnSecureToken=$true } | ConvertTo-Json
+  $url = "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=$ApiKey"
   try {
     return Invoke-RestMethod -Method Post -Uri $url -ContentType "application/json" -Body $body
   } catch {
@@ -50,7 +49,7 @@ function Login-Firebase($cfg) {
         }
       }
     } catch {}
-    throw "Firebase no acepta el inicio de sesion de '$($cfg.email)': $detail. Revisa que el usuario exista en Authentication y que tenga Email/Password, no solo Google."
+    throw "Firebase no acepta el modo puente anonimo: $detail. Activa Firebase > Authentication > Metodo de acceso > Anonimo."
   }
 }
 
@@ -78,7 +77,7 @@ function Get-EdgePath {
     "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
   )
   foreach($p in $paths){ if(Test-Path -LiteralPath $p){ return $p } }
-  throw "No encuentro Microsoft Edge. Instálalo o cambia el script para usar Chrome."
+  throw "No encuentro Microsoft Edge. Instalalo o cambia el script para usar Chrome."
 }
 
 function Print-HtmlJob($job,$token,$printerName) {
@@ -90,28 +89,34 @@ function Print-HtmlJob($job,$token,$printerName) {
   $uri = (New-Object System.Uri($file)).AbsoluteUri
   $proc = Start-Process -FilePath $edge -ArgumentList @("--kiosk-printing","--new-window",$uri) -PassThru -WindowStyle Minimized
   Start-Sleep -Seconds 8
-  try { if(!$proc.HasExited){ $proc.CloseMainWindow() | Out-Null; Start-Sleep -Seconds 1; if(!$proc.HasExited){$proc.Kill()} } } catch {}
+  try {
+    if(!$proc.HasExited){
+      $proc.CloseMainWindow() | Out-Null
+      Start-Sleep -Seconds 1
+      if(!$proc.HasExited){ $proc.Kill() }
+    }
+  } catch {}
   Invoke-FirebasePatch "print_jobs/$id" $token @{ status="done"; done_at=(Get-Date).ToString("o"); printer=$printerName }
   Write-Host ("Impresa etiqueta/trabajo " + $id) -ForegroundColor Green
 }
 
 $cfg = Load-BridgeConfig
 if ($cfg.printer) { $PrinterName = $cfg.printer }
-Write-Host "=== Puente impresión ALBARABA -> Brother ===" -ForegroundColor Cyan
+Write-Host "=== Puente impresion ALBARABA -> Brother ===" -ForegroundColor Cyan
+Write-Host "Modo: anonimo, sin correo ni contrasena." -ForegroundColor Green
 Write-Host "Impresora esperada/predeterminada: $PrinterName" -ForegroundColor Yellow
 Write-Host "IMPORTANTE: pon esa Brother como impresora predeterminada en Windows." -ForegroundColor Yellow
 
 $auth = $null
 while ($true) {
   try {
-    if ($null -eq $auth) { $auth = Login-Firebase $cfg }
+    if ($null -eq $auth) { $auth = Login-FirebaseAnonymous }
     $jobs = Get-PendingJobs $auth.idToken
     foreach($job in $jobs){ Print-HtmlJob $job $auth.idToken $PrinterName }
   } catch {
     Write-Host ("Error puente: " + $_.Exception.Message) -ForegroundColor Red
-    if ($_.Exception.Message -like "*Firebase no acepta el inicio de sesion*") {
-      Write-Host "Si escribiste mal el usuario o contraseña, cierra esta ventana, borra este archivo y abre el puente otra vez:" -ForegroundColor Yellow
-      Write-Host $ConfigFile -ForegroundColor Yellow
+    if ($_.Exception.Message -like "*Firebase no acepta el modo puente anonimo*") {
+      Write-Host "Abre Firebase > Authentication > Metodo de acceso y habilita Anonimo." -ForegroundColor Yellow
     }
     $auth = $null
     Start-Sleep -Seconds 8
