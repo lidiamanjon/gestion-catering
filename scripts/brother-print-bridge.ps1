@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$PrinterName = "Brother QL-820NWB Printer",
   [int]$IntervalSeconds = 3
 )
@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260727-login-claro"
+$BridgeVersion = "20260727-cola-visible"
 
 function Save-BridgeConfig {
   Write-Host "Primer arranque del puente Brother ALBARABA." -ForegroundColor Cyan
@@ -96,6 +96,33 @@ function Get-PendingJobs($token) {
   return $jobs | Sort-Object { $_.data.created_at }
 }
 
+function Get-PrintQueueStats($token) {
+  $url = "$DbUrl/print_jobs.json?auth=$token"
+  try {
+    $data = Invoke-RestMethod -Method Get -Uri $url
+  } catch {
+    $detail = Get-FirebaseErrorDetail $_.Exception
+    throw "No puedo revisar la cola de impresion en Firebase: $detail"
+  }
+  if ($null -eq $data) {
+    return [pscustomobject]@{ total=0; pending=0; printing=0; done=0; error=0 }
+  }
+  $total = 0
+  $pending = 0
+  $printing = 0
+  $done = 0
+  $errorCount = 0
+  $data.PSObject.Properties | ForEach-Object {
+    $total++
+    switch ($_.Value.status) {
+      "pending" { $pending++ }
+      "printing" { $printing++ }
+      "done" { $done++ }
+      "error" { $errorCount++ }
+    }
+  }
+  return [pscustomobject]@{ total=$total; pending=$pending; printing=$printing; done=$done; error=$errorCount }
+}
 function Get-EdgePath {
   $paths = @(
     "$env:ProgramFiles\Microsoft\Edge\Application\msedge.exe",
@@ -154,11 +181,20 @@ try {
   exit 1
 }
 
+$loopCount = 0
 while ($true) {
   try {
     if ($null -eq $auth) { $auth = Login-Firebase $cfg }
+    $loopCount++
+    if ($loopCount -eq 1 -or ($loopCount % 5) -eq 0) {
+      $stats = Get-PrintQueueStats $auth.idToken
+      Write-Host ("[" + (Get-Date -Format "HH:mm:ss") + "] Cola Brother: " + $stats.pending + " pendiente(s), " + $stats.printing + " imprimiendo, " + $stats.done + " hecha(s), " + $stats.error + " error(es), " + $stats.total + " total.") -ForegroundColor Cyan
+    }
     $jobs = Get-PendingJobs $auth.idToken
-    foreach($job in $jobs){ Print-HtmlJob $job $auth.idToken $PrinterName }
+    foreach($job in $jobs){
+      Write-Host ("Trabajo pendiente encontrado: " + $job.id) -ForegroundColor Yellow
+      Print-HtmlJob $job $auth.idToken $PrinterName
+    }
   } catch {
     Write-Host ("Error puente: " + $_.Exception.Message) -ForegroundColor Red
     $auth = $null
@@ -166,3 +202,5 @@ while ($true) {
   }
   Start-Sleep -Seconds $IntervalSeconds
 }
+
+
