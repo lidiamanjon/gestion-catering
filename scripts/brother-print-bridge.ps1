@@ -34,6 +34,13 @@ function Load-BridgeConfig {
   return $cfg
 }
 
+function Reset-BridgeConfig {
+  Write-Host "Vamos a introducir de nuevo el usuario y la contrasena." -ForegroundColor Yellow
+  Remove-Item -LiteralPath $ConfigFile -Force -ErrorAction SilentlyContinue
+  Save-BridgeConfig
+  return Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json
+}
+
 function Get-PlainPassword($encrypted) {
   $secure = ConvertTo-SecureString $encrypted
   $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
@@ -133,8 +140,7 @@ while ($true) {
   } catch {
     Write-Host ("Error puente: " + $_.Exception.Message) -ForegroundColor Red
     if ($_.Exception.Message -like "*Firebase no acepta el inicio de sesion*") {
-      Write-Host "Si escribiste mal el usuario o contrasena, cierra esta ventana, borra este archivo y abre el puente otra vez:" -ForegroundColor Yellow
-      Write-Host $ConfigFile -ForegroundColor Yellow
+      $cfg = Reset-BridgeConfig
     }
     $auth = $null
     Start-Sleep -Seconds 8
