@@ -9,6 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
+$BridgeVersion = "20260727-login-claro"
 
 function Save-BridgeConfig {
   Write-Host "Primer arranque del puente Brother ALBARABA." -ForegroundColor Cyan
@@ -32,13 +33,6 @@ function Load-BridgeConfig {
     $cfg = Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json
   }
   return $cfg
-}
-
-function Reset-BridgeConfig {
-  Write-Host "Vamos a introducir de nuevo el usuario y la contrasena." -ForegroundColor Yellow
-  Remove-Item -LiteralPath $ConfigFile -Force -ErrorAction SilentlyContinue
-  Save-BridgeConfig
-  return Get-Content -LiteralPath $ConfigFile -Raw | ConvertFrom-Json
 }
 
 function Get-PlainPassword($encrypted) {
@@ -127,11 +121,32 @@ function Print-HtmlJob($job,$token,$printerName) {
 $cfg = Load-BridgeConfig
 if ($cfg.printer) { $PrinterName = $cfg.printer }
 Write-Host "=== Puente impresion ALBARABA -> Brother ===" -ForegroundColor Cyan
+Write-Host "Version puente: $BridgeVersion" -ForegroundColor DarkGray
 Write-Host "Modo: usuario y contrasena de la app." -ForegroundColor Green
+Write-Host "Usuario guardado: $($cfg.email)" -ForegroundColor Green
+Write-Host "Archivo de configuracion: $ConfigFile" -ForegroundColor DarkGray
 Write-Host "Impresora esperada/predeterminada: $PrinterName" -ForegroundColor Yellow
 Write-Host "IMPORTANTE: pon esa Brother como impresora predeterminada en Windows." -ForegroundColor Yellow
+try {
+  $defaultPrinter = Get-CimInstance Win32_Printer | Where-Object { $_.Default } | Select-Object -First 1 -ExpandProperty Name
+  if ($defaultPrinter) { Write-Host "Impresora predeterminada real de Windows: $defaultPrinter" -ForegroundColor Yellow }
+} catch {}
 
-$auth = $null
+Write-Host ""
+Write-Host "Probando inicio de sesion en Firebase..." -ForegroundColor Cyan
+try {
+  $auth = Login-Firebase $cfg
+  Write-Host "CONECTADO A FIREBASE. Puente escuchando etiquetas pendientes." -ForegroundColor Green
+  Write-Host "Deja esta ventana abierta. Si la cierras, no imprime automaticamente." -ForegroundColor Yellow
+} catch {
+  Write-Host ("ERROR DE INICIO: " + $_.Exception.Message) -ForegroundColor Red
+  Write-Host ""
+  Write-Host "No voy a pedirte el email en bucle." -ForegroundColor Yellow
+  Write-Host "Para cambiar usuario/contrasena, ejecuta primero reiniciar-usuario-puente.bat y despues vuelve a abrir este puente." -ForegroundColor Yellow
+  Read-Host "Pulsa ENTER para cerrar"
+  exit 1
+}
+
 while ($true) {
   try {
     if ($null -eq $auth) { $auth = Login-Firebase $cfg }
@@ -139,14 +154,6 @@ while ($true) {
     foreach($job in $jobs){ Print-HtmlJob $job $auth.idToken $PrinterName }
   } catch {
     Write-Host ("Error puente: " + $_.Exception.Message) -ForegroundColor Red
-    if ($_.Exception.Message -like "*Firebase no acepta el inicio de sesion*") {
-      Write-Host ""
-      Write-Host "No vuelvo a pedirte el email en bucle para no marearte." -ForegroundColor Yellow
-      Write-Host "Ese usuario/clave no ha sido aceptado por Firebase." -ForegroundColor Yellow
-      Write-Host "Pulsa ENTER para cerrar. Si quieres meter otro usuario, abre primero reiniciar-usuario-puente.bat." -ForegroundColor Yellow
-      Read-Host
-      exit 1
-    }
     $auth = $null
     Start-Sleep -Seconds 8
   }
