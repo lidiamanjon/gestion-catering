@@ -1,5 +1,5 @@
-﻿param(
-  [string]$PrinterName = "Brother QL-820NWB Printer",
+param(
+  [string]$PrinterName = "Brother QL-820NWB (Copiar 1)",
   [int]$IntervalSeconds = 3
 )
 
