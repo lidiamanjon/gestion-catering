@@ -77,14 +77,21 @@ function Invoke-FirebasePatch($path,$token,$obj) {
 }
 
 function Get-PendingJobs($token) {
-  $order = [uri]::EscapeDataString('"status"')
-  $equal = [uri]::EscapeDataString('"pending"')
-  $url = "$DbUrl/print_jobs.json?orderBy=$order&equalTo=$equal&auth=$token"
-  $data = Invoke-RestMethod -Method Get -Uri $url
+  # Leemos la cola completa y filtramos aqui.
+  # Evita errores 400 de Firebase cuando no hay indice .indexOn para "status".
+  $url = "$DbUrl/print_jobs.json?auth=$token"
+  try {
+    $data = Invoke-RestMethod -Method Get -Uri $url
+  } catch {
+    $detail = Get-FirebaseErrorDetail $_.Exception
+    throw "No puedo leer la cola de impresion en Firebase: $detail"
+  }
   if ($null -eq $data) { return @() }
   $jobs = @()
   $data.PSObject.Properties | ForEach-Object {
-    $jobs += [pscustomobject]@{ id=$_.Name; data=$_.Value }
+    if ($_.Value.status -eq "pending") {
+      $jobs += [pscustomobject]@{ id=$_.Name; data=$_.Value }
+    }
   }
   return $jobs | Sort-Object { $_.data.created_at }
 }
