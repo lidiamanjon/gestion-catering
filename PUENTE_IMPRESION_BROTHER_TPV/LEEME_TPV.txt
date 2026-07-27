@@ -1,0 +1,23 @@
+PUENTE IMPRESION BROTHER - ALBARABA
+
+Estos dos archivos tienen que estar juntos en la TPV:
+
+1. iniciar-puente-impresion-brother.bat
+2. brother-print-bridge.ps1
+
+PASOS:
+
+1. Conecta la Brother QL-820NWB a la TPV por USB.
+2. Instala el controlador Brother si Windows dice que no esta disponible.
+3. Pon la Brother como impresora predeterminada.
+4. Configura la Brother con rollo 62 mm, horizontal y cortar al final.
+5. Haz doble clic en iniciar-puente-impresion-brother.bat.
+6. La primera vez pon un usuario y contrasena de la app ALBARABA, creado en Firebase Authentication.
+7. Deja la ventana abierta.
+
+Usa el usuario de la app, no el usuario de la consola de Firebase.
+
+Si te equivocas de usuario o contrasena, borra este archivo en la TPV y abre el puente otra vez:
+C:\Users\TU_USUARIO\AppData\Roaming\AlbarabaPrintBridge\config.json
+
+Mientras esta ventana este abierta, las tablets y moviles mandan las etiquetas a la nube y la TPV las imprime automaticamente en la Brother.
