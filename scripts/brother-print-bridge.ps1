@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260727-edge-silencioso"
+$BridgeVersion = "20260727-cola-windows-segura"
 
 function Save-BridgeConfig {
   Write-Host "Primer arranque del puente Brother ALBARABA." -ForegroundColor Cyan
@@ -132,6 +132,48 @@ function Get-EdgePath {
   throw "No encuentro Microsoft Edge. Instalalo o cambia el script para usar Chrome."
 }
 
+function Resolve-BrotherPrinterName($preferred) {
+  try {
+    $printers = @(Get-CimInstance Win32_Printer | Select-Object Name,Default)
+    if ($preferred -and ($printers | Where-Object { $_.Name -eq $preferred })) { return $preferred }
+    $defaultBrother = $printers | Where-Object { $_.Default -and $_.Name -like "*Brother*" } | Select-Object -First 1
+    if ($defaultBrother) { return $defaultBrother.Name }
+    $anyBrother = $printers | Where-Object { $_.Name -like "*QL-820*" -or $_.Name -like "*Brother*" } | Select-Object -First 1
+    if ($anyBrother) { return $anyBrother.Name }
+  } catch {}
+  return $preferred
+}
+
+function Get-QueueIds($printerName) {
+  try {
+    if (Get-Command Get-PrintJob -ErrorAction SilentlyContinue) {
+      return @(Get-PrintJob -PrinterName $printerName -ErrorAction SilentlyContinue | ForEach-Object { [string]$_.ID })
+    }
+  } catch {}
+  return @()
+}
+
+function Wait-JobInWindowsQueue($printerName,$beforeIds,$timeoutSeconds) {
+  $deadline = (Get-Date).AddSeconds($timeoutSeconds)
+  while ((Get-Date) -lt $deadline) {
+    $now = @(Get-QueueIds $printerName)
+    $new = @($now | Where-Object { $beforeIds -notcontains $_ })
+    if ($new.Count -gt 0) { return $true }
+    Start-Sleep -Seconds 1
+  }
+  return $false
+}
+
+function Wait-QueueCleared($printerName,$timeoutSeconds) {
+  $deadline = (Get-Date).AddSeconds($timeoutSeconds)
+  while ((Get-Date) -lt $deadline) {
+    $now = @(Get-QueueIds $printerName)
+    if ($now.Count -eq 0) { return $true }
+    Start-Sleep -Seconds 2
+  }
+  return $false
+}
+
 function Print-HtmlJob($job,$token,$printerName) {
   $id = $job.id
   Invoke-FirebasePatch "print_jobs/$id" $token @{ status="printing"; started_at=(Get-Date).ToString("o"); bridge=$env:COMPUTERNAME }
@@ -141,6 +183,7 @@ function Print-HtmlJob($job,$token,$printerName) {
   $uri = (New-Object System.Uri($file)).AbsoluteUri
   $profileDir = Join-Path $env:TEMP "albaraba-edge-print-profile"
   New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+  $beforeQueue = @(Get-QueueIds $printerName)
   $args = @(
     "--kiosk-printing",
     "--disable-print-preview",
@@ -151,7 +194,17 @@ function Print-HtmlJob($job,$token,$printerName) {
     $uri
   )
   $proc = Start-Process -FilePath $edge -ArgumentList $args -PassThru -WindowStyle Minimized
-  Start-Sleep -Seconds 10
+  $queued = Wait-JobInWindowsQueue $printerName $beforeQueue 25
+  if (-not $queued) {
+    Invoke-FirebasePatch "print_jobs/$id" $token @{ status="error"; error="No entro ningun trabajo en la cola real de Windows. Revisa impresora predeterminada, dialogos de Edge y controlador Brother."; error_at=(Get-Date).ToString("o"); printer=$printerName }
+    Write-Host ("NO IMPRESA " + $id + ": no entro en la cola real de Windows.") -ForegroundColor Red
+    try {
+      if(!$proc.HasExited){ $proc.CloseMainWindow() | Out-Null }
+    } catch {}
+    return
+  }
+  Write-Host ("Trabajo " + $id + " detectado en cola Windows de " + $printerName + ". Esperando salida...") -ForegroundColor Yellow
+  $cleared = Wait-QueueCleared $printerName 120
   try {
     if(!$proc.HasExited){
       $proc.CloseMainWindow() | Out-Null
@@ -159,12 +212,18 @@ function Print-HtmlJob($job,$token,$printerName) {
       if(!$proc.HasExited){ $proc.Kill() }
     }
   } catch {}
+  if (-not $cleared) {
+    Invoke-FirebasePatch "print_jobs/$id" $token @{ status="error"; error="El trabajo entro en cola Windows pero no salio en 120 segundos. Revisa comunicacion PC-Brother, rollo y errores del controlador."; error_at=(Get-Date).ToString("o"); printer=$printerName }
+    Write-Host ("ERROR IMPRESION " + $id + ": quedo atascado en cola Windows.") -ForegroundColor Red
+    return
+  }
   Invoke-FirebasePatch "print_jobs/$id" $token @{ status="done"; done_at=(Get-Date).ToString("o"); printer=$printerName }
-  Write-Host ("Impresa etiqueta/trabajo " + $id) -ForegroundColor Green
+  Write-Host ("Trabajo terminado en cola Windows " + $id) -ForegroundColor Green
 }
 
 $cfg = Load-BridgeConfig
 if ($cfg.printer) { $PrinterName = $cfg.printer }
+$PrinterName = Resolve-BrotherPrinterName $PrinterName
 Write-Host "=== Puente impresion ALBARABA -> Brother ===" -ForegroundColor Cyan
 Write-Host "Version puente: $BridgeVersion" -ForegroundColor DarkGray
 Write-Host "Modo: usuario y contrasena de la app." -ForegroundColor Green

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260726-print-bridge1';
+﻿const CACHE_NAME = 'albaraba-appcc-v20260727-etiquetas-tanda1';
 const APP_SHELL = [
   './',
   './index.html',
