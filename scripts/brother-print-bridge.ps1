@@ -140,7 +140,12 @@ while ($true) {
   } catch {
     Write-Host ("Error puente: " + $_.Exception.Message) -ForegroundColor Red
     if ($_.Exception.Message -like "*Firebase no acepta el inicio de sesion*") {
-      $cfg = Reset-BridgeConfig
+      Write-Host ""
+      Write-Host "No vuelvo a pedirte el email en bucle para no marearte." -ForegroundColor Yellow
+      Write-Host "Ese usuario/clave no ha sido aceptado por Firebase." -ForegroundColor Yellow
+      Write-Host "Pulsa ENTER para cerrar. Si quieres meter otro usuario, abre primero reiniciar-usuario-puente.bat." -ForegroundColor Yellow
+      Read-Host
+      exit 1
     }
     $auth = $null
     Start-Sleep -Seconds 8
