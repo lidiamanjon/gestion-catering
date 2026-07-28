@@ -1,5 +1,5 @@
-<!DOCTYPE html>
-<!-- VERSION: v20260728-etiqueta-62x50-1 -->
+﻿<!DOCTYPE html>
+<!-- VERSION: v20260728-appcc-evento-fix1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -1357,6 +1357,12 @@ if(FB_READY){
 // ═══════════════════════════════════════════════════
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function jsArg(v){return JSON.stringify(String(v||''))}
+function safeDomId(prefix,id){return prefix+'-'+String(id||'').replace(/[^a-zA-Z0-9_-]/g,'_')}
+function safeRender(label,fn,fallback=''){
+  try{return fn()}
+  catch(e){console.error('[ALBARABA] Error renderizando '+label,e);return fallback}
+}
 
 // ═══════════════════════════════════════════════════
 // ALERGENOS
@@ -6143,10 +6149,11 @@ function setHojasTab(tab){
   renderHojasTable(document.getElementById('hojas-srch')?.value||'');
 }
 function renderHojasTable(q=''){
-  const list=DB.hojas.filter(h=>{
+  const hojas=Array.isArray(DB.hojas)?DB.hojas:[];
+  const list=hojas.filter(h=>{
     if(_hojasTab==='pendientes'&&h.realizado)return false;
     if(_hojasTab==='realizados'&&!h.realizado)return false;
-    if(q&&!h.cliente.toLowerCase().includes(q.toLowerCase())&&!((h.empresa||'').toLowerCase().includes(q.toLowerCase())))return false;
+    if(q&&!String(h.cliente||'').toLowerCase().includes(q.toLowerCase())&&!((h.empresa||'').toLowerCase().includes(q.toLowerCase())))return false;
     return true;
   });
   const cont=document.getElementById('hojas-list');
@@ -6161,16 +6168,19 @@ function renderHojasTable(q=''){
     return bd-ad;                   // antiguos: los más recientes arriba
   });
   cont.innerHTML=sorted.map(h=>{
+    const hid=jsArg(h.id);
+    const bodyId=safeDomId('body',h.id);
     const d=h.fecha?new Date(h.fecha+'T00:00:00'):null;
     const serviceDateHint=(h.fechas_servicio||[]).map(f=>[f.dia,f.fecha,f.hora].filter(Boolean).join(' · ')).filter(Boolean).slice(0,3).join(' / ');
     const dateStr=d&&!Number.isNaN(d.getTime())?d.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}):(serviceDateHint||'Fecha pendiente');
     const evaMissing=[!h.fecha?'fecha':'',!(parseInt(h.pax)>0)?'pax':'',!h.cliente?'cliente':''].filter(Boolean);
-    const appccTotal=(h.menu||[]).length,appccDone=(h.menu||[]).filter(m=>m.appcc_estado==='completada').length,appccEnProceso=(h.menu||[]).filter(m=>m.appcc_estado==='elaborada').length;
+    const menu=Array.isArray(h.menu)?h.menu:[];
+    const appccTotal=menu.length,appccDone=menu.filter(m=>m.appcc_estado==='completada').length,appccEnProceso=menu.filter(m=>m.appcc_estado==='elaborada').length;
     const fact=h.facturacion||{},estadoCobro=String(fact.estado_cobro||'pendiente').toLowerCase();
     const facturado=['facturado','cerrado'].includes(String(h.estado_comercial||'').toLowerCase())||Boolean(fact.numero_factura||h.documentos?.factura_url);
     return`<div class="hoja-card">
-      <div class="hoja-header" onclick="toggleHojaBody('${h.id}')">
-        <label title="Incluir en pedido agrupado" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${eventosPedidoSeleccionados.has(h.id)?'checked':''} onchange="toggleEventoPedido('${h.id}',this.checked)"> Agrupar</label>
+      <div class="hoja-header" onclick="toggleHojaBody(${hid})">
+        <label title="Incluir en pedido agrupado" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${eventosPedidoSeleccionados.has(h.id)?'checked':''} onchange="toggleEventoPedido(${hid},this.checked)"> Agrupar</label>
         <div style="flex:1">
           <div style="font-size:15px;font-weight:700">${esc(h.cliente)}${h.empresa?` · <span style="color:var(--muted);font-weight:400">${esc(h.empresa)}</span>`:''}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr}${h.hora?` · ${esc(h.hora)}`:''}${h.lugar?` · 📍${esc(h.lugar)}`:''}</div>
@@ -6181,22 +6191,23 @@ function renderHojasTable(q=''){
         ${h.fuente?`<span class="badge" style="background:rgba(99,102,241,.1);color:#4338ca;font-size:10px">${h.fuente==='alaboca'?'🍽 Alaboca':'🌿 PV'}</span>`:''}
         ${facturado?'<span class="badge" style="background:#dbeafe;color:#1e40af">🧾 Facturado</span>':'<span class="badge" style="background:#f3f4f6;color:#6b7280">Sin facturar</span>'}
         ${estadoCobro==='cobrado'?'<span class="badge b-ok">💶 Pagado</span>':estadoCobro==='parcial'?'<span class="badge" style="background:#fff7ed;color:#9a3412">💶 Pago parcial</span>':'<span class="badge" style="background:#fef2f2;color:#991b1b">Cobro pendiente</span>'}
-        ${h.eva_revision_pendiente||h.eva_cambio_pendiente?`<span class="badge b-warn">✨ Revisión de Eva pendiente</span>${evaMissing.length?`<span class="badge" style="background:#fee2e2;color:#991b1b">Falta: ${evaMissing.join(', ')}</span>`:''}<button class="btn btn-sm btn-green" onclick="event.stopPropagation();aprobarPropuestaEva('${h.id}')">${evaMissing.length?'✏️ Completar datos':'✓ Revisar y aprobar'}</button><button class="btn btn-sm btn-del" onclick="event.stopPropagation();rechazarPropuestaEva('${h.id}')">Rechazar</button>`:(h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado('${h.id}')">✅ Confirmar realizado</button>`)}
+        ${h.eva_revision_pendiente||h.eva_cambio_pendiente?`<span class="badge b-warn">✨ Revisión de Eva pendiente</span>${evaMissing.length?`<span class="badge" style="background:#fee2e2;color:#991b1b">Falta: ${evaMissing.join(', ')}</span>`:''}<button class="btn btn-sm btn-green" onclick="event.stopPropagation();aprobarPropuestaEva(${hid})">${evaMissing.length?'✏️ Completar datos':'✓ Revisar y aprobar'}</button><button class="btn btn-sm btn-del" onclick="event.stopPropagation();rechazarPropuestaEva(${hid})">Rechazar</button>`:(h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado(${hid})">✅ Confirmar realizado</button>`)}
         ${!(h.eva_revision_pendiente||h.eva_cambio_pendiente)&&evaMissing.length?`<span class="badge" style="background:#fee2e2;color:#991b1b">Aviso EVA: falta ${evaMissing.join(', ')}</span>`:''}
-        <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF('${h.id}')" title="${h.documentos?.hoja_servicio_url?'Abrir el PDF final preparado por EVA':'El PDF de EVA todavía está pendiente'}">📄 PDF EVA</button>
-        <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();cargarPedidoDesdeHoja('${h.id}')">🛒 Calcular pedido</button>
-        <button class="btn btn-sm btn-light" onclick="event.stopPropagation();editHoja('${h.id}')">✏️</button>
-        <button class="btn btn-sm btn-del" onclick="event.stopPropagation();deleteHoja('${h.id}')">🗑</button>
+        <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF(${hid})" title="${h.documentos?.hoja_servicio_url?'Abrir el PDF final preparado por EVA':'El PDF de EVA todavía está pendiente'}">📄 PDF EVA</button>
+        <button class="btn btn-sm btn-gold" onclick="event.stopPropagation();cargarPedidoDesdeHoja(${hid})">🛒 Calcular pedido</button>
+        <button class="btn btn-sm btn-light" onclick="event.stopPropagation();editHoja(${hid})">✏️</button>
+        <button class="btn btn-sm btn-del" onclick="event.stopPropagation();deleteHoja(${hid})">🗑</button>
       </div>
-      <div class="hoja-body" id="body-${h.id}">
-        ${renderHojaBody(h)}
+      <div class="hoja-body" id="${bodyId}">
+        ${safeRender('evento '+String(h.id||''),()=>renderHojaBody(h),'<div class="notice warn" style="margin:12px">Este evento tiene un dato raro y no se pudo abrir completo. Puedes editarlo o avisarme para limpiarlo.</div>')}
       </div>
     </div>`;
   }).join('');
 }
 
 function toggleHojaBody(id){
-  const el=document.getElementById('body-'+id);
+  const el=document.getElementById(safeDomId('body',id));
+  if(!el)return;
   el.classList.toggle('open');
 }
 
@@ -6208,6 +6219,7 @@ function abrirDocumentoEvento(id,tipo){
 }
 
 function renderDocumentacionEvento(h){
+  const hid=jsArg(h.id);
   const docs=h.documentos||{},fac=h.facturacion||{};
   const enlaces=[
     ['presupuesto_url','Presupuesto',docs.presupuesto_url],
@@ -6221,13 +6233,14 @@ function renderDocumentacionEvento(h){
   const fondoCobro=estadoCobro==='cobrado'?'#dcfce7':estadoCobro==='parcial'?'#fff7ed':'#fef2f2';
   return`<div style="margin-bottom:14px;padding:12px 14px;background:#f8fafc;border:1px solid #dbe3ef;border-radius:10px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:9px"><strong style="font-size:13px">📁 Documentación y cobro</strong><span class="badge b-cat">${esc(String(h.estado_comercial||'pendiente').replaceAll('_',' '))}</span><span class="badge" style="background:${fondoCobro};color:${colorCobro}">${estadoCobro==='parcial'?'Cobrado parcialmente':estadoCobro==='cobrado'?'Cobrado':'Cobro pendiente'}</span>${h.archivado_cliente_en?'<span class="badge b-ok">Archivado en cliente</span>':''}</div>
-    <div style="display:flex;gap:7px;flex-wrap:wrap">${enlaces.map(([tipo,nombre,url])=>url?`<button class="btn btn-sm btn-outline" onclick="abrirDocumentoEvento('${h.id}','${tipo}')">🔗 ${nombre}</button>`:`<span class="badge" style="background:#eee;color:#777">${nombre}: pendiente</span>`).join('')}</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap">${enlaces.map(([tipo,nombre,url])=>url?`<button class="btn btn-sm btn-outline" onclick="abrirDocumentoEvento(${hid},${jsArg(tipo)})">🔗 ${nombre}</button>`:`<span class="badge" style="background:#eee;color:#777">${nombre}: pendiente</span>`).join('')}</div>
     ${(total||fac.numero_factura)?`<div style="font-size:12px;color:var(--muted);margin-top:9px">Factura ${esc(fac.numero_factura||'sin número')} · Total: <strong>${total.toLocaleString('es-ES',{style:'currency',currency:'EUR'})}</strong> · Cobrado: <strong>${cobrado.toLocaleString('es-ES',{style:'currency',currency:'EUR'})}</strong> · Pendiente: <strong>${pendiente.toLocaleString('es-ES',{style:'currency',currency:'EUR'})}</strong></div>`:''}
     <div style="font-size:10px;color:var(--muted);margin-top:7px">Los archivos originales permanecen en Drive; aquí solo se guardan sus enlaces y estados.</div>
   </div>`;
 }
 
 function renderHojaBody(h){
+  const hid=jsArg(h.id);
   // Stock check
   const check=checkStockHoja(h);
   const menuItems=(h.menu||[]).map(m=>{
@@ -6270,7 +6283,7 @@ function renderHojaBody(h){
       ${h.hora?`<div class="hoja-meta-item"><div class="lbl">Hora</div><div class="val">🕐 ${esc(h.hora)}</div></div>`:''}
       ${h.lugar?`<div class="hoja-meta-item"><div class="lbl">Lugar</div><div class="val">📍 ${esc(h.lugar)}</div></div>`:''}
     </div>
-    ${menuItems?`<div style="margin-bottom:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"><div style="font-weight:600;font-size:13px">🍽 Menú / elaboraciones EVA</div><button class="btn btn-sm btn-outline" onclick="editHoja('${h.id}')">✏️ Modificar elaboraciones</button></div><ul style="padding-left:18px;font-size:13px">${menuItems}</ul></div>`:''}
+    ${menuItems?`<div style="margin-bottom:14px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px"><div style="font-weight:600;font-size:13px">🍽 Menú / elaboraciones EVA</div><button class="btn btn-sm btn-outline" onclick="editHoja(${hid})">✏️ Modificar elaboraciones</button></div><ul style="padding-left:18px;font-size:13px">${menuItems}</ul></div>`:''}
     ${h.postre?`<div style="margin-bottom:10px;font-size:13px"><strong>Postre:</strong> ${esc(h.postre)}</div>`:''}
     ${(()=>{
       const alSet=new Set();
