@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-ensaladilla-appcc1 -->
+<!-- VERSION: v20260728-albondigas-piquillo1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-ensaladilla-appcc1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-albondigas-piquillo1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-ensaladilla-appcc1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-albondigas-piquillo1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4496,7 +4496,10 @@ function _installAlbarabaRecetasBase(autoSave=true){
     patata:ensureProducto({id:'prod_patata',nombre:'Patata',categoria:'Verduras y hortalizas',unidad:'kg'}),
     atunAceite:ensureProducto({id:'prod_atun_aceite_escurrido',nombre:'Atun en aceite escurrido',categoria:'Conservas',unidad:'kg',alergenos:['pescado'],notas:'Escurrir perfectamente antes de incorporar. Alergeno: pescado.'}),
     huevoCocido:ensureProducto({id:'prod_huevo_cocido',nombre:'Huevo cocido',categoria:'Lacteos y huevos',unidad:'kg',alergenos:['huevos'],notas:'Para ensaladilla: 0,9 kg aprox. 18 huevos por cada 10 kg de produccion. Alergeno: huevo.'}),
-    mayonesaSgSl:ensureProducto({id:'prod_mayonesa_sin_gluten_sin_lactosa',nombre:'Mayonesa sin gluten y sin lactosa',categoria:'Salsas y condimentos',unidad:'kg',alergenos:['huevos','mostaza'],notas:'Usar siempre mayonesa sin gluten y sin lactosa. Verificar ficha tecnica: contiene huevo y puede contener mostaza segun fabricante.'})
+    mayonesaSgSl:ensureProducto({id:'prod_mayonesa_sin_gluten_sin_lactosa',nombre:'Mayonesa sin gluten y sin lactosa',categoria:'Salsas y condimentos',unidad:'kg',alergenos:['huevos','mostaza'],notas:'Usar siempre mayonesa sin gluten y sin lactosa. Verificar ficha tecnica: contiene huevo y puede contener mostaza segun fabricante.'}),
+    albondigas:ensureProducto({id:'prod_albondigas_40g',nombre:'Albondigas 40 g',categoria:'Carnes',unidad:'kg',alergenos:['gluten','huevos','leche','soja'],notas:'Producto base para albondigas al piquillo. Racion: 4 albondigas/persona, aprox. 40 g por unidad. Verificar ficha tecnica: contiene o puede contener gluten, huevo, leche y soja segun fabricante.'}),
+    piquillo:ensureProducto({id:'prod_pimientos_piquillo',nombre:'Pimientos del piquillo',categoria:'Conservas',unidad:'kg'}),
+    caldoCarne:ensureProducto({id:'prod_caldo_carne',nombre:'Caldo de carne',categoria:'Salsas y condimentos',unidad:'l',alergenos:['apio','gluten','soja'],notas:'Verificar ficha tecnica del caldo usado: puede contener apio, gluten o soja segun fabricante.'})
   };
   const nombreElab='Pollo guisado a la jardinera';
   const ing=[
@@ -4651,8 +4654,63 @@ function _installAlbarabaRecetasBase(autoSave=true){
     if(!elabEnsaladilla.notas||!elabEnsaladilla.notas.includes('Vida util')){elabEnsaladilla.notas=notasEnsaladilla;changed=true;}
     if(!elabEnsaladilla.fichaDetalle||!elabEnsaladilla.fichaDetalle.pasos||!String(elabEnsaladilla.fichaDetalle.vidaUtil||'').includes('48 horas')||!String(elabEnsaladilla.fichaDetalle.tempCoccion||'').includes('Producto final frio')){elabEnsaladilla.fichaDetalle=fichaDetalleEnsaladilla;changed=true;}
   }
+  const nombreAlbondigas='Albondigas al piquillo';
+  const ingAlbondigas=[
+    {producto_id:productos.albondigas,cantidad:6.4,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.cebolla,cantidad:1.5,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.ajo,cantidad:0.12,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.piquillo,cantidad:2,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.tomate,cantidad:3.5,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.tomateFrito,cantidad:1,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.caldoCarne,cantidad:4,unidad:'l',modo_cantidad:'total_receta'},
+    {producto_id:productos.aceite,cantidad:0.45,unidad:'l',modo_cantidad:'total_receta'},
+    {producto_id:productos.sal,cantidad:0.06,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.azucar,cantidad:0.02,unidad:'kg',modo_cantidad:'total_receta'}
+  ];
+  const procesoAlbondigas=`1. Preparacion: picar la cebolla, laminar el ajo y escurrir los pimientos del piquillo. Triturar los piquillos junto con parte del tomate hasta obtener una crema fina.
+2. Salsa: en marmita anadir aceite de oliva, ajo y cebolla. Pochar lentamente. Anadir tomate triturado y tomate frito y cocinar unos minutos.
+3. Incorporar crema de piquillos, caldo de carne y azucar. Cocer lentamente hasta obtener una salsa homogenea, cremosa y abundante. Rectificar solo de sal. No anadir pimienta, pimenton ni laurel.
+4. Coccion: incorporar las albondigas a la salsa. Cocinar suavemente para que absorban sabor sin romperse. Evitar ebullicion fuerte.
+5. Montaje: colocar 4 albondigas por racion en bandejas gastronorm termoselladas. Cubrir completamente con salsa; no debe quedar ninguna albondiga descubierta.
+6. Abatidor: enfriar rapidamente tras elaboracion, de 60°C a 10°C en menos de 2 horas. Conservar siempre las albondigas cubiertas por salsa.
+7. Pasteurizacion: no lleva pasteurizacion final. La seguridad depende de coccion completa, abatimiento rapido, envasado correcto y cadena de frio.
+8. Regeneracion: regenerar en horno Rational hasta temperatura segura en el centro del producto. Anadir salsa extra si fuera necesario para mantener jugosidad.`;
+  const fichaDetalleAlbondigas={
+    pasos:procesoAlbondigas,
+    tempCoccion:'Cocinar completamente las albondigas en salsa. Abatir de 60°C a 10°C en menos de 2 horas. No lleva pasteurizacion final; regenerar en Rational hasta temperatura segura en el centro.',
+    fichaNum:'MA 03-3',
+    conservacion:'Refrigerado 0°C – 3°C',
+    vidaUtil:'72 horas en nevera a 0-3 °C tras coccion, abatimiento correcto, envasado cerrado y cadena de frio mantenida.',
+    consumo:'Servir caliente tras regeneracion. Mantener siempre las albondigas cubiertas con salsa.',
+    aspecto:'Albondigas enteras cubiertas con salsa cremosa de piquillo',
+    olor:'Caracteristico, sin olores anomalos',
+    sabor:'Caracteristico a albondigas con salsa de piquillo, sin especias',
+    consistencia:'Albondigas jugosas que mantienen su forma; salsa homogenea y cremosa',
+    ventaMaterial:'Bandejas gastronorm termoselladas + tupper gastronorm extra de salsa',
+    ventaUnidades:'40 raciones base · 4 albondigas por persona · 160 unidades · 6,40 kg · 1 tupper extra salsa 6 l',
+    alergenos:['gluten','huevos','leche','soja','apio'],
+    alergenosDetalle:[{key:'gluten',val:'C'},{key:'huevos',val:'C'},{key:'leche',val:'T'},{key:'soja',val:'T'},{key:'apio',val:'T'}],
+    fechaRev:'07/26'
+  };
+  let elabAlbondigas=DB.elaboraciones.find(e=>norm(e.nombre)===norm(nombreAlbondigas));
+  const notasAlbondigas='Produccion base 40 raciones. Racion: 4 albondigas/persona. Total 160 albondigas, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Receta sin especias y sin laurel: no anadir pimienta ni pimenton. Alergenos: albondigas suelen contener gluten y huevo; pueden contener leche, soja y apio segun fabricante/caldo. Vida util: 72 h en nevera a 0-3 °C tras coccion, abatimiento y envasado correcto.';
+  if(!elabAlbondigas){
+    DB.elaboraciones.push({
+      id:'elab_albondigas_piquillo',nombre:nombreAlbondigas,categoria:'segundo',raciones_base:40,ingredientes:ingAlbondigas,proceso:procesoAlbondigas,
+      notas:notasAlbondigas,foto:'',fichaDetalle:fichaDetalleAlbondigas
+    });
+    changed=true;
+  }else{
+    const retirar=[productos.pimienta,productos.pimenton,productos.laurel];
+    if(!elabAlbondigas.ingredientes||!elabAlbondigas.ingredientes.length||elabAlbondigas.ingredientes.some(i=>retirar.includes(i.producto_id))){elabAlbondigas.ingredientes=ingAlbondigas;changed=true;}
+    if(!elabAlbondigas.proceso||/laurel|pimienta|piment[oó]n/i.test(elabAlbondigas.proceso)){elabAlbondigas.proceso=procesoAlbondigas;changed=true;}
+    if(!elabAlbondigas.raciones_base||elabAlbondigas.raciones_base===10){elabAlbondigas.raciones_base=40;changed=true;}
+    if(!elabAlbondigas.categoria||elabAlbondigas.categoria==='otros'){elabAlbondigas.categoria='segundo';changed=true;}
+    if(!elabAlbondigas.notas||!elabAlbondigas.notas.includes('sin especias')){elabAlbondigas.notas=notasAlbondigas;changed=true;}
+    if(!elabAlbondigas.fichaDetalle||!elabAlbondigas.fichaDetalle.pasos||/laurel|pimienta|piment[oó]n/i.test(elabAlbondigas.fichaDetalle.pasos||'')||!String(elabAlbondigas.fichaDetalle.vidaUtil||'').includes('72 horas')||!String(elabAlbondigas.fichaDetalle.tempCoccion||'').includes('Abatir')){elabAlbondigas.fichaDetalle=fichaDetalleAlbondigas;changed=true;}
+  }
   if(changed){
-    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728_appcc',lomo_piperrada:'20260728_appcc',ensaladilla_rusa:'20260728_appcc'};
+    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728_appcc',lomo_piperrada:'20260728_appcc',ensaladilla_rusa:'20260728_appcc',albondigas_piquillo:'20260728_appcc'};
     if(autoSave)saveDB();
     console.log('[Albaraba] Receta base instalada: '+nombreElab);
   }
