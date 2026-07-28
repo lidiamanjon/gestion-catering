@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-eva-payload-directo1 -->
+<!-- VERSION: v20260728-scroll-sync1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-eva-payload-directo1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-scroll-sync1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-eva-payload-directo1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-scroll-sync1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -3855,7 +3855,7 @@ function initMainCloudRealtime(){
       localStorage.setItem('albaraba_v2',JSON.stringify(DB));
       setSyncStatus('ok');
       if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
-      if(currentSection)nav(currentSection);else nav('dashboard');
+      if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
     }finally{
       _mainCloudApplying=false;
     }
@@ -3899,7 +3899,7 @@ function loadDB(){
           localStorage.removeItem('_albaraba_pending_sync');
           setSyncStatus('ok');
           if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
-          if(currentSection)nav(currentSection);else nav('dashboard');
+          if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
           return;
         }
         const pending=localStorage.getItem('_albaraba_pending_sync')==='1';
@@ -3925,7 +3925,7 @@ function loadDB(){
         localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
         if(mergedPending)saveDB();else setSyncStatus('ok');
         if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
-        if(currentSection)nav(currentSection);else nav('dashboard');
+        if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
       } else if(raw){
         // Firebase vacío pero tenemos datos locales → subirlos
         fbDB.ref('albaraba_v2').set(DB).then(()=>setSyncStatus('ok'));
@@ -4758,7 +4758,9 @@ window.addEventListener('storage',function(e){
 // ═══════════════════════════════════════════════════
 let currentSection='dashboard';
 const WORKER_ALLOWED_SECTIONS=new Set(['dashboard','proveedores','productos','elaboraciones','pedidos','stock','nevera-elab','congelador','mejoras','tareas','recetas','albaranes']);
-function nav(s){
+function nav(s,opts={}){
+  const _keepScroll=opts&&opts.preserveScroll;
+  const _scrollX=window.scrollX||0,_scrollY=window.scrollY||0;
   if(typeof userRole!=='undefined'&&userRole==='trabajador'&&!WORKER_ALLOWED_SECTIONS.has(s)){
     alert('Este apartado está reservado para jefes y oficina.');return;
   }
@@ -4790,7 +4792,7 @@ function nav(s){
   else if(s==='usuarios'){renderUsuarios();}
   _applyRoleDOM();
   closeSidebar();
-  window.scrollTo(0,0);
+  if(_keepScroll)requestAnimationFrame(()=>window.scrollTo(_scrollX,_scrollY));else window.scrollTo(0,0);
 }
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('mobOvl').classList.toggle('open')}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobOvl').classList.remove('open')}
