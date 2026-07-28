@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260728-eva-proximo-impresora1';
+const CACHE_NAME = 'albaraba-appcc-v20260728-etiqueta-62x50-1';
 const APP_SHELL = [
   './',
   './index.html',
