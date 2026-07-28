@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-stock-elab-procesos1 -->
+<!-- VERSION: v20260728-eva-fechas-precios1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-stock-elab-procesos1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-eva-fechas-precios1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-stock-elab-procesos1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-eva-fechas-precios1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6152,7 +6152,8 @@ function renderHojasTable(q=''){
   const sorted=[...list].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
   cont.innerHTML=sorted.map(h=>{
     const d=h.fecha?new Date(h.fecha+'T00:00:00'):null;
-    const dateStr=d&&!Number.isNaN(d.getTime())?d.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}):'Fecha pendiente';
+    const serviceDateHint=(h.fechas_servicio||[]).map(f=>[f.dia,f.fecha,f.hora].filter(Boolean).join(' · ')).filter(Boolean).slice(0,3).join(' / ');
+    const dateStr=d&&!Number.isNaN(d.getTime())?d.toLocaleDateString('es-ES',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}):(serviceDateHint||'Fecha pendiente');
     const evaMissing=[!h.fecha?'fecha':'',!(parseInt(h.pax)>0)?'pax':'',!h.cliente?'cliente':''].filter(Boolean);
     const appccTotal=(h.menu||[]).length,appccDone=(h.menu||[]).filter(m=>m.appcc_estado==='completada').length,appccEnProceso=(h.menu||[]).filter(m=>m.appcc_estado==='elaborada').length;
     const fact=h.facturacion||{},estadoCobro=String(fact.estado_cobro||'pendiente').toLowerCase();
@@ -6219,7 +6220,13 @@ function renderDocumentacionEvento(h){
 function renderHojaBody(h){
   // Stock check
   const check=checkStockHoja(h);
-  const menuItems=(h.menu||[]).map(m=>`<li style="margin-bottom:6px">${m.appcc_estado==='completada'?'✅':m.appcc_estado==='elaborada'?'⏳':'○'} ${esc(m.nombre)}${m.pax_override?` <span class="badge b-cat">${m.pax_override} rac.</span>`:''}<span style="font-size:10px;color:${m.appcc_estado==='completada'?'#166534':m.appcc_estado==='elaborada'?'#d97706':'#888'};margin-left:6px">${m.appcc_estado==='completada'?'Trazabilidad finalizada':m.appcc_estado==='elaborada'?'En proceso APPCC':'Pendiente'}</span></li>`).join('');
+  const menuItems=(h.menu||[]).map(m=>{
+    const entrega=[m.dia_servicio||'',m.fecha_servicio||'',m.hora_servicio||''].filter(Boolean).join(' · ');
+    const cantidad=m.pax_override?`${m.pax_override} ${esc(m.unidad_eva||'rac.')}`:'';
+    const precio=Number(m.precio_venta)>0?` · ${Number(m.precio_venta).toLocaleString('es-ES',{style:'currency',currency:'EUR'})}`:'';
+    const uds=m.unidades_totales?` · ${m.unidades_totales} uds totales`:'';
+    return `<li style="margin-bottom:8px">${m.appcc_estado==='completada'?'✅':m.appcc_estado==='elaborada'?'⏳':'○'} <strong>${esc(m.nombre)}</strong>${cantidad?` <span class="badge b-cat">${cantidad}</span>`:''}${entrega?` <span class="badge" style="background:#eef4ff;color:#1a4fa8">${esc(entrega)}</span>`:''}${precio?` <span style="font-size:11px;color:#166534;font-weight:700">${precio}</span>`:''}${uds?` <span style="font-size:11px;color:#666">${uds}</span>`:''}<span style="font-size:10px;color:${m.appcc_estado==='completada'?'#166534':m.appcc_estado==='elaborada'?'#d97706':'#888'};margin-left:6px">${m.appcc_estado==='completada'?'Trazabilidad finalizada':m.appcc_estado==='elaborada'?'En proceso APPCC':'Pendiente'}</span>${m.observaciones?`<div style="font-size:11px;color:#64748b;margin-left:18px;margin-top:2px">${esc(m.observaciones)}</div>`:''}</li>`;
+  }).join('');
   const stockHTML=check.length?`
     <div style="margin-bottom:14px">
       <div style="font-weight:600;font-size:13px;margin-bottom:4px">📊 Estado de stock para este servicio</div>
@@ -7637,14 +7644,29 @@ function _evaFindElab(nombre){
   const datos=src.datos_evento||src.evento||src.event||src.datos||src.cabecera||src.general||src;
   const pick=(...vals)=>vals.find(v=>v!==undefined&&v!==null&&String(v).trim()!=='')||'';
   const asArr=(v)=>Array.isArray(v)?v:(v&&typeof v==='object'?Object.values(v):[]);
+  const parseMoney=(v)=>{if(v===undefined||v===null||v==='')return 0;const n=Number(String(v).replace(/[^0-9,.-]/g,'').replace(',','.'));return Number.isFinite(n)?n:0;};
+  const parseQty=(...vals)=>vals.map(v=>parseFloat(String(v??'').replace(',','.'))).find(v=>Number.isFinite(v)&&v>0)||0;
+  const cleanDate=(v)=>{const t=String(v||'').trim();if(!t||t==='null')return '';const iso=(t.match(/\\d{4}-\\d{2}-\\d{2}/)||[])[0];if(iso)return iso;const es=t.match(/(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{2,4})/);if(es){const y=es[3].length===2?'20'+es[3]:es[3];return y+'-'+es[2].padStart(2,'0')+'-'+es[1].padStart(2,'0');}return '';};
+  const cleanTime=(v)=>{const t=String(v||'').trim();if(!t||t==='null')return '';return (t.match(/\\d{1,2}:\\d{2}/)||[])[0]||t;};
   const findDocUrl=(tipo)=>{
     const docs=asArr(src.documentos||datos.documentos||root.documentos);
     const q=_evaNormText(tipo);
     const d=docs.find(x=>_evaNormText(x?.tipo||x?.type||x?.nombre||x?.name||'').includes(q));
     return d?.url||d?.link||d?.archivo_url||d?.drive_url||'';
   };
-  const nestedServicios=asArr(src.fechas_servicio||src.servicios||src.entregas||datos.fechas_servicio||root.fechas_servicio)
-    .flatMap((serv,si)=>asArr(serv?.elaboraciones||serv?.menu||serv?.items||serv?.lineas).map(it=>({...((typeof it==='string')?{nombre:it}:it||{}),_eva_dia:serv?.dia_indicado||serv?.dia||serv?.nombre||('Entrega '+(si+1)),_eva_fecha:serv?.fecha||'',_eva_hora:serv?.hora||'',_eva_estado_fecha:serv?.estado_fecha||''})));
+  const serviceBlocks=[
+    ...asArr(src.fechas_servicio),...asArr(src.servicios),...asArr(src.entregas),...asArr(src.fechas),...asArr(src.calendario),...asArr(src.agenda),...asArr(src.servicios_programados),
+    ...asArr(datos.fechas_servicio),...asArr(datos.servicios),...asArr(datos.entregas),...asArr(root.fechas_servicio),...asArr(root.servicios),...asArr(root.entregas),...asArr(root.calendario)
+  ].filter((x,i,a)=>x&&typeof x==='object'&&a.indexOf(x)===i);
+  const nestedServicios=serviceBlocks.flatMap((serv,si)=>{
+    const servFecha=cleanDate(pick(serv.fecha,serv.date,serv.fecha_servicio,serv.fecha_entrega,serv.dia_fecha));
+    const servHora=cleanTime(pick(serv.hora,serv.time,serv.hora_servicio,serv.hora_entrega));
+    const servDia=pick(serv.dia_indicado,serv.dia,serv.nombre,serv.name,serv.titulo,serv.title)||('Entrega '+(si+1));
+    return asArr(serv?.elaboraciones||serv?.menu||serv?.items||serv?.lineas||serv?.platos||serv?.productos).map(it=>({
+      ...((typeof it==='string')?{nombre:it}:it||{}),
+      _eva_dia:servDia,_eva_fecha:servFecha,_eva_hora:servHora,_eva_estado_fecha:pick(serv.estado_fecha,serv.estado,serv.status,serv.notas_fecha),_eva_servicio_index:si
+    }));
+  });
   const rawMenu=[
     ...asArr(src.menu),...asArr(src.elaboraciones),...asArr(src.elaboraciones_previstas),...asArr(src.elaboraciones_pendientes),
     ...asArr(src.productionItems),...asArr(src.items),...asArr(src.lineas),...asArr(src.platos),
@@ -7655,20 +7677,36 @@ function _evaFindElab(nombre){
     const data=typeof item==='string'?{nombre:item}:item||{};
     const nombre=pick(data.nombre,data.name,data.elaboracion,data.plato,data.producto,data.descripcion,data.description,data.title,data.concepto);
     const match=_evaFindElab(nombre);
-    const cantidadPositiva=[data.pax_override,data.raciones,data.raciones_previstas,data.quantity,data.cantidad,data.cantidad_prevista,data.unidades,data.pax].map(v=>parseInt(v)).find(v=>v>0)||0;
-    const obs=[data._eva_dia?('Entrega: '+data._eva_dia):'',data._eva_fecha?('Fecha: '+data._eva_fecha):'',data._eva_hora?('Hora: '+data._eva_hora):'',data._eva_estado_fecha?('Estado fecha: '+data._eva_estado_fecha):'',data.unidad&&data.unidad!=='raciones'?('Cantidad indicada: '+(data.cantidad_prevista||data.cantidad||data.raciones||'')+' '+data.unidad):'',data.observaciones||data.notas||data.notes||''].filter(Boolean).join(' · ');
+    const cantidadPositiva=parseQty(data.pax_override,data.raciones,data.raciones_previstas,data.quantity,data.cantidad,data.cantidad_prevista,data.unidades,data.unidades_totales,data.pax);
+    const unidad=pick(data.unidad,data.unit,data.medida)||'raciones';
+    const fechaServicio=cleanDate(pick(data.fecha_servicio,data.fecha_entrega,data.fecha,data.date,data._eva_fecha));
+    const horaServicio=cleanTime(pick(data.hora_servicio,data.hora_entrega,data.hora,data.time,data._eva_hora));
+    const precioUnit=parseMoney(data.precio_unitario??data.unit_price??data.precio_por_racion??data.precio_racion);
+    const importe=parseMoney(data.precio_venta??data.importe??data.total??data.subtotal??data.precio_total??data.precio);
+    const obs=[data._eva_dia?('Entrega: '+data._eva_dia):'',fechaServicio?('Fecha: '+fechaServicio):'',horaServicio?('Hora: '+horaServicio):'',data._eva_estado_fecha?('Estado fecha: '+data._eva_estado_fecha):'',unidad&&unidad!=='raciones'?('Cantidad indicada: '+(data.cantidad_prevista||data.cantidad||data.raciones||cantidadPositiva)+' '+unidad):'',data.unidades_por_racion?('Unidades/racion: '+data.unidades_por_racion):'',data.unidades_totales?('Unidades totales: '+data.unidades_totales):'',data.observaciones||data.notas||data.notes||''].filter(Boolean).join(' · ');
     return{
       elab_id:data.elab_id||data.elaborationId||match?.id||'',
       nombre:match?.nombre||nombre||('Elaboracion '+(index+1)),
       pax_override:Math.max(0,cantidadPositiva),
-      precio_venta:Math.max(0,Number(data.precio_venta??data.importe??data.total??data.precio??data.precio_unitario??0)||0),
+      unidad_eva:unidad,
+      cantidad_eva:Math.max(0,cantidadPositiva),
+      unidades_por_racion:parseQty(data.unidades_por_racion,data.unidades_por_persona,data.piezas_por_racion),
+      unidades_totales:parseQty(data.unidades_totales,data.piezas_totales,data.total_unidades),
+      precio_unitario:precioUnit,
+      precio_venta:Math.max(0,importe||((precioUnit&&cantidadPositiva)?precioUnit*cantidadPositiva:0)),
+      fecha_servicio:fechaServicio,
+      hora_servicio:horaServicio,
+      dia_servicio:data._eva_dia||'',
+      estado_fecha_servicio:data._eva_estado_fecha||'',
       observaciones:obs,
       appcc_estado:data.appcc_estado||'pendiente',
       origen:'eva'
     };
-  }).filter(x=>x.nombre);  const fechaRaw=pick(datos.fecha,datos.date,datos.eventDate,datos.fecha_evento,datos.fecha_servicio,datos.fecha_entrega,src.fecha,src.fecha_evento,root.fecha_evento);
+  }).filter(x=>x.nombre);
+  const firstServiceDate=serviceBlocks.map(s=>cleanDate(pick(s.fecha,s.date,s.fecha_servicio,s.fecha_entrega,s.dia_fecha))).find(Boolean)||menu.map(m=>m.fecha_servicio).find(Boolean)||'';
+  const fechaRaw=pick(datos.fecha,datos.date,datos.eventDate,datos.fecha_evento,datos.fecha_servicio,datos.fecha_entrega,src.fecha,src.fecha_evento,root.fecha_evento,firstServiceDate);
   const horaRaw=pick(datos.hora,datos.time,datos.hora_evento,datos.hora_servicio,datos.hora_entrega,src.hora,src.time);
-  const fecha=String(fechaRaw||'').slice(0,10);
+  const fecha=cleanDate(fechaRaw);
   const hora=horaRaw||((String(fechaRaw||'').match(/(\d{1,2}:\d{2})/)||[])[1]||'');
   const documentos=src.documentos||datos.documentos||{};
   const facturacion=src.facturacion||src.factura||datos.facturacion||datos.factura||{};
@@ -7683,6 +7721,7 @@ function _evaFindElab(nombre){
     pax:Math.max(0,parseInt(datos.pax??datos.asistentes??datos.guests??datos.comensales??src.pax??src.asistentes??root.pax??0)||0),
     servicio:pick(datos.servicio,datos.serviceType,datos.tipo_servicio,datos.tipo,src.servicio,src.tipo)||'Servicio de catering',
     lugar:pick(datos.lugar,datos.ubicacion,datos.location,datos.direccion,src.lugar,src.ubicacion),menu,
+    fechas_servicio:serviceBlocks.map((serv,si)=>({dia:pick(serv.dia_indicado,serv.dia,serv.nombre,serv.name,serv.titulo,serv.title)||('Entrega '+(si+1)),fecha:cleanDate(pick(serv.fecha,serv.date,serv.fecha_servicio,serv.fecha_entrega,serv.dia_fecha)),hora:cleanTime(pick(serv.hora,serv.time,serv.hora_servicio,serv.hora_entrega)),estado_fecha:pick(serv.estado_fecha,serv.estado,serv.status,serv.notas_fecha),elaboraciones:asArr(serv.elaboraciones||serv.menu||serv.items||serv.lineas||serv.platos||serv.productos).length})).filter(x=>x.dia||x.fecha||x.hora||x.elaboraciones),
     postre:pick(datos.postre,src.postre,src.dessert),precio_venta:parseFloat(pick(src.precio_venta,root.precio_venta,src.totalPrice,root.totalPrice,src.price,datos.precio_venta,datos.total_evento,datos.total,root.total_evento,root.total,totalMenu))||0,
     indicaciones:pick(src.indicaciones,src.restricciones,src.instructions,datos.indicaciones,datos.restricciones,datos.alergias),
     notas:pick(src.notas,src.notes,datos.notas,datos.observaciones),fuente:'eva',origen_documento:pick(src.origen_documento,src.source,root.source)||'Eva',
@@ -7756,7 +7795,8 @@ function _evaCompletarPrecios(hoja){
 }
 function confirmEvaImport(){
   const hoja=window._evaHojaPreview;if(!hoja)return;
-  if(!hoja.cliente||!hoja.fecha||!hoja.pax){alert('Faltan cliente, fecha o número de asistentes. Corrige la hoja antes de guardarla.');return;}
+  if(!hoja.cliente){alert('Falta el cliente. Corrige la hoja antes de guardarla.');return;}
+  if(!hoja.fecha||!hoja.pax){hoja.eva_campos_pendientes=[...(hoja.eva_campos_pendientes||[]),...(!hoja.fecha?['fecha']:[]),...(!hoja.pax?['pax']:[])].filter((v,i,a)=>v&&a.indexOf(v)===i);}
   const nuevas=_evaRegistrarElaboracionesNuevas(hoja);
   const sinReceta=_evaCompletarPrecios(hoja);
   const idx=(DB.hojas||[]).findIndex(x=>x.id===hoja.id);

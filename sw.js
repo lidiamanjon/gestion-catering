@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260728-stock-elab-procesos1';
+const CACHE_NAME = 'albaraba-appcc-v20260728-eva-fechas-precios1';
 const APP_SHELL = [
   './',
   './index.html',
