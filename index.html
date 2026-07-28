@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-eva-fechas-precios1 -->
+<!-- VERSION: v20260728-eva-payload-directo1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-eva-fechas-precios1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-eva-payload-directo1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-eva-fechas-precios1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-eva-payload-directo1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -7646,8 +7646,8 @@ function _evaFindElab(nombre){
   const asArr=(v)=>Array.isArray(v)?v:(v&&typeof v==='object'?Object.values(v):[]);
   const parseMoney=(v)=>{if(v===undefined||v===null||v==='')return 0;const n=Number(String(v).replace(/[^0-9,.-]/g,'').replace(',','.'));return Number.isFinite(n)?n:0;};
   const parseQty=(...vals)=>vals.map(v=>parseFloat(String(v??'').replace(',','.'))).find(v=>Number.isFinite(v)&&v>0)||0;
-  const cleanDate=(v)=>{const t=String(v||'').trim();if(!t||t==='null')return '';const iso=(t.match(/\\d{4}-\\d{2}-\\d{2}/)||[])[0];if(iso)return iso;const es=t.match(/(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{2,4})/);if(es){const y=es[3].length===2?'20'+es[3]:es[3];return y+'-'+es[2].padStart(2,'0')+'-'+es[1].padStart(2,'0');}return '';};
-  const cleanTime=(v)=>{const t=String(v||'').trim();if(!t||t==='null')return '';return (t.match(/\\d{1,2}:\\d{2}/)||[])[0]||t;};
+  const cleanDate=(v)=>{const t=String(v||'').trim();if(!t||t==='null')return '';const iso=(t.match(/\d{4}-\d{2}-\d{2}/)||[])[0];if(iso)return iso;const es=t.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{2,4})/);if(es){const y=es[3].length===2?'20'+es[3]:es[3];return y+'-'+es[2].padStart(2,'0')+'-'+es[1].padStart(2,'0');}return '';};
+  const cleanTime=(v)=>{const t=String(v||'').trim();if(!t||t==='null')return '';return (t.match(/\d{1,2}:\d{2}/)||[])[0]||t;};
   const findDocUrl=(tipo)=>{
     const docs=asArr(src.documentos||datos.documentos||root.documentos);
     const q=_evaNormText(tipo);
@@ -7672,7 +7672,7 @@ function _evaFindElab(nombre){
     ...asArr(src.productionItems),...asArr(src.items),...asArr(src.lineas),...asArr(src.platos),
     ...asArr(datos.menu),...asArr(datos.elaboraciones),...asArr(datos.elaboraciones_previstas),...asArr(datos.items),
     ...nestedServicios
-  ];
+  ].filter((x,i,a)=>x&&a.indexOf(x)===i);
   const menu=(Array.isArray(rawMenu)?rawMenu:[]).map((item,index)=>{
     const data=typeof item==='string'?{nombre:item}:item||{};
     const nombre=pick(data.nombre,data.name,data.elaboracion,data.plato,data.producto,data.descripcion,data.description,data.title,data.concepto);
@@ -7704,8 +7704,8 @@ function _evaFindElab(nombre){
     };
   }).filter(x=>x.nombre);
   const firstServiceDate=serviceBlocks.map(s=>cleanDate(pick(s.fecha,s.date,s.fecha_servicio,s.fecha_entrega,s.dia_fecha))).find(Boolean)||menu.map(m=>m.fecha_servicio).find(Boolean)||'';
-  const fechaRaw=pick(datos.fecha,datos.date,datos.eventDate,datos.fecha_evento,datos.fecha_servicio,datos.fecha_entrega,src.fecha,src.fecha_evento,root.fecha_evento,firstServiceDate);
-  const horaRaw=pick(datos.hora,datos.time,datos.hora_evento,datos.hora_servicio,datos.hora_entrega,src.hora,src.time);
+  const fechaRaw=pick(datos.fecha,datos.date,datos.eventDate,datos.startDate,datos.fecha_evento,datos.fecha_servicio,datos.fecha_entrega,datos.fecha_recogida,datos.fecha_inicio,src.fecha,src.fecha_evento,src.fecha_servicio,src.fecha_entrega,root.fecha_evento,root.fecha,firstServiceDate);
+  const horaRaw=pick(datos.hora,datos.time,datos.horario,datos.hora_evento,datos.hora_servicio,datos.hora_entrega,datos.hora_recogida,datos.hora_inicio,datos.startTime,src.hora,src.time,src.horario,src.hora_inicio,root.hora,root.horario);
   const fecha=cleanDate(fechaRaw);
   const hora=horaRaw||((String(fechaRaw||'').match(/(\d{1,2}:\d{2})/)||[])[1]||'');
   const documentos=src.documentos||datos.documentos||{};
@@ -7715,14 +7715,14 @@ function _evaFindElab(nombre){
     id:pick(datos.id_evento,src.id_evento,root.id_evento,datos.id,src.id)||('eva_'+uid()),
     eva_id:pick(datos.id_evento,src.id_evento,root.id_evento,datos.id,src.id),
     fecha,hora,
-    cliente:pick(datos.cliente,datos.customer,datos.clientName,datos.nombre_cliente,src.cliente,root.cliente),
-    empresa:pick(datos.empresa,datos.company,src.empresa),tel:pick(datos.tel,datos.telefono,datos.phone,datos.contacto_telefono,src.tel,src.telefono),
-    email:pick(datos.email,datos.correo,datos.contacto_email,src.email,src.correo),
+    cliente:pick(datos.cliente,datos.customer,datos.clientName,datos.nombre_cliente,datos.contacto_nombre,datos.contacto,src.cliente,src.customer,src.nombre_cliente,root.cliente,root.customer),
+    empresa:pick(datos.empresa,datos.company,datos.razon_social,src.empresa,src.company,root.empresa),tel:pick(datos.tel,datos.telefono,datos.phone,datos.movil,datos.contacto_telefono,src.tel,src.telefono,src.phone,root.tel,root.telefono),
+    email:pick(datos.email,datos.correo,datos.contacto_email,datos.mail,src.email,src.correo,src.mail,root.email,root.correo),
     pax:Math.max(0,parseInt(datos.pax??datos.asistentes??datos.guests??datos.comensales??src.pax??src.asistentes??root.pax??0)||0),
     servicio:pick(datos.servicio,datos.serviceType,datos.tipo_servicio,datos.tipo,src.servicio,src.tipo)||'Servicio de catering',
-    lugar:pick(datos.lugar,datos.ubicacion,datos.location,datos.direccion,src.lugar,src.ubicacion),menu,
+    lugar:pick(datos.lugar,datos.ubicacion,datos.location,datos.direccion,datos.direccion_entrega,datos.lugar_entrega,src.lugar,src.ubicacion,src.direccion,src.direccion_entrega,src.lugar_entrega,root.lugar,root.lugar_entrega),menu,
     fechas_servicio:serviceBlocks.map((serv,si)=>({dia:pick(serv.dia_indicado,serv.dia,serv.nombre,serv.name,serv.titulo,serv.title)||('Entrega '+(si+1)),fecha:cleanDate(pick(serv.fecha,serv.date,serv.fecha_servicio,serv.fecha_entrega,serv.dia_fecha)),hora:cleanTime(pick(serv.hora,serv.time,serv.hora_servicio,serv.hora_entrega)),estado_fecha:pick(serv.estado_fecha,serv.estado,serv.status,serv.notas_fecha),elaboraciones:asArr(serv.elaboraciones||serv.menu||serv.items||serv.lineas||serv.platos||serv.productos).length})).filter(x=>x.dia||x.fecha||x.hora||x.elaboraciones),
-    postre:pick(datos.postre,src.postre,src.dessert),precio_venta:parseFloat(pick(src.precio_venta,root.precio_venta,src.totalPrice,root.totalPrice,src.price,datos.precio_venta,datos.total_evento,datos.total,root.total_evento,root.total,totalMenu))||0,
+    postre:pick(datos.postre,src.postre,src.dessert),precio_venta:parseMoney(pick(src.precio_venta,root.precio_venta,src.totalPrice,root.totalPrice,src.price,datos.precio_venta,datos.total_evento,datos.total,root.total_evento,root.total,totalMenu))||0,
     indicaciones:pick(src.indicaciones,src.restricciones,src.instructions,datos.indicaciones,datos.restricciones,datos.alergias),
     notas:pick(src.notas,src.notes,datos.notas,datos.observaciones),fuente:'eva',origen_documento:pick(src.origen_documento,src.source,root.source)||'Eva',
     realizado:Boolean(src.realizado||datos.realizado),marca:pick(src.marca,datos.marca,datos.brand,root.marca),estado:pick(src.estado,datos.estado)||'pendiente',
@@ -7865,9 +7865,30 @@ function aplicarEstadoDirectoEva(msg,snap){
   snap.ref.update({estado:'aplicado',aplicado_en:ahora});
   if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
 }
+function _evaPayloadFromMsg(msg){
+  msg=msg||{};
+  const body=msg.evento||msg.hoja_servicio||msg.planificacion_eva||msg.planificacionEva||msg.albaraba_appcc||msg.data||msg.payload||msg.event||msg;
+  if(body&&typeof body==='object'&&!Array.isArray(body)){
+    const merged={...msg,...body};
+    merged.id_evento=body.id_evento||body.id||msg.id_evento||msg.id||merged.id_evento;
+    merged.cliente=body.cliente||body.customer||body.clientName||msg.cliente||msg.customer||msg.clientName||merged.cliente;
+    merged.fecha=body.fecha??body.fecha_evento??body.fecha_servicio??msg.fecha??msg.fecha_evento??msg.fecha_servicio??merged.fecha;
+    merged.hora=body.hora??body.hora_evento??body.hora_servicio??msg.hora??msg.hora_evento??msg.hora_servicio??merged.hora;
+    merged.pax=body.pax??body.asistentes??body.comensales??msg.pax??msg.asistentes??msg.comensales??merged.pax;
+    merged.precio_venta=body.precio_venta??body.total_evento??body.total??msg.precio_venta??msg.total_evento??msg.total??merged.precio_venta;
+    merged.documentos={...(msg.documentos||{}),...(body.documentos||{})};
+    return merged;
+  }
+  return msg;
+}
+function _evaMsgHasEventData(msg){
+  const p=_evaPayloadFromMsg(msg);
+  return Boolean(p&&(p.cliente||p.customer||p.clientName||p.nombre_cliente||p.contacto||p.fecha||p.fecha_evento||p.fecha_servicio||p.hora||p.horario||p.fechas_servicio||p.servicios||p.entregas||p.menu||p.elaboraciones||p.elaboraciones_previstas||p.items||p.lineas||p.planificacion_eva||p.hoja_servicio));
+}
 function aplicarEventoEvaDirecto(msg,snap){
-  const hoja=normalizarHojaEva(msg.evento);
-  hoja.eva_id=msg.id_evento||hoja.id;
+  const hoja=normalizarHojaEva(_evaPayloadFromMsg(msg));
+  if(!hoja.cliente&&!(hoja.menu||[]).length){snap.ref.update({estado:'error_payload_incompleto',error:'No se leyeron cliente ni elaboraciones del mensaje EVA',error_en:new Date().toISOString()});return;}
+  hoja.eva_id=msg.id_evento||hoja.eva_id||hoja.id;
   hoja.id=hoja.eva_id;
   hoja.eva_bridge_message_id=snap.key;
   hoja.eva_recibido_en=msg.recibido_en||new Date().toISOString();
@@ -7925,11 +7946,11 @@ function initEvaBridgeSync(){
       }
       snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});return;
     }
-    if(msg.evento&&['pendiente_aplicacion','pendiente_revision','pendiente_datos'].includes(msg.estado)){
+    if(_evaMsgHasEventData(msg)&&(!msg.estado||['pendiente_aplicacion','pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))){
       aplicarEventoEvaDirecto(msg,snap);return;
     }
-    if(!['pendiente_revision','pendiente_datos'].includes(msg.estado)||!msg.evento)return;
-    const hoja=normalizarHojaEva(msg.evento);hoja.eva_id=msg.id_evento||hoja.id;hoja.id=hoja.eva_id;
+    if((msg.estado&&!['pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))||!_evaMsgHasEventData(msg))return;
+    const hoja=normalizarHojaEva(_evaPayloadFromMsg(msg));if(!hoja.cliente&&!(hoja.menu||[]).length){snap.ref.update({estado:'error_payload_incompleto',error:'No se leyeron cliente ni elaboraciones del mensaje EVA',error_en:new Date().toISOString()});return;}hoja.eva_id=msg.id_evento||hoja.eva_id||hoja.id;hoja.id=hoja.eva_id;
     hoja.eva_bridge_message_id=snap.key;hoja.eva_recibido_en=msg.recibido_en||new Date().toISOString();
     hoja.eva_campos_pendientes=Array.isArray(msg.campos_pendientes)?msg.campos_pendientes:[];
     const existente=(DB.hojas||[]).find(h=>h.id===hoja.id||h.eva_id===hoja.eva_id);
