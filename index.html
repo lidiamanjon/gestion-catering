@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-receta-pollo-jardinera1 -->
+<!-- VERSION: v20260728-receta-lomo-piperrada1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-receta-pollo-jardinera1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-receta-lomo-piperrada1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-receta-pollo-jardinera1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-receta-lomo-piperrada1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4487,7 +4487,12 @@ function _installAlbarabaRecetasBase(autoSave=true){
     pimienta:ensureProducto({id:'prod_pimienta_negra',nombre:'Pimienta negra',categoria:'Salsas y condimentos',unidad:'kg'}),
     pimenton:ensureProducto({id:'prod_pimenton_dulce',nombre:'Pimentón dulce',categoria:'Salsas y condimentos',unidad:'kg'}),
     laurel:ensureProducto({id:'prod_laurel',nombre:'Laurel',categoria:'Salsas y condimentos',unidad:'ud'}),
-    tomillo:ensureProducto({id:'prod_tomillo',nombre:'Tomillo',categoria:'Salsas y condimentos',unidad:'kg'})
+    tomillo:ensureProducto({id:'prod_tomillo',nombre:'Tomillo',categoria:'Salsas y condimentos',unidad:'kg'}),
+    lomoAdobado:ensureProducto({id:'prod_lomo_adobado_fileteado',nombre:'Lomo adobado fileteado',categoria:'Carnes',unidad:'kg',alergenos:['dioxido','gluten','soja'],notas:'Producto base para lomo a la piperrada. Racion: 3 filetes/persona, aprox. 56 g por filete. Verificar siempre ficha tecnica del proveedor: adobo puede incorporar sulfitos, gluten o soja.'}),
+    pimientoRojo:ensureProducto({id:'prod_pimiento_rojo',nombre:'Pimiento rojo',categoria:'Verduras y hortalizas',unidad:'kg'}),
+    pimientoVerde:ensureProducto({id:'prod_pimiento_verde',nombre:'Pimiento verde',categoria:'Verduras y hortalizas',unidad:'kg'}),
+    tomateFrito:ensureProducto({id:'prod_tomate_frito',nombre:'Tomate frito',categoria:'Conservas',unidad:'kg'}),
+    azucar:ensureProducto({id:'prod_azucar',nombre:'Azucar',categoria:'Salsas y condimentos',unidad:'kg'})
   };
   const nombreElab='Pollo guisado a la jardinera';
   const ing=[
@@ -4544,8 +4549,62 @@ function _installAlbarabaRecetasBase(autoSave=true){
     if(!elab.notas||!elab.notas.includes('tupper gastronorm extra')){elab.notas='Producción base 40 raciones. Ración: 2 filetes de pechuga/persona. Total 80 filetes, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Alérgenos: verificar caldo de pollo; puede contener apio, gluten o soja según fabricante.';changed=true;}
     if(!elab.fichaDetalle||!elab.fichaDetalle.pasos){elab.fichaDetalle=fichaDetalle;changed=true;}
   }
+  const nombreLomo='Lomo a la Piperrada';
+  const ingLomo=[
+    {producto_id:productos.lomoAdobado,cantidad:6.72,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.cebolla,cantidad:1.5,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.pimientoRojo,cantidad:1,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.pimientoVerde,cantidad:1,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.ajo,cantidad:0.12,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.tomate,cantidad:7,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.tomateFrito,cantidad:2,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.aceite,cantidad:0.45,unidad:'l',modo_cantidad:'total_receta'},
+    {producto_id:productos.sal,cantidad:0.04,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.pimienta,cantidad:0.01,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.azucar,cantidad:0.025,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.laurel,cantidad:4,unidad:'ud',modo_cantidad:'total_receta'}
+  ];
+  const procesoLomo=`1. Preparacion: cortar la cebolla en juliana, cortar los pimientos en tiras y picar el ajo.
+2. Piperrada: rehogar en marmita aceite, ajo y cebolla. Tras unos minutos anadir pimiento rojo y pimiento verde. Cocinar lentamente hasta que toda la verdura quede muy tierna.
+3. Salsa: anadir tomate triturado, tomate frito, azucar y laurel. Cocinar lentamente hasta obtener una salsa homogenea. Rectificar de sal y pimienta teniendo en cuenta que el lomo ya viene adobado.
+4. Lomo: marcar ligeramente el lomo en horno Rational o plancha, sin terminar completamente la coccion. Finalizara durante la regeneracion.
+5. Montaje: colocar 3 filetes por racion en bandeja gastronorm termosellada y cubrir completamente con salsa. La carne nunca debe quedar descubierta.
+6. Salsa extra: preparar 1 tupper gastronorm con aprox. 6 litros de salsa por cada 40 raciones para reforzar durante el servicio.`;
+  const fichaDetalleLomo={
+    pasos:procesoLomo,
+    tempCoccion:'Marcar ligeramente el lomo en Rational o plancha. Regenerar despues en Rational hasta temperatura segura en el centro del producto.',
+    fichaNum:'MA 03-2',
+    conservacion:'Refrigerado 0°C – 4°C',
+    vidaUtil:'Enfriar rapidamente mediante abatidor. Mantener refrigerado entre 0 y 3 °C y no romper la cadena de frio.',
+    consumo:'Servir caliente tras regeneracion. Mantener siempre la carne completamente cubierta por salsa.',
+    aspecto:'Filetes de lomo cubiertos con piperrada de tomate, pimiento y cebolla',
+    olor:'Caracteristico, sin olores anomalos',
+    sabor:'Caracteristico a lomo adobado y salsa piperrada',
+    consistencia:'Lomo jugoso, salsa homogenea y verdura muy tierna',
+    ventaMaterial:'Bandejas gastronorm termoselladas + tupper gastronorm extra de salsa',
+    ventaUnidades:'40 raciones base · 3 filetes por persona · 120 filetes · 6,72 kg lomo · 1 tupper extra salsa 6 l',
+    alergenos:['dioxido','gluten','soja'],
+    alergenosDetalle:[{key:'dioxido',val:'T'},{key:'gluten',val:'T'},{key:'soja',val:'T'}],
+    fechaRev:'07/26'
+  };
+  let elabLomo=DB.elaboraciones.find(e=>norm(e.nombre)===norm(nombreLomo));
+  const notasLomo='Produccion base 40 raciones. Racion: 3 filetes de lomo/persona. Total 120 filetes, aprox. 6,72 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Alergenos: verificar ficha tecnica del lomo adobado; puede incorporar sulfitos, gluten o soja segun proveedor.';
+  if(!elabLomo){
+    DB.elaboraciones.push({
+      id:'elab_lomo_piperrada',nombre:nombreLomo,categoria:'segundo',raciones_base:40,ingredientes:ingLomo,proceso:procesoLomo,
+      notas:notasLomo,foto:'',fichaDetalle:fichaDetalleLomo
+    });
+    changed=true;
+  }else{
+    if(!elabLomo.ingredientes||!elabLomo.ingredientes.length){elabLomo.ingredientes=ingLomo;changed=true;}
+    if(!elabLomo.proceso){elabLomo.proceso=procesoLomo;changed=true;}
+    if(!elabLomo.raciones_base||elabLomo.raciones_base===10){elabLomo.raciones_base=40;changed=true;}
+    if(!elabLomo.categoria||elabLomo.categoria==='otros'){elabLomo.categoria='segundo';changed=true;}
+    if(!elabLomo.notas||!elabLomo.notas.includes('lomo adobado')){elabLomo.notas=notasLomo;changed=true;}
+    if(!elabLomo.fichaDetalle||!elabLomo.fichaDetalle.pasos){elabLomo.fichaDetalle=fichaDetalleLomo;changed=true;}
+  }
   if(changed){
-    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728'};
+    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728',lomo_piperrada:'20260728'};
     if(autoSave)saveDB();
     console.log('[Albaraba] Receta base instalada: '+nombreElab);
   }
