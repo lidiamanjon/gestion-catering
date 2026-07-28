@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-recetas-sin-especias1 -->
+<!-- VERSION: v20260728-ensaladilla-appcc1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-recetas-sin-especias1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-ensaladilla-appcc1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-recetas-sin-especias1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-ensaladilla-appcc1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4492,7 +4492,11 @@ function _installAlbarabaRecetasBase(autoSave=true){
     pimientoRojo:ensureProducto({id:'prod_pimiento_rojo',nombre:'Pimiento rojo',categoria:'Verduras y hortalizas',unidad:'kg'}),
     pimientoVerde:ensureProducto({id:'prod_pimiento_verde',nombre:'Pimiento verde',categoria:'Verduras y hortalizas',unidad:'kg'}),
     tomateFrito:ensureProducto({id:'prod_tomate_frito',nombre:'Tomate frito',categoria:'Conservas',unidad:'kg'}),
-    azucar:ensureProducto({id:'prod_azucar',nombre:'Azucar',categoria:'Salsas y condimentos',unidad:'kg'})
+    azucar:ensureProducto({id:'prod_azucar',nombre:'Azucar',categoria:'Salsas y condimentos',unidad:'kg'}),
+    patata:ensureProducto({id:'prod_patata',nombre:'Patata',categoria:'Verduras y hortalizas',unidad:'kg'}),
+    atunAceite:ensureProducto({id:'prod_atun_aceite_escurrido',nombre:'Atun en aceite escurrido',categoria:'Conservas',unidad:'kg',alergenos:['pescado'],notas:'Escurrir perfectamente antes de incorporar. Alergeno: pescado.'}),
+    huevoCocido:ensureProducto({id:'prod_huevo_cocido',nombre:'Huevo cocido',categoria:'Lacteos y huevos',unidad:'kg',alergenos:['huevos'],notas:'Para ensaladilla: 0,9 kg aprox. 18 huevos por cada 10 kg de produccion. Alergeno: huevo.'}),
+    mayonesaSgSl:ensureProducto({id:'prod_mayonesa_sin_gluten_sin_lactosa',nombre:'Mayonesa sin gluten y sin lactosa',categoria:'Salsas y condimentos',unidad:'kg',alergenos:['huevos','mostaza'],notas:'Usar siempre mayonesa sin gluten y sin lactosa. Verificar ficha tecnica: contiene huevo y puede contener mostaza segun fabricante.'})
   };
   const nombreElab='Pollo guisado a la jardinera';
   const ing=[
@@ -4514,10 +4518,10 @@ function _installAlbarabaRecetasBase(autoSave=true){
 5. Salsa extra: preparar 1 tupper gastronorm adicional con aprox. 6 litros de salsa por cada 40 raciones para servicio.`;
   const fichaDetalle={
     pasos:proceso,
-    tempCoccion:'Cocinar completamente el pollo. Regenerar en Rational hasta temperatura segura en el centro del producto.',
+    tempCoccion:'Cocinar completamente el pollo. Abatir de 60°C a 10°C en menos de 2 horas. No lleva pasteurizacion final; se regenera en Rational hasta temperatura segura en el centro del producto.',
     fichaNum:'MA 03-1',
     conservacion:'Refrigerado 0°C – 4°C',
-    vidaUtil:'Mantener entre 0 y 3 °C. Usar según criterio APPCC interno tras abatimiento y sin romper cadena de frío.',
+    vidaUtil:'72 horas en nevera a 0-3 °C tras abatimiento correcto, envasado cerrado y cadena de frio mantenida.',
     consumo:'Servir caliente tras regeneración. Mantener el pollo siempre cubierto con salsa.',
     aspecto:'Filetes de pollo cubiertos con salsa jardinera y verduras visibles',
     olor:'Característico, sin olores anómalos',
@@ -4543,7 +4547,7 @@ function _installAlbarabaRecetasBase(autoSave=true){
     if(!elab.raciones_base||elab.raciones_base===10){elab.raciones_base=40;changed=true;}
     if(!elab.categoria||elab.categoria==='otros'){elab.categoria='segundo';changed=true;}
     if(!elab.notas||!elab.notas.includes('sin especias')){elab.notas='Producción base 40 raciones. Ración: 2 filetes de pechuga/persona. Total 80 filetes, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Receta sin especias y sin laurel. Alérgenos: verificar caldo de pollo; puede contener apio, gluten o soja según fabricante.';changed=true;}
-    if(!elab.fichaDetalle||!elab.fichaDetalle.pasos||/laurel|tomillo|piment[oó]n|pimienta/i.test(elab.fichaDetalle.pasos||'')){elab.fichaDetalle=fichaDetalle;changed=true;}
+    if(!elab.fichaDetalle||!elab.fichaDetalle.pasos||/laurel|tomillo|piment[oó]n|pimienta/i.test(elab.fichaDetalle.pasos||'')||!String(elab.fichaDetalle.vidaUtil||'').includes('72 horas')||!String(elab.fichaDetalle.tempCoccion||'').includes('Abatir')){elab.fichaDetalle=fichaDetalle;changed=true;}
   }
   const nombreLomo='Lomo a la Piperrada';
   const ingLomo=[
@@ -4567,10 +4571,10 @@ function _installAlbarabaRecetasBase(autoSave=true){
 6. Salsa extra: preparar 1 tupper gastronorm con aprox. 6 litros de salsa por cada 40 raciones para reforzar durante el servicio.`;
   const fichaDetalleLomo={
     pasos:procesoLomo,
-    tempCoccion:'Marcar ligeramente el lomo en Rational o plancha. Regenerar despues en Rational hasta temperatura segura en el centro del producto.',
+    tempCoccion:'Marcar ligeramente el lomo en Rational o plancha. Abatir de 60°C a 10°C en menos de 2 horas. No lleva pasteurizacion final; se regenera despues en Rational hasta temperatura segura en el centro del producto.',
     fichaNum:'MA 03-2',
     conservacion:'Refrigerado 0°C – 4°C',
-    vidaUtil:'Enfriar rapidamente mediante abatidor. Mantener refrigerado entre 0 y 3 °C y no romper la cadena de frio.',
+    vidaUtil:'72 horas en nevera a 0-3 °C tras abatimiento correcto, envasado cerrado y cadena de frio mantenida.',
     consumo:'Servir caliente tras regeneracion. Mantener siempre la carne completamente cubierta por salsa.',
     aspecto:'Filetes de lomo cubiertos con piperrada de tomate, pimiento y cebolla',
     olor:'Caracteristico, sin olores anomalos',
@@ -4596,10 +4600,59 @@ function _installAlbarabaRecetasBase(autoSave=true){
     if(!elabLomo.raciones_base||elabLomo.raciones_base===10){elabLomo.raciones_base=40;changed=true;}
     if(!elabLomo.categoria||elabLomo.categoria==='otros'){elabLomo.categoria='segundo';changed=true;}
     if(!elabLomo.notas||!elabLomo.notas.includes('sin especias')){elabLomo.notas=notasLomo;changed=true;}
-    if(!elabLomo.fichaDetalle||!elabLomo.fichaDetalle.pasos||/laurel|pimienta/i.test(elabLomo.fichaDetalle.pasos||'')){elabLomo.fichaDetalle=fichaDetalleLomo;changed=true;}
+    if(!elabLomo.fichaDetalle||!elabLomo.fichaDetalle.pasos||/laurel|pimienta/i.test(elabLomo.fichaDetalle.pasos||'')||!String(elabLomo.fichaDetalle.vidaUtil||'').includes('72 horas')||!String(elabLomo.fichaDetalle.tempCoccion||'').includes('Abatir')){elabLomo.fichaDetalle=fichaDetalleLomo;changed=true;}
+  }
+  const nombreEnsaladilla='Ensaladilla rusa';
+  const ingEnsaladilla=[
+    {producto_id:productos.patata,cantidad:6,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.atunAceite,cantidad:1.5,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.huevoCocido,cantidad:0.9,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.cebolla,cantidad:0.3,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.mayonesaSgSl,cantidad:1.3,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.sal,cantidad:0.045,unidad:'kg',modo_cantidad:'total_receta'}
+  ];
+  const procesoEnsaladilla=`1. Coccion de patata: lavar la patata y cocer con piel hasta que este tierna. Escurrir, dejar templar, pelar y cortar en dados pequenos sin romper la patata.
+2. Preparacion: escurrir perfectamente el atun. Cocer los huevos, enfriarlos, pelarlos y picarlos fino. Picar la cebolla muy fina.
+3. Abatidor / enfriado: abatir patata y huevo cocido antes de mezclar. La mezcla final debe mantenerse fria; no dejar producto a temperatura ambiente.
+4. Mezclado: introducir patata, atun, huevo y cebolla en marmita o mezcladora. Anadir mayonesa sin gluten y sin lactosa. Incorporar lentamente con pala para no romper la patata. Rectificar solo de sal. No anadir pimienta, vinagre ni limon.
+5. Envasado: llenar bolsas alimentarias o recipientes, eliminar aire, termosellar o envasar al vacio y etiquetar. No comprimir en exceso para no perder textura.
+6. Pasteurizacion: no aplicar pasteurizacion final a la ensaladilla terminada. Usar mayonesa industrial/pasteurizada y mantener siempre en frio.
+7. Servicio: servir siempre bien fria. Remover suavemente si fuese necesario y no anadir mas mayonesa una vez terminada salvo autorizacion de produccion.`;
+  const fichaDetalleEnsaladilla={
+    pasos:procesoEnsaladilla,
+    tempCoccion:'Cocer patata y huevo. Abatir/enfriar rapidamente antes del mezclado. Producto final frio: no lleva pasteurizacion final; usar mayonesa industrial/pasteurizada.',
+    fichaNum:'MA 01-1',
+    conservacion:'Refrigerado 0°C – 3°C',
+    vidaUtil:'48 horas en nevera a 0-3 °C tras elaboracion y envasado correcto. No congelar una vez elaborada.',
+    consumo:'Servir bien fria. Mantener siempre refrigerada y no romper cadena de frio.',
+    aspecto:'Mezcla cremosa de patata, atun, huevo, cebolla y mayonesa',
+    olor:'Caracteristico, fresco, sin olores anomalos',
+    sabor:'Caracteristico a ensaladilla rusa, sin vinagre ni limon',
+    consistencia:'Cremosa, homogenea y consistente, con patata entera no triturada',
+    ventaMaterial:'Bolsa alimentaria termosellada o envasada al vacio',
+    ventaUnidades:'Produccion base 10 kg · rendimiento aproximado 65-70 raciones de 140-150 g · sin tupper adicional de salsa',
+    alergenos:['huevos','pescado','mostaza'],
+    alergenosDetalle:[{key:'huevos',val:'C'},{key:'pescado',val:'C'},{key:'mostaza',val:'T'}],
+    fechaRev:'07/26'
+  };
+  let elabEnsaladilla=DB.elaboraciones.find(e=>norm(e.nombre)===norm(nombreEnsaladilla));
+  const notasEnsaladilla='Produccion base 10 kg. Rendimiento aproximado 65-70 raciones de 140-150 g. Receta sin especias: no anadir pimienta. No lleva vinagre ni limon. No lleva tupper adicional de salsa. Alergenos: contiene huevo y pescado; puede contener mostaza segun mayonesa. Vida util: 48 h en nevera a 0-3 °C tras elaboracion y envasado correcto.';
+  if(!elabEnsaladilla){
+    DB.elaboraciones.push({
+      id:'elab_ensaladilla_rusa',nombre:nombreEnsaladilla,categoria:'primero',raciones_base:70,ingredientes:ingEnsaladilla,proceso:procesoEnsaladilla,
+      notas:notasEnsaladilla,foto:'',fichaDetalle:fichaDetalleEnsaladilla
+    });
+    changed=true;
+  }else{
+    if(!elabEnsaladilla.ingredientes||!elabEnsaladilla.ingredientes.length||elabEnsaladilla.ingredientes.some(i=>i.producto_id===productos.pimienta)){elabEnsaladilla.ingredientes=ingEnsaladilla;changed=true;}
+    if(!elabEnsaladilla.proceso||/pimienta|vinagre|lim[oó]n/i.test(elabEnsaladilla.proceso)){elabEnsaladilla.proceso=procesoEnsaladilla;changed=true;}
+    if(!elabEnsaladilla.raciones_base||elabEnsaladilla.raciones_base===10){elabEnsaladilla.raciones_base=70;changed=true;}
+    if(!elabEnsaladilla.categoria||elabEnsaladilla.categoria==='otros'){elabEnsaladilla.categoria='primero';changed=true;}
+    if(!elabEnsaladilla.notas||!elabEnsaladilla.notas.includes('Vida util')){elabEnsaladilla.notas=notasEnsaladilla;changed=true;}
+    if(!elabEnsaladilla.fichaDetalle||!elabEnsaladilla.fichaDetalle.pasos||!String(elabEnsaladilla.fichaDetalle.vidaUtil||'').includes('48 horas')||!String(elabEnsaladilla.fichaDetalle.tempCoccion||'').includes('Producto final frio')){elabEnsaladilla.fichaDetalle=fichaDetalleEnsaladilla;changed=true;}
   }
   if(changed){
-    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728_sin_especias',lomo_piperrada:'20260728_sin_especias'};
+    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728_appcc',lomo_piperrada:'20260728_appcc',ensaladilla_rusa:'20260728_appcc'};
     if(autoSave)saveDB();
     console.log('[Albaraba] Receta base instalada: '+nombreElab);
   }

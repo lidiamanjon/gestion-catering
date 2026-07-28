@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260728-recetas-sin-especias1';
+const CACHE_NAME = 'albaraba-appcc-v20260728-ensaladilla-appcc1';
 const APP_SHELL = [
   './',
   './index.html',
