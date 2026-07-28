@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260728-etiqueta-62x35-1 -->
+<!-- VERSION: v20260728-etiqueta-62x50-estable1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -16934,7 +16934,7 @@ function renderCfg(){
           <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">
             <button class="btn btn-sm btn-outline" onclick="setLabelSizePreset('QL-29x90mm')">Pequeña 29×90</button>
             <button class="btn btn-sm btn-outline" onclick="setLabelSizePreset('QL-62x100mm')">Grande 62×100</button>
-            <button class="btn btn-sm btn-outline" onclick="setLabelSizePreset('QL-62mm-cont')">Rollo 62×35 compacto</button>
+            <button class="btn btn-sm btn-outline" onclick="setLabelSizePreset('QL-62mm-cont')">Rollo 62×50 estable</button>
           </div>
         </div>
         <div class="alert-box alert-ok" style="font-size:12px;font-weight:400">
@@ -18252,7 +18252,7 @@ function savePlagas(){
 const LBL_SIZES={
   'QL-62x100mm':{label:'Brother QL grande 62×100mm',w:'62mm',h:'100mm',hPrint:'100mm',wpx:234,hpx:378,brother:true},
   'QL-29x90mm': {label:'Brother QL pequeña 29×90mm', w:'29mm',h:'90mm', hPrint:'90mm', wpx:110,hpx:340,brother:true,narrow:true},
-  'QL-62mm-cont':{label:'Brother QL rollo continuo 62×35mm compacto',w:'62mm',h:'auto',hPrint:'35mm',wpx:234,hpx:0,brother:true,cont:true},
+  'QL-62mm-cont':{label:'Brother QL rollo continuo 62×50mm estable',w:'62mm',h:'auto',hPrint:'50mm',wpx:234,hpx:0,brother:true,cont:true},
   'QL-29mm-cont':{label:'Brother QL rollo continuo 29mm',w:'29mm',h:'auto',hPrint:'90mm',wpx:110,hpx:0,brother:true,cont:true,narrow:true},
   'QL-62x60mm': {label:'Brother QL 62×60mm', w:'62mm',h:'60mm', hPrint:'60mm', wpx:234,hpx:227,brother:true},
   'QL-62x29mm': {label:'Brother QL 62×29mm', w:'62mm',h:'29mm', hPrint:'29mm', wpx:234,hpx:110,brother:true},
@@ -18790,3 +18790,4 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
