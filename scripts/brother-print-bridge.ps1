@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260728-etiqueta-62x35"
+$BridgeVersion = "20260728-etiqueta-62x50-estable"
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
@@ -204,7 +204,7 @@ function Print-LabelsDirect($job,$token,$printerName) {
   $doc.PrinterSettings.PrinterName = $printerName
   $doc.DocumentName = "ALBARABA etiquetas $id"
   $doc.PrintController = New-Object System.Drawing.Printing.StandardPrintController
-  $doc.DefaultPageSettings.PaperSize = New-Object System.Drawing.Printing.PaperSize("ALBARABA_62x35",244,138)
+  $doc.DefaultPageSettings.PaperSize = New-Object System.Drawing.Printing.PaperSize("ALBARABA_62x50",244,197)
   $doc.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0,0,0,0)
   $doc.DefaultPageSettings.Landscape = $false
   $script:LabelIndex = 0
@@ -226,10 +226,10 @@ function Print-LabelsDirect($job,$token,$printerName) {
     $g.DrawString('ALBARABA SL',$small,$gray,3,2)
     $g.DrawString($l.producto,$titleFont,$black,3,5)
     $g.DrawString(($l.destino).ToUpper(),$mid,$blue,3,14)
-    if($l.lote){ $g.DrawString(('LOTE: ' + $l.lote),$mid,$black,3,25) }
-    $g.DrawString(('CREADA: ' + $l.creada),$small,$gray,3,32)
-    if($l.hecha){ $g.DrawString(('HECHA POR: ' + $l.hecha),$small,$gray,3,37) }
-    $g.DrawString('CONSUMIR ANTES DE:',$small,$gray,3,42)
+    if($l.lote){ $g.DrawString(('LOTE: ' + $l.lote),$mid,$black,3,19) }
+    $g.DrawString(('CREADA: ' + $l.creada),$small,$gray,3,24)
+    if($l.hecha){ $g.DrawString(('HECHA POR: ' + $l.hecha),$small,$gray,3,28) }
+    $g.DrawString('CONSUMIR ANTES:',$small,$gray,3,32)
     $g.DrawString($l.cad,$cadFont,$red,27,30)
     $titleFont.Dispose(); $red.Dispose(); $blue.Dispose(); $small.Dispose(); $mid.Dispose(); $cadFont.Dispose()
     $script:LabelIndex++
