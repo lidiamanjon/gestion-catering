@@ -16953,6 +16953,10 @@ function renderCfg(){
     </div>`;
 }
 function testPrint(){
+  if(localStorage.getItem('a_print_bridge')!=='0'&&fbDB&&fbAuth&&fbAuth.currentUser&&typeof _batchPrint==='function'){
+    _batchPrint([{r:{id:'test_'+Date.now(),producto:'Prueba ALBARABA',lote:_etqAutoLot('Prueba ALBARABA'),dlc:_etqDefaultDlc(),caducidad:_etqDefaultDlc(),destino:'nevera',ts:new Date().toISOString(),etqEmp:_etqCurrentWorker(),proceso:['prueba impresora']},cop:1,tipo:'test'}]);
+    return;
+  }
   const size=getLabelSize();
   const wMm=parseFloat(size.w);
   const hPrint=size.hPrint||'100mm';
