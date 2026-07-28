@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'albaraba-appcc-v20260727-etiquetas-tanda1';
+const CACHE_NAME = 'albaraba-appcc-v20260728-pistola-recepcion1';
 const APP_SHELL = [
   './',
   './index.html',
