@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-receta-lomo-piperrada1 -->
+<!-- VERSION: v20260728-recetas-sin-especias1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-receta-lomo-piperrada1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-recetas-sin-especias1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-receta-lomo-piperrada1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-recetas-sin-especias1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4505,14 +4505,10 @@ function _installAlbarabaRecetasBase(autoSave=true){
     {producto_id:productos.tomate,cantidad:2,unidad:'kg',modo_cantidad:'total_receta'},
     {producto_id:productos.caldo,cantidad:5,unidad:'l',modo_cantidad:'total_receta'},
     {producto_id:productos.aceite,cantidad:0.45,unidad:'l',modo_cantidad:'total_receta'},
-    {producto_id:productos.sal,cantidad:0.07,unidad:'kg',modo_cantidad:'total_receta'},
-    {producto_id:productos.pimienta,cantidad:0.012,unidad:'kg',modo_cantidad:'total_receta'},
-    {producto_id:productos.pimenton,cantidad:0.025,unidad:'kg',modo_cantidad:'total_receta'},
-    {producto_id:productos.laurel,cantidad:4,unidad:'ud',modo_cantidad:'total_receta'},
-    {producto_id:productos.tomillo,cantidad:0.006,unidad:'kg',modo_cantidad:'total_receta'}
+    {producto_id:productos.sal,cantidad:0.07,unidad:'kg',modo_cantidad:'total_receta'}
   ];
   const proceso=`1. Preparación: picar la cebolla, laminar el ajo, pelar y cortar la zanahoria en rodajas, escurrir los champiñones y preparar los guisantes.
-2. Salsa: añadir aceite, ajo y cebolla en marmita. Pochar lentamente hasta que la cebolla quede transparente. Añadir zanahoria y champiñón y cocinar unos minutos. Incorporar tomate triturado y reducir ligeramente. Añadir caldo de pollo, laurel, tomillo y pimentón. Cocer lentamente hasta obtener salsa homogénea. Añadir guisantes y rectificar de sal y pimienta.
+2. Salsa: añadir aceite, ajo y cebolla en marmita. Pochar lentamente hasta que la cebolla quede transparente. Añadir zanahoria y champiñón y cocinar unos minutos. Incorporar tomate triturado y reducir ligeramente. Añadir caldo de pollo. Cocer lentamente hasta obtener salsa homogénea. Añadir guisantes y rectificar de sal.
 3. Cocción: incorporar los filetes de pollo a la salsa y cocinar suavemente hasta que queden jugosos. Evitar sobrecocer para que no se sequen durante la regeneración.
 4. Montaje: colocar 2 filetes por ración en bandeja gastronorm termosellada. Cubrir completamente con salsa y verduras. No debe quedar pollo al aire.
 5. Salsa extra: preparar 1 tupper gastronorm adicional con aprox. 6 litros de salsa por cada 40 raciones para servicio.`;
@@ -4537,17 +4533,17 @@ function _installAlbarabaRecetasBase(autoSave=true){
   if(!elab){
     DB.elaboraciones.push({
       id:'elab_pollo_guisado_jardinera',nombre:nombreElab,categoria:'segundo',raciones_base:40,ingredientes:ing,proceso,
-      notas:'Producción base 40 raciones. Ración: 2 filetes de pechuga/persona. Total 80 filetes, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Alérgenos: verificar caldo de pollo; puede contener apio, gluten o soja según fabricante.',
+      notas:'Producción base 40 raciones. Ración: 2 filetes de pechuga/persona. Total 80 filetes, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Receta sin especias y sin laurel. Alérgenos: verificar caldo de pollo; puede contener apio, gluten o soja según fabricante.',
       foto:'',fichaDetalle
     });
     changed=true;
   }else{
-    if(!elab.ingredientes||!elab.ingredientes.length){elab.ingredientes=ing;changed=true;}
-    if(!elab.proceso){elab.proceso=proceso;changed=true;}
+    if(!elab.ingredientes||!elab.ingredientes.length||elab.ingredientes.some(i=>[productos.pimienta,productos.pimenton,productos.laurel,productos.tomillo].includes(i.producto_id))){elab.ingredientes=ing;changed=true;}
+    if(!elab.proceso||/laurel|tomillo|piment[oó]n|pimienta/i.test(elab.proceso)){elab.proceso=proceso;changed=true;}
     if(!elab.raciones_base||elab.raciones_base===10){elab.raciones_base=40;changed=true;}
     if(!elab.categoria||elab.categoria==='otros'){elab.categoria='segundo';changed=true;}
-    if(!elab.notas||!elab.notas.includes('tupper gastronorm extra')){elab.notas='Producción base 40 raciones. Ración: 2 filetes de pechuga/persona. Total 80 filetes, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Alérgenos: verificar caldo de pollo; puede contener apio, gluten o soja según fabricante.';changed=true;}
-    if(!elab.fichaDetalle||!elab.fichaDetalle.pasos){elab.fichaDetalle=fichaDetalle;changed=true;}
+    if(!elab.notas||!elab.notas.includes('sin especias')){elab.notas='Producción base 40 raciones. Ración: 2 filetes de pechuga/persona. Total 80 filetes, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Receta sin especias y sin laurel. Alérgenos: verificar caldo de pollo; puede contener apio, gluten o soja según fabricante.';changed=true;}
+    if(!elab.fichaDetalle||!elab.fichaDetalle.pasos||/laurel|tomillo|piment[oó]n|pimienta/i.test(elab.fichaDetalle.pasos||'')){elab.fichaDetalle=fichaDetalle;changed=true;}
   }
   const nombreLomo='Lomo a la Piperrada';
   const ingLomo=[
@@ -4560,13 +4556,12 @@ function _installAlbarabaRecetasBase(autoSave=true){
     {producto_id:productos.tomateFrito,cantidad:2,unidad:'kg',modo_cantidad:'total_receta'},
     {producto_id:productos.aceite,cantidad:0.45,unidad:'l',modo_cantidad:'total_receta'},
     {producto_id:productos.sal,cantidad:0.04,unidad:'kg',modo_cantidad:'total_receta'},
-    {producto_id:productos.pimienta,cantidad:0.01,unidad:'kg',modo_cantidad:'total_receta'},
     {producto_id:productos.azucar,cantidad:0.025,unidad:'kg',modo_cantidad:'total_receta'},
-    {producto_id:productos.laurel,cantidad:4,unidad:'ud',modo_cantidad:'total_receta'}
+    
   ];
   const procesoLomo=`1. Preparacion: cortar la cebolla en juliana, cortar los pimientos en tiras y picar el ajo.
 2. Piperrada: rehogar en marmita aceite, ajo y cebolla. Tras unos minutos anadir pimiento rojo y pimiento verde. Cocinar lentamente hasta que toda la verdura quede muy tierna.
-3. Salsa: anadir tomate triturado, tomate frito, azucar y laurel. Cocinar lentamente hasta obtener una salsa homogenea. Rectificar de sal y pimienta teniendo en cuenta que el lomo ya viene adobado.
+3. Salsa: anadir tomate triturado, tomate frito y azucar. Cocinar lentamente hasta obtener una salsa homogenea. Rectificar de sal teniendo en cuenta que el lomo ya viene adobado.
 4. Lomo: marcar ligeramente el lomo en horno Rational o plancha, sin terminar completamente la coccion. Finalizara durante la regeneracion.
 5. Montaje: colocar 3 filetes por racion en bandeja gastronorm termosellada y cubrir completamente con salsa. La carne nunca debe quedar descubierta.
 6. Salsa extra: preparar 1 tupper gastronorm con aprox. 6 litros de salsa por cada 40 raciones para reforzar durante el servicio.`;
@@ -4588,7 +4583,7 @@ function _installAlbarabaRecetasBase(autoSave=true){
     fechaRev:'07/26'
   };
   let elabLomo=DB.elaboraciones.find(e=>norm(e.nombre)===norm(nombreLomo));
-  const notasLomo='Produccion base 40 raciones. Racion: 3 filetes de lomo/persona. Total 120 filetes, aprox. 6,72 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Alergenos: verificar ficha tecnica del lomo adobado; puede incorporar sulfitos, gluten o soja segun proveedor.';
+  const notasLomo='Produccion base 40 raciones. Racion: 3 filetes de lomo/persona. Total 120 filetes, aprox. 6,72 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Receta sin especias y sin laurel. Alergenos: verificar ficha tecnica del lomo adobado; puede incorporar sulfitos, gluten o soja segun proveedor.';
   if(!elabLomo){
     DB.elaboraciones.push({
       id:'elab_lomo_piperrada',nombre:nombreLomo,categoria:'segundo',raciones_base:40,ingredientes:ingLomo,proceso:procesoLomo,
@@ -4596,15 +4591,15 @@ function _installAlbarabaRecetasBase(autoSave=true){
     });
     changed=true;
   }else{
-    if(!elabLomo.ingredientes||!elabLomo.ingredientes.length){elabLomo.ingredientes=ingLomo;changed=true;}
-    if(!elabLomo.proceso){elabLomo.proceso=procesoLomo;changed=true;}
+    if(!elabLomo.ingredientes||!elabLomo.ingredientes.length||elabLomo.ingredientes.some(i=>[productos.pimienta,productos.laurel].includes(i.producto_id))){elabLomo.ingredientes=ingLomo;changed=true;}
+    if(!elabLomo.proceso||/laurel|pimienta/i.test(elabLomo.proceso)){elabLomo.proceso=procesoLomo;changed=true;}
     if(!elabLomo.raciones_base||elabLomo.raciones_base===10){elabLomo.raciones_base=40;changed=true;}
     if(!elabLomo.categoria||elabLomo.categoria==='otros'){elabLomo.categoria='segundo';changed=true;}
-    if(!elabLomo.notas||!elabLomo.notas.includes('lomo adobado')){elabLomo.notas=notasLomo;changed=true;}
-    if(!elabLomo.fichaDetalle||!elabLomo.fichaDetalle.pasos){elabLomo.fichaDetalle=fichaDetalleLomo;changed=true;}
+    if(!elabLomo.notas||!elabLomo.notas.includes('sin especias')){elabLomo.notas=notasLomo;changed=true;}
+    if(!elabLomo.fichaDetalle||!elabLomo.fichaDetalle.pasos||/laurel|pimienta/i.test(elabLomo.fichaDetalle.pasos||'')){elabLomo.fichaDetalle=fichaDetalleLomo;changed=true;}
   }
   if(changed){
-    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728',lomo_piperrada:'20260728'};
+    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728_sin_especias',lomo_piperrada:'20260728_sin_especias'};
     if(autoSave)saveDB();
     console.log('[Albaraba] Receta base instalada: '+nombreElab);
   }
