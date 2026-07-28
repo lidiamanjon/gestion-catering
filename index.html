@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-eva-editar-elaboraciones1 -->
+<!-- VERSION: v20260728-eva-orden-14dias1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-eva-editar-elaboraciones1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-eva-orden-14dias1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-eva-editar-elaboraciones1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-eva-orden-14dias1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6151,7 +6151,7 @@ function renderHojasTable(q=''){
   });
   const cont=document.getElementById('hojas-list');
   if(!list.length){cont.innerHTML='<div class="empty" style="padding:40px"><div class="ic">📋</div><p>Sin hojas de servicio. Crea la primera.</p></div>';return}
-  const sorted=[...list].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));
+  const sorted=[...list].sort((a,b)=>{const ad=_planDateMs(a.fecha)||Math.max(...(a.fechas_servicio||[]).map(f=>_planDateMs(f.fecha)).filter(Boolean),0)||0;const bd=_planDateMs(b.fecha)||Math.max(...(b.fechas_servicio||[]).map(f=>_planDateMs(f.fecha)).filter(Boolean),0)||0;return bd-ad;});
   cont.innerHTML=sorted.map(h=>{
     const d=h.fecha?new Date(h.fecha+'T00:00:00'):null;
     const serviceDateHint=(h.fechas_servicio||[]).map(f=>[f.dia,f.fecha,f.hora].filter(Boolean).join(' · ')).filter(Boolean).slice(0,3).join(' / ');
@@ -8045,10 +8045,30 @@ function rechazarPropuestaEva(id){
   saveDB();if(messageId&&fbDB)fbDB.ref('eva_bridge_v1/inbox/'+messageId).update({estado:'rechazado',rechazado_en:new Date().toISOString(),rechazado_por:currentUserEmail||''});
   updateEvaPlanSummary();renderHojasTable();
 }
-function getEvaPendingElaborations(){
+function _planDateMs(v){
+  if(!v)return null;
+  const t=String(v).slice(0,10);
+  const d=new Date(t+'T00:00:00');
+  return Number.isNaN(d.getTime())?null:d.getTime();
+}
+function _itemPlanDate(h,m){
+  return m?.fecha_servicio||h?.fecha||'';
+}
+function _isWithinNextDays(dateStr,days=14){
+  const ms=_planDateMs(dateStr);if(ms===null)return false;
+  const start=new Date();start.setHours(0,0,0,0);
+  const end=new Date(start);end.setDate(end.getDate()+days);
+  return ms>=start.getTime()&&ms<=end.getTime();
+}
+function getEvaPendingElaborations(opts={}){
+  const days=opts.days??14;
   const result=[];(DB.hojas||[]).filter(h=>!h.realizado&&!h.eva_revision_pendiente).forEach(h=>{
-    (h.menu||[]).forEach((m,index)=>{if(m.appcc_estado!=='completada')result.push({hojaId:h.id,menuIndex:index,cliente:h.cliente,fecha:h.fecha,hora:h.hora,lugar:h.lugar,nombre:m.nombre,elab_id:m.elab_id,raciones:m.pax_override||h.pax||0,appcc_estado:m.appcc_estado||'pendiente',appcc_rec_id:m.appcc_rec_id||''});});
-  });return result.sort((a,b)=>String(a.fecha||'9999').localeCompare(String(b.fecha||'9999')));
+    (h.menu||[]).forEach((m,index)=>{
+      const fecha=_itemPlanDate(h,m);
+      if(opts.upcomingOnly!==false&&!_isWithinNextDays(fecha,days))return;
+      if(m.appcc_estado!=='completada')result.push({hojaId:h.id,menuIndex:index,cliente:h.cliente,fecha,hora:m.hora_servicio||h.hora,lugar:h.lugar,nombre:m.nombre,elab_id:m.elab_id,raciones:m.pax_override||h.pax||0,unidad:m.unidad_eva||'raciones',appcc_estado:m.appcc_estado||'pendiente',appcc_rec_id:m.appcc_rec_id||''});
+    });
+  });return result.sort((a,b)=>(_planDateMs(a.fecha)||0)-(_planDateMs(b.fecha)||0));
 }
 function construirExpedienteEventoEva(hojaId){
   const hoja=(DB.hojas||[]).find(h=>h.id===hojaId);if(!hoja)return null;
@@ -13508,13 +13528,13 @@ function renderElab(){
 
   document.getElementById('elab-body').innerHTML=`
     ${evaPend.length?`<div class="card" style="border:2px solid #f59e0b">
-      <div class="card-head" style="background:#fff7ed"><h3>📅 Elaboraciones pendientes de eventos (${evaPend.length})</h3></div>
+      <div class="card-head" style="background:#fff7ed"><h3>📅 Elaboraciones próximas 14 días (${evaPend.length})</h3></div>
       <div>${evaPend.slice(0,30).map(p=>`<div class="list-row" style="align-items:center">
         <div class="list-icon">${p.elab_id?'🍳':'⚠️'}</div>
-        <div class="list-main"><div class="list-title">${esc(p.nombre)}</div><div class="list-sub">${esc(p.cliente)} · ${p.raciones} raciones · ${esc(p.fecha||'sin fecha')}</div><div class="list-sub" style="color:${p.appcc_estado==='elaborada'?'#d97706':'#888'};font-weight:700">${p.appcc_estado==='elaborada'?'⏳ En proceso · falta entrega/finalización':'Pendiente de elaborar'}</div></div>
+        <div class="list-main"><div class="list-title">${esc(p.nombre)}</div><div class="list-sub">${esc(p.cliente)} · ${p.raciones} ${esc(p.unidad||'raciones')} · ${esc(p.fecha||'sin fecha')}${p.hora?' · '+esc(p.hora):''}</div><div class="list-sub" style="color:${p.appcc_estado==='elaborada'?'#d97706':'#888'};font-weight:700">${p.appcc_estado==='elaborada'?'⏳ En proceso · falta entrega/finalización':'Pendiente de elaborar'}</div></div>
         <div class="list-right">${p.appcc_estado==='elaborada'&&p.appcc_rec_id?`<button class="btn btn-sm btn-outline" onclick="viewTrazDetail('${p.appcc_rec_id}')">Continuar trazabilidad →</button>`:p.elab_id?`<button class="btn btn-sm btn-green" onclick="iniciarEvaElab('${p.hojaId}',${p.menuIndex})">Empezar →</button>`:'<span class="list-badge badge-orange">Vincular catálogo</span>'}</div>
       </div>`).join('')}</div>
-    </div>`:`<div class="card" style="border-left:4px solid #27ae60"><div style="padding:14px 16px;color:#166534;font-weight:700">✅ No hay elaboraciones de eventos pendientes</div></div>`}
+    </div>`:`<div class="card" style="border-left:4px solid #27ae60"><div style="padding:14px 16px;color:#166534;font-weight:700">✅ No hay elaboraciones pendientes en los próximos 14 días</div></div>`}
     <div class="card">
       <div class="card-head"><h3>🍳 Producción de hoy (${todayRecs.length})</h3>
         <button class="btn btn-sm btn-green" onclick="openElabModalAPPCC()">+ Nueva</button>
