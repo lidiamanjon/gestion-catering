@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260728-eva-json-flex1';
+const CACHE_NAME = 'albaraba-appcc-v20260728-eva-fechas-servicio1';
 const APP_SHELL = [
   './',
   './index.html',
