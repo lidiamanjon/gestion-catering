@@ -2861,7 +2861,7 @@ function albaranPaso2(){
     const inputs = row.querySelectorAll('input');
     if(_alb.lineas[i]){
       _alb.lineas[i].nombreAlb = inputs[0]?.value?.trim()||'';
-      _alb.lineas[i].lote = inputs[1]?.value?.trim()||'';
+      _alb.lineas[i].lote = (inputs[1]?.value?.trim()||'').toUpperCase();
       _alb.lineas[i].precio = parseFloat(inputs[2]?.value)||0;
       _alb.lineas[i].uds = parseInt(inputs[3]?.value)||1;
     }
@@ -2911,6 +2911,75 @@ function calcSimilitud(a, b){
   return base;
 }
 
+function _albNormProd(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+function _albSeleccionarProducto(i, prodIndex){
+  const p = DB.productos[prodIndex];
+  if(!_alb.lineas[i] || !p) return;
+  _alb.lineas[i]._match = p;
+  _alb.lineas[i]._accion = 'actualizar';
+  _alb.lineas[i]._nombreProd = p.nombre || '';
+  _alb.lineas[i]._provMatch = p.proveedor || _alb.proveedor || '';
+  renderAlbaranPaso2();
+}
+
+function _albRenderProductoSugerencias(i, value){
+  const box = document.getElementById('alb-sug-'+i);
+  if(!box) return;
+  const q = _albNormProd(value);
+  if(!q){
+    box.innerHTML = '';
+    box.style.display = 'none';
+    return;
+  }
+  const opts = DB.productos
+    .map((p,idx)=>({p,idx,n:_albNormProd(p.nombre)}))
+    .filter(x=>x.n.includes(q) || q.split(' ').some(w=>w && x.n.includes(w)))
+    .slice(0,8);
+  if(!opts.length){
+    box.innerHTML = `<div style="font-size:11px;color:#92400e;padding:6px 8px">No aparece en catálogo: se creará como producto nuevo.</div>`;
+    box.style.display = 'block';
+    return;
+  }
+  box.innerHTML = opts.map(x=>`
+    <button type="button" onclick="_albSeleccionarProducto(${i},${x.idx})"
+      style="display:block;width:100%;text-align:left;border:0;background:#fff;padding:7px 8px;border-bottom:1px solid #eef2ff;font-size:12px;cursor:pointer">
+      <strong>${esc(x.p.nombre||'')}</strong>
+      <span style="color:#6b7280">${x.p.proveedor?' · '+esc(x.p.proveedor):''}${x.p.ultimo_lote?' · lote '+esc(x.p.ultimo_lote):''}</span>
+    </button>`).join('');
+  box.style.display = 'block';
+}
+
+function _albElegirProducto(i,value){
+  const v=(value||'').trim();
+  if(!_alb.lineas[i]) return;
+  _alb.lineas[i]._nombreProd = v;
+  const exact = DB.productos.find(p=>(p.nombre||'').toLowerCase()===v.toLowerCase());
+  if(exact){
+    _alb.lineas[i]._match = exact;
+    _alb.lineas[i]._accion = 'actualizar';
+    _alb.lineas[i]._provMatch = exact.proveedor || _alb.proveedor || '';
+  } else if(_alb.lineas[i]._accion!=='ignorar'){
+    _alb.lineas[i]._match = null;
+    _alb.lineas[i]._accion = 'nuevo';
+    _alb.lineas[i]._provMatch = _alb.proveedor || '';
+  }
+  _albRenderProductoSugerencias(i,v);
+}
+
+function _albProductoInput(i,l){
+  return `
+    <input class="fc" style="font-size:12px;margin-top:4px" id="albn-${i}" value="${esc(l._nombreProd||'')}"
+      placeholder="Escribe para buscar producto..." autocomplete="off"
+      onfocus="_albRenderProductoSugerencias(${i},this.value)"
+      oninput="_albElegirProducto(${i},this.value)"
+      onchange="_albElegirProducto(${i},this.value)">
+    <div id="alb-sug-${i}" style="display:none;margin-top:3px;border:1px solid #dbeafe;border-radius:8px;background:#fff;box-shadow:0 8px 18px rgba(15,23,42,.12);overflow:hidden;max-height:220px;overflow-y:auto;position:relative;z-index:50"></div>`;
+}
 function renderAlbaranPaso2(){
   const el = document.getElementById('albaran-main'); if(!el) return;
 
@@ -2940,9 +3009,13 @@ function renderAlbaranPaso2(){
         <div>
           <div style="font-size:13px;font-weight:600">${esc(l.nombreAlb)}</div>
           ${l._accion!=='ignorar'?`
-          <input class="fc" style="font-size:12px;margin-top:4px" id="albn-${i}" value="${esc(l._nombreProd)}"
-            placeholder="Nombre producto en tu app" onchange="_alb.lineas[${i}]._nombreProd=this.value">
-          `:''}
+                    ${_albProductoInput(i,l)}
+          <div style="display:flex;gap:6px;align-items:center;margin-top:5px">
+            <span style="font-size:11px;font-weight:800;color:#dc2626;white-space:nowrap">LOTE *</span>
+            <input class="fc" style="font-size:12px;border-color:${l.lote?'#ddd':'#dc2626'}" id="alblote-${i}" value="${esc(l.lote||'')}"
+              placeholder="Confirmar lote"
+              onchange="_alb.lineas[${i}].lote=this.value.trim().toUpperCase();this.value=_alb.lineas[${i}].lote">
+          </div>`:''}
           ${matchInfo}
         </div>
         <div>
@@ -2990,7 +3063,7 @@ function renderAlbaranPaso2(){
       </div>
       <div style="background:#e8f4fd;padding:10px 14px;font-size:12px;color:#1a4fa8;border-bottom:1px solid #f0f0f0">
         💡 Revisa los nombres y corrígelos si no coinciden. Luego pulsa <strong>Confirmar y guardar</strong>.
-        Solo se actualizan <strong>precio de compra</strong> y <strong>unidades/caja</strong> — sin stock, sin lotes.
+        El <strong>lote es obligatorio</strong>. Se actualizan precio, unidades/caja y último lote del producto.
       </div>
       ${filas}
       <div style="display:flex;gap:10px;padding:14px">
@@ -3014,12 +3087,21 @@ function confirmarAlbaran(){
   // Sync values from DOM
   _alb.lineas.forEach((l,i)=>{
     const np = document.getElementById('albn-'+i);
+    const lp = document.getElementById('alblote-'+i);
     const pp = document.getElementById('albp-'+i);
     const up = document.getElementById('albu-'+i);
-    if(np) l._nombreProd = np.value.trim()||l._nombreProd;
+    if(np) _albElegirProducto(i,np.value.trim()||l._nombreProd);
+    if(lp) l.lote = (lp.value||'').trim().toUpperCase();
     if(pp) l.precio = parseFloat(pp.value)||0;
     if(up) l.uds = parseInt(up.value)||1;
   });
+
+  const sinLote = _alb.lineas.filter(l=>l._accion!=='ignorar' && !(l.lote||'').trim());
+  if(sinLote.length){
+    alert('Falta confirmar el número de lote en '+sinLote.length+' línea(s). El lote es obligatorio para recepción y trazabilidad.');
+    renderAlbaranPaso2();
+    return;
+  }
 
   let actualizados = 0, creados = 0;
 
@@ -3073,6 +3155,7 @@ function confirmarAlbaran(){
     lineas: _alb.lineas.map(l=>({
       nombreAlb: l.nombreAlb,
       nombreProd: l._nombreProd||l.nombreAlb,
+      lote: l.lote||'',
       precio: l.precio||0,
       uds: l.uds||1,
       accion: l._accion,
