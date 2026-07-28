@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260728-eva-orden-14dias1';
+const CACHE_NAME = 'albaraba-appcc-v20260728-eva-proximo-impresora1';
 const APP_SHELL = [
   './',
   './index.html',

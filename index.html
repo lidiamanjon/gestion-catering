@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-eva-orden-14dias1 -->
+<!-- VERSION: v20260728-eva-proximo-impresora1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-eva-orden-14dias1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-eva-proximo-impresora1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-eva-orden-14dias1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-eva-proximo-impresora1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6151,7 +6151,15 @@ function renderHojasTable(q=''){
   });
   const cont=document.getElementById('hojas-list');
   if(!list.length){cont.innerHTML='<div class="empty" style="padding:40px"><div class="ic">📋</div><p>Sin hojas de servicio. Crea la primera.</p></div>';return}
-  const sorted=[...list].sort((a,b)=>{const ad=_planDateMs(a.fecha)||Math.max(...(a.fechas_servicio||[]).map(f=>_planDateMs(f.fecha)).filter(Boolean),0)||0;const bd=_planDateMs(b.fecha)||Math.max(...(b.fechas_servicio||[]).map(f=>_planDateMs(f.fecha)).filter(Boolean),0)||0;return bd-ad;});
+  const todayMs=(()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime();})();
+  const eventDateMs=(h)=>_planDateMs(h.fecha)||Math.min(...(h.fechas_servicio||[]).map(f=>_planDateMs(f.fecha)).filter(Boolean),Infinity)||0;
+  const sorted=[...list].sort((a,b)=>{
+    const ad=eventDateMs(a),bd=eventDateMs(b);
+    const af=ad>=todayMs,bf=bd>=todayMs;
+    if(af!==bf)return af?-1:1;      // primero eventos futuros
+    if(af&&bf)return ad-bd;         // el más cercano arriba
+    return bd-ad;                   // antiguos: los más recientes arriba
+  });
   cont.innerHTML=sorted.map(h=>{
     const d=h.fecha?new Date(h.fecha+'T00:00:00'):null;
     const serviceDateHint=(h.fechas_servicio||[]).map(f=>[f.dia,f.fecha,f.hora].filter(Boolean).join(' · ')).filter(Boolean).slice(0,3).join(' / ');
