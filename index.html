@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-eva-fechas-servicio1 -->
+<!-- VERSION: v20260728-stock-elab-procesos1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-eva-fechas-servicio1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-stock-elab-procesos1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-eva-fechas-servicio1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-stock-elab-procesos1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5730,25 +5730,18 @@ function _storageDestLabel(destino){
     : {body:'nevera-elab-stock-body',icon:'❄️',title:'Elaboraciones en nevera',empty:'La nevera de elaboraciones está vacía',color:'#0ea5e9'};
 }
 function _buildElabStorageList(destino){
-  const elabBatches=ld(K.elab).filter(x=>(x.destino||'nevera')===destino&&x.estado!=='servido'&&x.estado!=='regenerado');
-  const regenRecs=ld(K.regen);
+  const elabBatches=ld(K.elab).filter(x=>(x.destino||'nevera')===destino&&x.estado!=='servido'&&x.estado!=='regenerado'&&x.estado!=='eliminado');
   const items={};
   elabBatches.forEach(b=>{
     const key=(b.producto||b.nombre||'?')+'|'+(b.lote||'');
-    if(!items[key])items[key]={producto:b.producto||b.nombre||'?',lote:b.lote||'',cantTotal:0,regenTotal:0,fechas:[],dlcs:[],ids:[]};
+    const actual=parseFloat(b.cantidad)||parseFloat(b.cantNum)||0;
+    const inicial=parseFloat(b.cantidad_inicial)||parseFloat(b.cantidad_original)||actual||1;
+    if(!items[key])items[key]={producto:b.producto||b.nombre||'?',lote:b.lote||'',cantTotal:0,regenTotal:0,fechas:[],dlcs:[],ids:[],unidad:b.unidad||'raciones'};
     items[key].ids.push(b.id);
-    items[key].cantTotal+=parseFloat(b.cantidad)||parseFloat(b.cantNum)||1;
+    items[key].cantTotal+=inicial;
+    items[key].regenTotal+=Math.max(0,inicial-actual);
     if(b.ts)items[key].fechas.push(b.ts);
     if(b.dlc)items[key].dlcs.push(b.dlc);
-  });
-  regenRecs.forEach(rg=>{
-    const prod=rg.producto||'',lote=rg.lote_ref||rg.lote||'',key=prod+'|'+lote;
-    const used=parseFloat(rg.porciones)||1;
-    if(items[key])items[key].regenTotal+=used;
-    else{
-      const keyP=Object.keys(items).find(k=>k.startsWith(prod+'|'));
-      if(keyP)items[keyP].regenTotal+=used;
-    }
   });
   return Object.values(items).filter(x=>x.cantTotal-x.regenTotal>0).sort((a,b)=>a.producto.localeCompare(b.producto));
 }
@@ -5785,7 +5778,7 @@ function renderElabStorageStock(destino){
             <td style="text-align:center"><strong style="font-size:15px;color:${barColor}">${Math.round(disp)}</strong><div style="height:4px;background:#eee;border-radius:2px;margin-top:3px;width:60px"><div style="height:4px;width:${pct}%;background:${barColor};border-radius:2px"></div></div></td>
             <td style="font-size:12px;color:#555">${dlc}</td>
             <td style="font-size:12px;color:#888">${lastDate}</td>
-            <td><button class="btn btn-sm btn-outline" onclick="openElabStockManual('${destino}','${esc(x.producto)}','${esc(x.lote)}')">+ Entrada</button></td>
+            <td style="white-space:nowrap"><button class="btn btn-sm btn-outline" onclick="openElabStockGroup('${destino}','${x.ids.join(',')}')">Editar</button> <button class="btn btn-sm btn-outline" onclick="openElabStockManual('${destino}','${esc(x.producto)}','${esc(x.lote)}')">+ Entrada</button></td>
           </tr>`;
         }).join('')}</tbody>
       </table></div>
@@ -5827,13 +5820,75 @@ function saveElabStockManual(destino){
   const emp=(document.getElementById('elab-stock-emp')||{}).value?.trim()||currentUserName||currentUserEmail||'';
   const obs=(document.getElementById('elab-stock-obs')||{}).value?.trim()||'Entrada manual de stock de elaboración';
   const recs=ld(K.elab);
-  recs.push({id:genId(),producto,cantidad,unidad,lote,dlc,emp,obs,destino,estado:'en_stock',ts:fecha?new Date(fecha).toISOString():new Date().toISOString(),manual:true,proceso:[`${destino==='congelador'?'🧊':'❄️'} Entrada manual en ${destino} · ${new Date().toLocaleDateString('es-ES')}`]});
+  recs.push({id:genId(),producto,cantidad,cantidad_inicial:cantidad,unidad,lote,dlc,emp,obs,destino,estado:'en_stock',ts:fecha?new Date(fecha).toISOString():new Date().toISOString(),manual:true,proceso:[`${destino==='congelador'?'🧊':'❄️'} Entrada manual en ${destino} · ${new Date().toLocaleDateString('es-ES')}`]});
   sv(K.elab,recs);
   closeModal('modal-universal');
   if(destino==='congelador')renderCongeladorStock();else renderNeveraElabStock();
   alert('✅ Elaboración añadida al stock de '+(destino==='congelador'?'congelador':'nevera'));
 }
 
+function openElabStockGroup(destino, idsStr){
+  const ids=String(idsStr||'').split(',').filter(Boolean);
+  const recs=ld(K.elab)||[];
+  const rows=ids.map(id=>recs.find(r=>r.id===id)).filter(Boolean);
+  if(!rows.length){alert('No encuentro esos lotes. Actualiza la pantalla.');return;}
+  openModal(`<div class="mh"><h2>Editar stock de elaboraciones</h2><button class="mclose" onclick="closeModal('modal-universal')">x</button></div>
+    <div style="font-size:12px;color:#666;margin-bottom:10px">Puedes corregir cantidades, mover de congelador a nevera o eliminar un lote si hay un ajuste real de inventario.</div>
+    <div class="tbl-wrap"><table><thead><tr><th>Elaboracion</th><th>Lote</th><th>Cantidad</th><th>DLC</th><th>Destino</th><th></th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td><strong>${esc(r.producto||'')}</strong></td><td><span class="lot-code">${esc(r.lote||'-')}</span></td><td>${esc(r.cantidad||'')} ${esc(r.unidad||'')}</td><td>${esc(r.dlc||'-')}</td><td>${r.destino==='congelador'?'Congelador':'Nevera'}</td><td style="white-space:nowrap"><button class="btn btn-sm btn-outline" onclick="openEditElabStockItem('${r.id}')">Editar</button> ${r.destino==='congelador'?`<button class="btn btn-sm btn-green" onclick="moveElabStockToNevera('${r.id}')">A nevera</button>`:''} <button class="btn btn-sm btn-del" onclick="deleteElabStockItem('${r.id}')">Eliminar</button></td></tr>`).join('')}
+    </tbody></table></div>`, 'lg');
+}
+function openEditElabStockItem(id){
+  const r=(ld(K.elab)||[]).find(x=>x.id===id);if(!r){alert('No encontrado');return;}
+  openModal(`<div class="mh"><h2>Editar lote de elaboracion</h2><button class="mclose" onclick="closeModal('modal-universal')">x</button></div>
+    <div class="fg"><label class="fl">Elaboracion</label><input class="fc" id="edit-elab-prod" value="${esc(r.producto||'')}"></div>
+    <div class="frow"><div class="fg"><label class="fl">Cantidad disponible</label><input class="fc" id="edit-elab-cant" type="number" step="0.01" min="0" value="${esc(r.cantidad||'')}"></div><div class="fg"><label class="fl">Unidad</label><input class="fc" id="edit-elab-unidad" value="${esc(r.unidad||'raciones')}"></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Lote</label><input class="fc" id="edit-elab-lote" value="${esc(r.lote||'')}"></div><div class="fg"><label class="fl">DLC</label><input class="fc" id="edit-elab-dlc" type="date" value="${esc(r.dlc||'')}"></div></div>
+    <div class="fg"><label class="fl">Motivo / observacion</label><input class="fc" id="edit-elab-obs" value="Ajuste manual de stock"></div>
+    <div class="frow" style="justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-gold" onclick="saveEditElabStockItem('${r.id}')">Guardar ajuste</button></div>`, 'lg');
+}
+function saveEditElabStockItem(id){
+  const recs=ld(K.elab)||[];const i=recs.findIndex(x=>x.id===id);if(i<0)return;
+  const prev=JSON.parse(JSON.stringify(recs[i]));
+  const cantidad=parseFloat((document.getElementById('edit-elab-cant')||{}).value);
+  if(isNaN(cantidad)||cantidad<0){alert('Cantidad no valida');return;}
+  recs[i].producto=(document.getElementById('edit-elab-prod')||{}).value||recs[i].producto;
+  recs[i].cantidad=cantidad;
+  recs[i].cantidad_inicial=Math.max(parseFloat(recs[i].cantidad_inicial)||0,cantidad);
+  recs[i].unidad=(document.getElementById('edit-elab-unidad')||{}).value||recs[i].unidad||'raciones';
+  recs[i].lote=(document.getElementById('edit-elab-lote')||{}).value||recs[i].lote||'';
+  recs[i].dlc=(document.getElementById('edit-elab-dlc')||{}).value||recs[i].dlc||'';
+  recs[i].ajustes=[...(recs[i].ajustes||[]),{ts:new Date().toISOString(),emp:currentUserEmail||'',antes:prev.cantidad,despues:cantidad,motivo:(document.getElementById('edit-elab-obs')||{}).value||'Ajuste manual'}].slice(-20);
+  recs[i].proceso=[...(recs[i].proceso||[]),'Ajuste manual stock - '+new Date().toLocaleString('es-ES')+' - '+prev.cantidad+' -> '+cantidad+' '+(recs[i].unidad||'')];
+  if(cantidad<=0)recs[i].estado='servido';
+  sv(K.elab,recs);closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
+}
+function deleteElabStockItem(id){
+  if(!confirm('Eliminar este lote del stock? Solo hazlo si es un ajuste real.'))return;
+  const recs=ld(K.elab)||[];const i=recs.findIndex(x=>x.id===id);if(i<0)return;
+  recs[i].estado='eliminado';recs[i].eliminado_en=new Date().toISOString();recs[i].eliminado_por=currentUserEmail||'';
+  recs[i].proceso=[...(recs[i].proceso||[]),'Eliminado manualmente de stock - '+new Date().toLocaleString('es-ES')];
+  sv(K.elab,recs);closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
+}
+function moveElabStockToNevera(id){
+  const recs=ld(K.elab)||[];const i=recs.findIndex(x=>x.id===id);if(i<0)return;
+  const dlc=prompt('DLC en nevera (AAAA-MM-DD):', addDays(today(),ELAB_DLC_NEVERA||4));
+  recs[i].destino='nevera';recs[i].estado='en_stock';if(dlc)recs[i].dlc=dlc;
+  recs[i].proceso=[...(recs[i].proceso||[]),'Movido de congelador a nevera - '+new Date().toLocaleString('es-ES')];
+  sv(K.elab,recs);closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
+}
+function consumeElabStock(elabId, qty, motivo){
+  const recs=ld(K.elab)||[];const i=recs.findIndex(x=>x.id===elabId);if(i<0)return '';
+  const curr=parseFloat(recs[i].cantidad)||0;
+  const useQty=qty>0?Math.min(curr,qty):curr;
+  const next=Math.max(0,Math.round((curr-useQty)*1000)/1000);
+  if(!recs[i].cantidad_inicial)recs[i].cantidad_inicial=curr;
+  recs[i].cantidad=next;
+  recs[i].proceso=[...(recs[i].proceso||[]),(motivo||'Consumo')+' - '+new Date().toLocaleString('es-ES')+' - usado '+useQty+' '+(recs[i].unidad||'')+' - quedan '+next];
+  if(next<=0)recs[i].estado='servido'; else recs[i].estado='en_stock';
+  sv(K.elab,recs);
+  return ' Stock elaboracion: quedan '+next+' '+(recs[i].unidad||'')+' de '+(recs[i].producto||'');
+}
 function actualizarStock(id){
   const val=parseFloat(document.getElementById('st-'+id).value);
   if(isNaN(val)){alert('Introduce una cantidad válida');return}
@@ -13897,7 +13952,7 @@ function saveElab(){
   const recepOrigen=(_lr&&_lr.date===today()&&(prod.toLowerCase().includes((_lr.producto||'').toLowerCase().split(' ')[0])||(_lr.producto||'').toLowerCase().includes(prod.toLowerCase().split(' ')[0])))?_lr:null;
   if(recepOrigen) window._lastRecepData=null;
   const evaCtx=window._evaPendingContext||null;
-  const rec={id:genId(),lote:lote||(recepOrigen?recepOrigen.lote:''),producto:prod,cantidad:cant,unidad,emp,destino:dest,dlc,obs,ingredientes,estado:'en_stock',date:today(),ts:new Date().toISOString(),recep_id:recepOrigen?recepOrigen.id:null,
+  const rec={id:genId(),lote:lote||(recepOrigen?recepOrigen.lote:''),producto:prod,cantidad:cant,cantidad_inicial:parseFloat(cant)||0,unidad,emp,destino:dest,dlc,obs,ingredientes,estado:'en_stock',date:today(),ts:new Date().toISOString(),recep_id:recepOrigen?recepOrigen.id:null,
     evento_id:evaCtx?.hojaId||null,id_evento:evaCtx?.id_evento||evaCtx?.hojaId||null,evento_menu_index:evaCtx?.menuIndex??null,
     evento_cliente:evaCtx?.cliente||'',evento_empresa:evaCtx?.empresa||'',evento_fecha:evaCtx?.fecha||'',evento_hora:evaCtx?.hora||'',
     evento_fecha_entrega:evaCtx?.fecha_entrega||evaCtx?.fecha||'',evento_hora_entrega:evaCtx?.hora_entrega||evaCtx?.hora||'',
@@ -15174,7 +15229,7 @@ function openDescongelFor(elabId){
 }
 function openDescongelModal(){
   // Elaboraciones congeladas disponibles
-  const congeladas=ld(K.elab).filter(x=>x.destino==='congelador'&&x.estado!=='servido')
+  const congeladas=ld(K.elab).filter(x=>x.destino==='congelador'&&x.estado!=='servido'&&x.estado!=='regenerado'&&x.estado!=='eliminado')
     .sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   // También productos en congelador (de K.congel)
   const prodCongel=ld(K.congel||'a_congel').filter(x=>!x.fechaDescongel)
@@ -15231,12 +15286,12 @@ function saveDescongel(elabId){
   const dlc=document.getElementById('dc-dlc').value;
   const obs=document.getElementById('dc-obs').value;
   const recs=ld(K.descongel);
-  recs.push({id:genId(),elab_id:elabId,lote_ref:elab.lote,producto:elab.producto,emp,temp_inicio:temp,metodo:met,dlc_fin:dlc,obs,date:today(),ts:new Date().toISOString()});
+  recs.push({id:genId(),elab_id:elabId,lote_ref:elab.lote,producto:elab.producto,emp,temp_inicio:temp,metodo:met,dlc_fin:dlc,obs,estado:'movido_nevera',date:today(),ts:new Date().toISOString()});
   sv(K.descongel,recs);
   // Update elab status
   const elabs=ld(K.elab);const idx=elabs.findIndex(x=>x.id===elabId);
-  if(idx>=0){elabs[idx].estado='en_descongel';elabs[idx].dlc=dlc;sv(K.elab,elabs)}
-  closeModalAPPCC();renderDescongel();
+  if(idx>=0){elabs[idx].estado='en_stock';elabs[idx].destino='nevera';elabs[idx].dlc=dlc;elabs[idx].proceso=[...(elabs[idx].proceso||[]),'Descongelado y pasado a nevera - '+new Date().toLocaleString('es-ES')];sv(K.elab,elabs)}
+  closeModalAPPCC();renderDescongel();try{renderCongeladorStock();renderNeveraElabStock();}catch(e){}
   const last=ld(K.descongel).slice(-1)[0];
   const descongelDate=new Date().toLocaleDateString('es-ES');
   autoLabel({tipo:'🔄 DESCONGELACIÓN',producto:elab.producto,lote:elab.lote,
@@ -15474,40 +15529,16 @@ function saveRegen2(){
     sv(K.noconf,ncs);
   }
   let _stockMsg='';
+  const porcNum=parseFloat(porc)||0;
   if(ref.elabId){
-    const elabs=ld(K.elab)||[];const i=elabs.findIndex(x=>x.id===ref.elabId);
-    if(i!==-1){
-      const elab=elabs[i];
-      elabs[i].estado='servido';sv(K.elab,elabs);
-      // Decrement linked reception stock
-      if(elab.recep_id){
-        const rs=ld(K.recep)||[];const ri=rs.findIndex(x=>x.id===elab.recep_id);
-        if(ri!==-1&&rs[ri].cajas>0){
-          rs[ri].cajas=Math.max(0,(parseInt(rs[ri].cajas)||1)-1);
-          sv(K.recep,rs);
-          _stockMsg=' · Stock: '+(rs[ri].cajas)+' cajas restantes de '+rs[ri].producto;
-        }
-      }
-    }
+    _stockMsg=consumeElabStock(ref.elabId,porcNum,tipo==='caliente'?'Regenerado':'Entrega fria');
   }
   if(ref.descongelId){
     const descs=ld(K.descongel)||[];const i=descs.findIndex(x=>x.id===ref.descongelId);
     if(i!==-1){
       const desc=descs[i];descs[i].estado='servido';sv(K.descongel,descs);
-      // If descongel linked to elab, also mark elab and decrement stock
-      if(desc.elab_id){
-        const elabs=ld(K.elab)||[];const ei=elabs.findIndex(x=>x.id===desc.elab_id);
-        if(ei!==-1){
-          const elab=elabs[ei];elabs[ei].estado='servido';sv(K.elab,elabs);
-          if(elab.recep_id){
-            const rs=ld(K.recep)||[];const ri=rs.findIndex(x=>x.id===elab.recep_id);
-            if(ri!==-1&&rs[ri].cajas>0){
-              rs[ri].cajas=Math.max(0,(parseInt(rs[ri].cajas)||1)-1);
-              sv(K.recep,rs);
-              _stockMsg=' · Stock: '+(rs[ri].cajas)+' cajas restantes de '+rs[ri].producto;
-            }
-          }
-        }
+      if(desc.elab_id&&!ref.elabId){
+        _stockMsg=consumeElabStock(desc.elab_id,porcNum,tipo==='caliente'?'Regenerado tras descongelacion':'Entrega fria tras descongelacion');
       }
     }
   }
@@ -15520,7 +15551,7 @@ function saveRegen2(){
     producto:prod,lote:lote||'—',emp,dlc:null,ts:rec.ts,
     proceso:[ref.origen==='descongelado'?'💧 Descongelado':ref.origen==='elab'?'📦 Elaboración':'📦 Almacén',
       entregaLabel+' · '+regenDate+' · '+temp+'°C'+(tempOk?' ✓':'⚠')]}),300);
-  closeModalAPPCC();renderRegen();
+  closeModalAPPCC();renderRegen();try{renderCongeladorStock();renderNeveraElabStock();}catch(e){}
   if(_stockMsg){
     setTimeout(()=>{
       const t=document.createElement('div');
