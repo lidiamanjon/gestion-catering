@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- VERSION: v20260728-pistola-recepcion1 -->
+<!-- VERSION: v20260728-receta-pollo-jardinera1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260728-pistola-recepcion1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260728-receta-pollo-jardinera1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3788,7 +3788,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260728-pistola-recepcion1&resetApp=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260728-receta-pollo-jardinera1&resetApp=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -3851,6 +3851,7 @@ function initMainCloudRealtime(){
       DB=data;
       applyMigrations();
       _installBidfoodFichas();
+      _installAlbarabaRecetasBase();
       localStorage.setItem('albaraba_v2',JSON.stringify(DB));
       setSyncStatus('ok');
       if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
@@ -3869,12 +3870,14 @@ function loadDB(){
     try{DB=JSON.parse(raw)}catch(e){}
     applyMigrations();
     _installBidfoodFichas();
+      _installAlbarabaRecetasBase();
   } else {
     // Instalación nueva sin Firebase: cargar datos iniciales
     if(!FB_READY){
       DB.elaboraciones=ELAB_INICIAL.map(e=>({id:uid(),nombre:e.n,categoria:e.c,raciones_base:10,ingredientes:[],proceso:'',notas:'',foto:''}));
       DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
       DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};DB.mejoras=[];
+      _installAlbarabaRecetasBase(false);
       saveDB();
     }
   }
@@ -3890,6 +3893,7 @@ function loadDB(){
           DB=data;
           applyMigrations();
           _installBidfoodFichas();
+      _installAlbarabaRecetasBase();
           localStorage.setItem('albaraba_v2',JSON.stringify(DB));
           localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
           localStorage.removeItem('_albaraba_pending_sync');
@@ -3916,6 +3920,7 @@ function loadDB(){
         }
         applyMigrations();
         _installBidfoodFichas();
+      _installAlbarabaRecetasBase();
         localStorage.setItem('albaraba_v2',JSON.stringify(DB));
         localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
         if(mergedPending)saveDB();else setSyncStatus('ok');
@@ -4447,6 +4452,105 @@ const BIDFOOD_FICHAS=[
     dataUrl:null,fileType:null
   }
 ];
+
+// ═══════════════════════════════════════════════════════════
+// RECETAS BASE ALBARABA — instalación automática sin duplicar
+// ═══════════════════════════════════════════════════════════
+function _installAlbarabaRecetasBase(autoSave=true){
+  if(!DB.productos)DB.productos=[];
+  if(!DB.elaboraciones)DB.elaboraciones=[];
+  let changed=false;
+  const norm=typeof _normNombreCatalogo==='function'?_normNombreCatalogo:(v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim());
+  function ensureProducto(p){
+    const n=norm(p.nombre);
+    let prod=DB.productos.find(x=>norm(x.nombre)===n);
+    if(!prod){
+      prod={id:p.id||('prod_'+n.replace(/\s+/g,'_')),nombre:p.nombre,categoria:p.categoria||'Otros',proveedor_id:'',unidad:p.unidad||'kg',precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:p.referencia||'',notas:p.notas||'',foto:'',alergenos:p.alergenos||[],rendimiento:0,rendimiento_desc:''};
+      DB.productos.push(prod);changed=true;
+    }else{
+      ['categoria','unidad','referencia','notas'].forEach(k=>{if(!prod[k]&&p[k]){prod[k]=p[k];changed=true;}});
+      if((!prod.alergenos||!prod.alergenos.length)&&p.alergenos&&p.alergenos.length){prod.alergenos=p.alergenos;changed=true;}
+    }
+    return prod.id;
+  }
+  const productos={
+    pollo:ensureProducto({id:'prod_pechuga_pollo_fileteada',nombre:'Pechuga de pollo fileteada',categoria:'Carnes',unidad:'kg',notas:'Producto base para pollo guisado a la jardinera. Ración: 2 filetes/persona, aprox. 80 g por filete.'}),
+    cebolla:ensureProducto({id:'prod_cebolla',nombre:'Cebolla',categoria:'Verduras y hortalizas',unidad:'kg'}),
+    zanahoria:ensureProducto({id:'prod_zanahoria',nombre:'Zanahoria',categoria:'Verduras y hortalizas',unidad:'kg'}),
+    guisantes:ensureProducto({id:'prod_guisantes',nombre:'Guisantes',categoria:'Verduras y hortalizas',unidad:'kg'}),
+    champinon:ensureProducto({id:'prod_champinon_laminado',nombre:'Champiñón laminado',categoria:'Verduras y hortalizas',unidad:'kg'}),
+    ajo:ensureProducto({id:'prod_ajo',nombre:'Ajo',categoria:'Verduras y hortalizas',unidad:'kg'}),
+    tomate:ensureProducto({id:'prod_tomate_triturado',nombre:'Tomate triturado',categoria:'Conservas',unidad:'kg'}),
+    caldo:ensureProducto({id:'prod_caldo_pollo',nombre:'Caldo de pollo',categoria:'Salsas y condimentos',unidad:'l',alergenos:['apio','gluten','soja'],notas:'Verificar ficha técnica del caldo usado: puede contener apio, gluten o soja según fabricante.'}),
+    aceite:ensureProducto({id:'prod_aceite_oliva',nombre:'Aceite de oliva',categoria:'Salsas y condimentos',unidad:'l'}),
+    sal:ensureProducto({id:'prod_sal',nombre:'Sal',categoria:'Salsas y condimentos',unidad:'kg'}),
+    pimienta:ensureProducto({id:'prod_pimienta_negra',nombre:'Pimienta negra',categoria:'Salsas y condimentos',unidad:'kg'}),
+    pimenton:ensureProducto({id:'prod_pimenton_dulce',nombre:'Pimentón dulce',categoria:'Salsas y condimentos',unidad:'kg'}),
+    laurel:ensureProducto({id:'prod_laurel',nombre:'Laurel',categoria:'Salsas y condimentos',unidad:'ud'}),
+    tomillo:ensureProducto({id:'prod_tomillo',nombre:'Tomillo',categoria:'Salsas y condimentos',unidad:'kg'})
+  };
+  const nombreElab='Pollo guisado a la jardinera';
+  const ing=[
+    {producto_id:productos.pollo,cantidad:6.4,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.cebolla,cantidad:1.5,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.zanahoria,cantidad:1.2,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.guisantes,cantidad:1,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.champinon,cantidad:1,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.ajo,cantidad:0.12,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.tomate,cantidad:2,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.caldo,cantidad:5,unidad:'l',modo_cantidad:'total_receta'},
+    {producto_id:productos.aceite,cantidad:0.45,unidad:'l',modo_cantidad:'total_receta'},
+    {producto_id:productos.sal,cantidad:0.07,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.pimienta,cantidad:0.012,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.pimenton,cantidad:0.025,unidad:'kg',modo_cantidad:'total_receta'},
+    {producto_id:productos.laurel,cantidad:4,unidad:'ud',modo_cantidad:'total_receta'},
+    {producto_id:productos.tomillo,cantidad:0.006,unidad:'kg',modo_cantidad:'total_receta'}
+  ];
+  const proceso=`1. Preparación: picar la cebolla, laminar el ajo, pelar y cortar la zanahoria en rodajas, escurrir los champiñones y preparar los guisantes.
+2. Salsa: añadir aceite, ajo y cebolla en marmita. Pochar lentamente hasta que la cebolla quede transparente. Añadir zanahoria y champiñón y cocinar unos minutos. Incorporar tomate triturado y reducir ligeramente. Añadir caldo de pollo, laurel, tomillo y pimentón. Cocer lentamente hasta obtener salsa homogénea. Añadir guisantes y rectificar de sal y pimienta.
+3. Cocción: incorporar los filetes de pollo a la salsa y cocinar suavemente hasta que queden jugosos. Evitar sobrecocer para que no se sequen durante la regeneración.
+4. Montaje: colocar 2 filetes por ración en bandeja gastronorm termosellada. Cubrir completamente con salsa y verduras. No debe quedar pollo al aire.
+5. Salsa extra: preparar 1 tupper gastronorm adicional con aprox. 6 litros de salsa por cada 40 raciones para servicio.`;
+  const fichaDetalle={
+    pasos:proceso,
+    tempCoccion:'Cocinar completamente el pollo. Regenerar en Rational hasta temperatura segura en el centro del producto.',
+    fichaNum:'MA 03-1',
+    conservacion:'Refrigerado 0°C – 4°C',
+    vidaUtil:'Mantener entre 0 y 3 °C. Usar según criterio APPCC interno tras abatimiento y sin romper cadena de frío.',
+    consumo:'Servir caliente tras regeneración. Mantener el pollo siempre cubierto con salsa.',
+    aspecto:'Filetes de pollo cubiertos con salsa jardinera y verduras visibles',
+    olor:'Característico, sin olores anómalos',
+    sabor:'Característico a pollo guisado y salsa jardinera',
+    consistencia:'Pollo jugoso, salsa homogénea y verduras tiernas',
+    ventaMaterial:'Bandejas gastronorm termoselladas + tupper gastronorm extra de salsa',
+    ventaUnidades:'40 raciones base · 2 filetes por persona · 80 filetes · 6,40 kg pollo · 1 tupper extra salsa 6 l',
+    alergenos:['apio','gluten','soja'],
+    alergenosDetalle:[{key:'apio',val:'T'},{key:'gluten',val:'T'},{key:'soja',val:'T'}],
+    fechaRev:'07/26'
+  };
+  let elab=DB.elaboraciones.find(e=>norm(e.nombre)===norm(nombreElab));
+  if(!elab){
+    DB.elaboraciones.push({
+      id:'elab_pollo_guisado_jardinera',nombre:nombreElab,categoria:'segundo',raciones_base:40,ingredientes:ing,proceso,
+      notas:'Producción base 40 raciones. Ración: 2 filetes de pechuga/persona. Total 80 filetes, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Alérgenos: verificar caldo de pollo; puede contener apio, gluten o soja según fabricante.',
+      foto:'',fichaDetalle
+    });
+    changed=true;
+  }else{
+    if(!elab.ingredientes||!elab.ingredientes.length){elab.ingredientes=ing;changed=true;}
+    if(!elab.proceso){elab.proceso=proceso;changed=true;}
+    if(!elab.raciones_base||elab.raciones_base===10){elab.raciones_base=40;changed=true;}
+    if(!elab.categoria||elab.categoria==='otros'){elab.categoria='segundo';changed=true;}
+    if(!elab.notas||!elab.notas.includes('tupper gastronorm extra')){elab.notas='Producción base 40 raciones. Ración: 2 filetes de pechuga/persona. Total 80 filetes, aprox. 6,40 kg. Obligatorio 1 tupper gastronorm extra con 6 litros de salsa por cada 40 raciones. Alérgenos: verificar caldo de pollo; puede contener apio, gluten o soja según fabricante.';changed=true;}
+    if(!elab.fichaDetalle||!elab.fichaDetalle.pasos){elab.fichaDetalle=fichaDetalle;changed=true;}
+  }
+  if(changed){
+    DB._recetas_instaladas={...(DB._recetas_instaladas||{}),pollo_jardinera:'20260728'};
+    if(autoSave)saveDB();
+    console.log('[Albaraba] Receta base instalada: '+nombreElab);
+  }
+  return changed;
+}
 function _installBidfoodFichas(){
   if(!DB.fichasProveedor)DB.fichasProveedor=[];
   if(DB.fichasProveedor.some(x=>x._bidfood))return; // ya instaladas
