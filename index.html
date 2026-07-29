@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-resta-incidencia1 -->
+<!-- VERSION: v20260729-etiqueta-compacta-qr1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-resta-incidencia1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-compacta-qr1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3784,7 +3784,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-resta-incidencia1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-compacta-qr1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3919,7 +3919,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-resta-incidencia1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-compacta-qr1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -17823,8 +17823,24 @@ function _gs1FallbackLotFields(original,out,FNC1){
 }
 
 function parseInternalQR(raw) {
-  if (!raw.startsWith('ALB|')) return null;
-  const parts = raw.split('|');
+  const text=String(raw||'');
+  const first=text.split(/\r?\n/)[0]||text;
+  if (first.startsWith('ALBTRAZ|')) {
+    const parts = first.split('|');
+    return {
+      isInternal: true,
+      isTrace: true,
+      traceId: parts[1] || '',
+      producto: parts[2] || '',
+      lot: parts[3] || '',
+      expiry: parts[4] || '',
+      cliente: parts[5] || '',
+      evento_fecha: parts[6] || '',
+      raw:text
+    };
+  }
+  if (!first.startsWith('ALB|')) return null;
+  const parts = first.split('|');
   return {
     isInternal: true,
     producto: parts[1] || '',
@@ -18854,7 +18870,7 @@ function savePlagas(){
 const LBL_SIZES={
   'QL-62x100mm':{label:'Brother QL grande 62×100mm',w:'62mm',h:'100mm',hPrint:'100mm',wpx:234,hpx:378,brother:true},
   'QL-29x90mm': {label:'Brother QL pequeña 29×90mm', w:'29mm',h:'90mm', hPrint:'90mm', wpx:110,hpx:340,brother:true,narrow:true},
-  'QL-62mm-cont':{label:'Brother QL rollo continuo 62×50mm estable',w:'62mm',h:'auto',hPrint:'50mm',wpx:234,hpx:0,brother:true,cont:true},
+  'QL-62mm-cont':{label:'Brother QL rollo continuo 62×38mm compacto',w:'62mm',h:'auto',hPrint:'38mm',wpx:234,hpx:0,brother:true,cont:true},
   'QL-29mm-cont':{label:'Brother QL rollo continuo 29mm',w:'29mm',h:'auto',hPrint:'90mm',wpx:110,hpx:0,brother:true,cont:true,narrow:true},
   'QL-62x60mm': {label:'Brother QL 62×60mm', w:'62mm',h:'60mm', hPrint:'60mm', wpx:234,hpx:227,brother:true},
   'QL-62x29mm': {label:'Brother QL 62×29mm', w:'62mm',h:'29mm', hPrint:'29mm', wpx:234,hpx:110,brother:true},
@@ -18903,6 +18919,38 @@ function _etqAutoLot(producto=''){
   do{seq++;lote=`${initials}-${date}-${String(seq).padStart(4,'0')}`;}while(existing.has(lote)&&seq<9999);
   localStorage.setItem('_albaraba_lote_seq_'+date,String(seq));
   return lote;
+}
+function _etqFindEventoForElab(r){
+  const sid=String(r.evento_id||r.hoja_id||r.hojaId||r.eva_evento_id||'');
+  let h=sid&&typeof findHojaByAnyId==='function'?findHojaByAnyId(sid):null;
+  if(!h&&r.evento_cliente)h=(DB.hojas||[]).find(x=>_etqNorm(x.cliente||'')===_etqNorm(r.evento_cliente||'')&&(!r.evento_fecha||x.fecha===r.evento_fecha));
+  return h||null;
+}
+function _etqTraceText(r,tipo,empresa,fecha,emp){
+  const producto=r.producto||'';
+  const lote=r.lote||'';
+  const dlc=r.dlc||r.caducidad||'';
+  const ev=_etqFindEventoForElab(r)||{};
+  const recep=(ld(K.recep)||[]).find(x=>(lote&&String(x.lote||'')===String(lote))||(_etqNorm(x.producto||'')===_etqNorm(producto)&&String(x.caducidad||x.dlc||'')===String(dlc||'')))||{};
+  const traceId=r.id||r.elab_id||('TRZ-'+Date.now());
+  const head=['ALBTRAZ',traceId,producto,lote,dlc,ev.cliente||r.evento_cliente||'',ev.fecha||r.evento_fecha||''].map(x=>String(x||'').replace(/[|\n\r]/g,' ').trim()).join('|');
+  const lines=[head,
+    'EMPRESA: '+empresa,
+    'PRODUCTO/ELAB: '+producto,
+    lote?'LOTE: '+lote:'',
+    dlc?'CAD/DLC: '+dlc:'',
+    'ETIQUETA: '+fecha,
+    'HECHA POR: '+emp,
+    ev.cliente||r.evento_cliente?'CLIENTE: '+(ev.cliente||r.evento_cliente):'',
+    ev.fecha||r.evento_fecha?'EVENTO FECHA: '+(ev.fecha||r.evento_fecha):'',
+    ev.hora||r.evento_hora?'HORA: '+(ev.hora||r.evento_hora):'',
+    ev.lugar?'LUGAR: '+ev.lugar:'',
+    recep.proveedor||r.proveedor?'PROVEEDOR/COMPRA: '+(recep.proveedor||r.proveedor):'',
+    recep.ts||recep.date?'RECEPCION: '+(recep.ts||recep.date):'',
+    recep.lote?'LOTE MP: '+recep.lote:'',
+    Array.isArray(r.proceso)&&r.proceso.length?'PROCESO: '+r.proceso.slice(-6).join(' > '):''
+  ].filter(Boolean);
+  return lines.join('\n').slice(0,900);
 }
 function _buildEtiquetaProductRows(){
   const productos=(DB.productos||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
@@ -19199,7 +19247,7 @@ async function _batchPrint(items, orient){
   const isLand = lblSize.cont||parseFloat(lblSize.hPrint||'100')<=70;
   const PAGE_W = lblSize.w;
   const PAGE_H = lblSize.hPrint||'100mm';
-  const QR_MM  = Math.max(12,Math.min(18,wMm*0.29));
+  const QR_MM  = Math.max(11,Math.min(15,wMm*0.24));
   const qrPx   = Math.round(QR_MM*5);
 
   // Loading screen while we generate QR codes
@@ -19226,15 +19274,9 @@ async function _batchPrint(items, orient){
     const fecha    = new Date().toLocaleDateString('es-ES');
     const emp      = r.etqEmp || _etqCurrentWorker();
     const proceso  = r.proceso  || [];
-    const qrParts  = ['PRODUCTO: '+producto];
-    if(lote)        qrParts.push('LOTE: '+lote);
-    if(dlc)         qrParts.push('CADUCIDAD: '+dlc);
-    if(r.proveedor) qrParts.push('PROVEEDOR: '+r.proveedor);
-    qrParts.push('EMPRESA: '+empresa);
-    qrParts.push('ETIQUETA CREADA: '+fecha);
-    qrParts.push('HECHA POR: '+emp);
-    if(proceso.length) qrParts.push('PROCESO: '+proceso.join(' > '));
-    const qrUrl = await _generateQRDataURL(qrParts.join('\n'), qrPx);
+    const hasTraceQr=tipo==='elab';
+    const qrText=hasTraceQr?_etqTraceText(r,tipo,empresa,fecha,emp):'';
+    const qrUrl = hasTraceQr?await _generateQRDataURL(qrText, qrPx):'';
     allItems.push({r:Object.assign({},r,{dlc,caducidad:dlc,etqEmp:emp}), cop:cop||1, tipo, qrUrl, fecha});
   }
 
@@ -19248,22 +19290,24 @@ async function _batchPrint(items, orient){
     const proceso  = r.proceso  || [];
     const emp      = r.etqEmp || _etqCurrentWorker();
     const dlcFmt   = dlc ? fmtDate(dlc) : '—';
-    const qrImg    = qrUrl ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm">` : '';
+    const hasQr    = !!qrUrl;
+    const qrImg    = hasQr ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm">` : '';
     for(let i=0;i<cop;i++){
       if(isLand){
-        labelsHtml += `<div class="label"><div class="col-left">
+        labelsHtml += `<div class="label ${hasQr?'with-qr':'basic'}"><div class="col-left">
           <div class="emp">${empresa}</div>
           <div class="title">${producto}</div>
           <div class="dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
           ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
-          <div class="small-lbl">CREADA: ${fecha} · ${emp}</div>
+          <div class="small-lbl">CREADA: ${fecha} · ${emp}${r.proveedor?' · '+r.proveedor:''}</div>
           <div class="cad-lbl">CONSUMIR ANTES DE:</div>
           <div class="cad">${dlcFmt}</div>
-        </div><div class="col-right">${qrImg}
+        </div>${hasQr?`<div class="col-right">${qrImg}
+          <div class="qr-lote">TRAZABILIDAD</div>
           ${lote?`<div class="qr-lote">${lote}</div>`:''}
-        </div></div>`;
+        </div>`:''}</div>`;
       } else {
-        labelsHtml += `<div class="label">
+        labelsHtml += `<div class="label ${hasQr?'with-qr':'basic'}">
           <div class="emp">${empresa}</div>
           <div class="sep"></div>
           <div class="title">${producto}</div>
@@ -19275,9 +19319,9 @@ async function _batchPrint(items, orient){
           <div class="cad-lbl">CONSUMIR ANTES DE:</div>
           <div class="cad">${dlcFmt}</div>
           <div class="sep"></div>
-          <div class="qr-row">${qrImg}
+          ${hasQr?`<div class="qr-row">${qrImg}
             ${proceso.length?`<div class="proc">${proceso.slice(0,2).join('\n→ ')}</div>`:''}
-          </div>
+          </div>`:''}
         </div>`;
       }
     }
@@ -19308,12 +19352,14 @@ async function _batchPrint(items, orient){
     .col-left{flex:1;display:flex;flex-direction:column;gap:1mm;min-width:0;overflow:hidden}
     .col-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;flex-shrink:0}
     .emp{font-size:2mm;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-    .title{font-size:${isLand?'6.8mm':'5mm'};font-weight:900;color:#111;line-height:1.05;word-break:break-word;max-height:${isLand?'16mm':'13mm'};overflow:hidden}
+    .title{font-size:${isLand?'6.5mm':'5mm'};font-weight:900;color:#111;line-height:1.03;word-break:break-word;max-height:${isLand?'14mm':'13mm'};overflow:hidden}
+    .label.basic .title{font-size:${isLand?'7.2mm':'5.4mm'};max-height:${isLand?'16mm':'14mm'}}
     .dest{font-size:${isLand?'4mm':'3.5mm'};font-weight:900;padding:1mm 2mm;border-radius:1.5mm;text-align:center;letter-spacing:.3px;flex-shrink:0}
-    .lote{font-size:${isLand?'3.5mm':'2.5mm'};font-family:monospace;font-weight:900;color:#111;background:#f0f0f0;padding:.7mm 1.7mm;border-radius:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lote{font-size:${isLand?'3.2mm':'2.5mm'};font-family:monospace;font-weight:900;color:#111;background:#f0f0f0;padding:.6mm 1.4mm;border-radius:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .small-lbl{font-size:${isLand?'2.5mm':'2mm'};color:#555;font-weight:700}
     .cad-lbl{font-size:2mm;color:#888;text-transform:uppercase;letter-spacing:.3px}
-    .cad{font-size:${isLand?'7mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:1;letter-spacing:.5px}
+    .cad{font-size:${isLand?'6.3mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:1;letter-spacing:.5px}
+    .label.basic .cad{font-size:${isLand?'7.3mm':'8mm'}}
     .sep{height:.3mm;background:#e8e8e8;flex-shrink:0;margin:0.5mm 0}
     .qr-row{display:flex;flex-direction:row;align-items:center;gap:2mm;flex-shrink:0;margin-top:auto}
     .proc{font-size:1.8mm;color:#888;line-height:1.4;white-space:pre-line;max-width:${isLand?'60mm':'28mm'}}
@@ -19392,6 +19438,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
