@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-auto1 -->
+<!-- VERSION: v20260729-pistola-alta1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-auto1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-alta1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3785,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-auto1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-alta1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3920,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-auto1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-alta1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6194,10 +6194,16 @@ function openPistolUnknownProduct(parsed,context){
     <div style="background:#fff3cd;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px;font-size:13px;color:#78350f;margin-bottom:12px">
       Código leído: <code>${esc(gtin||parsed.raw||'')}</code>${parsed.lot?` · lote <code>${esc(parsed.lot)}</code>`:''}
     </div>
-    <div class="fg"><label class="fl">Producto del catálogo o nombre nuevo *</label><input class="fc" id="pistol-new-name" list="pistol-prod-list" placeholder="Empieza a escribir producto..." autocomplete="off"><datalist id="pistol-prod-list">${(DB.productos||[]).map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist></div>
+    <div style="background:#eef4ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;font-size:12px;color:#1e3a8a;margin-bottom:12px;line-height:1.45">
+      <strong>Ahora mismo hay que decidir qué producto es:</strong><br>
+      1) Si ya existe, empieza a escribir y selecciónalo del listado.<br>
+      2) Si es nuevo, escribe el nombre y se creará en Productos, asociado a este código para la próxima vez.
+    </div>
+    <div class="fg"><label class="fl">Buscar producto existente o crear producto nuevo *</label><input class="fc" id="pistol-new-name" list="pistol-prod-list" placeholder="Ej: Alitas de pollo / Tomate triturado..." autocomplete="off"><datalist id="pistol-prod-list">${(DB.productos||[]).map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist></div>
     <div class="fg"><label class="fl">Proveedor habitual</label><select class="fc" id="pistol-new-prov"><option value="">Sin proveedor</option>${(DB.proveedores||[]).map(p=>`<option value="${esc(p.id)}">${esc(p.nombre||'')}</option>`).join('')}</select></div>
     <div class="frow"><div class="fg"><label class="fl">Categoría</label><select class="fc" id="pistol-new-cat"><option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option><option>Lácteos y huevos</option><option>Conservas</option><option>Salsas y condimentos</option><option>Otros</option></select></div><div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-new-unit"><option>kg</option><option>ud</option><option>caja</option><option>bolsa</option><option>l</option><option>pack</option></select></div></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-gold" onclick="savePistolUnknownProduct()">Guardar y continuar</button></div>`, 'lg');
+    <div style="font-size:11px;color:#64748b;margin-top:8px">Si lo creas nuevo, después podrás completar precio, ficha técnica, alérgenos y stock mínimo desde Productos.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-gold" onclick="savePistolUnknownProduct()">✓ Asociar/crear y continuar</button></div>`, 'lg');
   setTimeout(()=>document.getElementById('pistol-new-name')?.focus(),120);
 }
 function savePistolUnknownProduct(context=window._pistolUnknownContext,parsed=window._pistolUnknownParsed){
@@ -19133,6 +19139,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
