@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola2 -->
+<!-- VERSION: v20260729-eva-unlock1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola2'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-eva-unlock1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -1375,6 +1375,15 @@ function safeDomId(prefix,id){return prefix+'-'+String(id||'').replace(/[^a-zA-Z
 function safeRender(label,fn,fallback=''){
   try{return fn()}
   catch(e){console.error('[ALBARABA] Error renderizando '+label,e);return fallback}
+}
+function sameId(a,b){return String(a??'')===String(b??'')}
+function findHojaById(id){
+  const sid=String(id??'');
+  return (DB.hojas||[]).find(h=>sameId(h.id,sid)||sameId(h.eva_id,sid)||sameId(h.id_evento,sid));
+}
+function findHojaIndexById(id){
+  const sid=String(id??'');
+  return (DB.hojas||[]).findIndex(h=>sameId(h.id,sid)||sameId(h.eva_id,sid)||sameId(h.id_evento,sid));
 }
 
 // ═══════════════════════════════════════════════════
@@ -3776,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola2');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-eva-unlock1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3911,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola2';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-eva-unlock1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6494,7 +6503,7 @@ function renderHojasTable(q=''){
     const facturado=['facturado','cerrado'].includes(String(h.estado_comercial||'').toLowerCase())||Boolean(fact.numero_factura||h.documentos?.factura_url);
     return`<div class="hoja-card">
       <div class="hoja-header" onclick="toggleHojaBody(${hid})">
-        <label title="Incluir en pedido agrupado" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${eventosPedidoSeleccionados.has(h.id)?'checked':''} onchange="toggleEventoPedido(${hid},this.checked)"> Agrupar</label>
+        <label title="Incluir en pedido agrupado" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${eventosPedidoSeleccionados.has(String(h.id))?'checked':''} onchange="toggleEventoPedido(${hid},this.checked)"> Agrupar</label>
         <div style="flex:1">
           <div style="font-size:15px;font-weight:700">${esc(h.cliente)}${h.empresa?` · <span style="color:var(--muted);font-weight:400">${esc(h.empresa)}</span>`:''}</div>
           <div style="font-size:12px;color:var(--muted);margin-top:2px">${dateStr}${h.hora?` · ${esc(h.hora)}`:''}${h.lugar?` · 📍${esc(h.lugar)}`:''}</div>
@@ -6526,7 +6535,7 @@ function toggleHojaBody(id){
 }
 
 function abrirDocumentoEvento(id,tipo){
-  const h=(DB.hojas||[]).find(x=>x.id===id);if(!h)return;
+  const h=findHojaById(id);if(!h)return;
   const url=tipo==='carpeta_drive_url'?h.carpeta_drive_url:h.documentos?.[tipo];
   if(!/^https:\/\//i.test(String(url||''))){alert('Este documento todavía no tiene un enlace válido en Drive.');return;}
   window.open(url,'_blank','noopener');
@@ -6649,7 +6658,7 @@ function openHojaModal(){
 }
 
 function editHoja(id){
-  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const h=findHojaById(id);if(!h)return;
   document.getElementById('hoja-id').value=h.id;
   document.getElementById('hoja-fecha').value=h.fecha||'';
   document.getElementById('hoja-hora').value=h.hora||'';
@@ -6772,7 +6781,7 @@ function saveHoja(){
   if(!pax||pax<1){alert('Indica el número de PAX');return}
   const id=document.getElementById('hoja-id').value||uid();
   const obj={id,fecha:document.getElementById('hoja-fecha').value,hora:document.getElementById('hoja-hora').value,cliente,empresa:document.getElementById('hoja-empresa').value,tel:document.getElementById('hoja-tel').value,pax,servicio:document.getElementById('hoja-servicio').value,lugar:document.getElementById('hoja-lugar').value,menu:getMenuItems(),postre:document.getElementById('hoja-postre').value,precio_venta:parseFloat(document.getElementById('hoja-precio-venta').value)||0,indicaciones:document.getElementById('hoja-indicaciones').value,notas:document.getElementById('hoja-notas').value};
-  const idx=DB.hojas.findIndex(x=>x.id===id);
+  const idx=findHojaIndexById(id);
   const existente=idx>=0?DB.hojas[idx]:null;
   let recalculadas=0;
   if(existente){
@@ -6811,11 +6820,11 @@ function saveHoja(){
 
 function deleteHoja(id){
   if(!confirm('¿Eliminar esta hoja de servicio?'))return;
-  DB.hojas=DB.hojas.filter(x=>x.id!==id);saveDB();renderHojasTable();
+  DB.hojas=DB.hojas.filter(x=>!sameId(x.id,id)&&!sameId(x.eva_id,id)&&!sameId(x.id_evento,id));saveDB();renderHojasTable();
 }
 
 function generarPresupuesto_G(id){
-  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const h=findHojaById(id);if(!h)return;
   // Mapear label de servicio → clave de tipo para presupuesto
   const SRV_MAP={
     'Lunch / Cóctel':'LUNCH','Coffee Break':'COFFEE',
@@ -6841,7 +6850,7 @@ function generarPresupuesto_G(id){
 }
 
 function confirmarServicioRealizado(id){
-  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const h=findHojaById(id);if(!h)return;
   if(h.eva_revision_pendiente||h.eva_cambio_pendiente){
     if(!confirm('Este evento tiene una propuesta antigua de Eva sin revisar. Puedes cerrarlo igualmente y conservar el aviso. ¿Continuar?'))return;
   }
@@ -6882,7 +6891,7 @@ function confirmarServicioRealizado(id){
   });
   marcarPedidosParaRecalcular('Stock consumido por el servicio: '+(h.cliente||h.id),p=>!p.totales||Object.keys(descuentos).some(pid=>Boolean(p.totales?.[pid])));
   // Mark as done
-  const idx=DB.hojas.findIndex(x=>x.id===id);
+  const idx=findHojaIndexById(id);
   if(idx>=0){DB.hojas[idx].realizado=true;DB.hojas[idx].fecha_realizado=new Date().toISOString();DB.hojas[idx].cierre_con_avisos=appccPendientes.length>0;DB.hojas[idx].appcc_pendientes_al_cierre=appccPendientes.map(m=>m.nombre);}
   saveDB();
   renderHojasTable();
@@ -6890,7 +6899,7 @@ function confirmarServicioRealizado(id){
 }
 
 function cargarPedidoDesdeHoja(id){
-  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const h=findHojaById(id);if(!h)return;
   Object.keys(pedidoSeleccionadas).forEach(k=>delete pedidoSeleccionadas[k]);
   (h.menu||[]).forEach(m=>{if(m.elab_id)pedidoSeleccionadas[m.elab_id]={elaboracion_id:m.elab_id,raciones:m.pax_override||h.pax||1,eventos:[h.id]};});
   if(!Object.keys(pedidoSeleccionadas).length){alert('Primero vincula las elaboraciones de esta hoja con el catálogo.');return;}
@@ -6898,12 +6907,13 @@ function cargarPedidoDesdeHoja(id){
 }
 
 function toggleEventoPedido(id,checked){
+  id=String(id??'');
   if(checked)eventosPedidoSeleccionados.add(id);else eventosPedidoSeleccionados.delete(id);
   const count=document.getElementById('eventos-pedido-count');if(count)count.textContent='('+eventosPedidoSeleccionados.size+')';
 }
 
 function agruparPedidosEventos(){
-  const hojas=(DB.hojas||[]).filter(h=>eventosPedidoSeleccionados.has(h.id));
+  const hojas=(DB.hojas||[]).filter(h=>eventosPedidoSeleccionados.has(String(h.id)));
   if(!hojas.length){alert('Marca al menos un evento con la casilla «Agrupar».');return;}
   Object.keys(pedidoSeleccionadas).forEach(k=>delete pedidoSeleccionadas[k]);
   const sinVincular=[];
@@ -6920,7 +6930,7 @@ function agruparPedidosEventos(){
 }
 
 function listaComprasDesdeHoja(id){
-  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const h=findHojaById(id);if(!h)return;
   const pax=parseInt(h.pax)||0;
   const totalesProd={};
   (h.menu||[]).forEach(m=>{
@@ -6986,7 +6996,7 @@ function exportarListaComprasPDF(h,byProv){
 }
 
 function exportarHojaPDF(id){
-  const h=DB.hojas.find(x=>x.id===id);if(!h)return;
+  const h=findHojaById(id);if(!h)return;
   const hojaEvaUrl=String(h.documentos?.hoja_servicio_url||'').trim();
   if(!/^https:\/\//i.test(hojaEvaUrl)){
     alert('EVA todavía no ha creado o enlazado el PDF final de esta hoja de servicio. Pídele que lo prepare y actualice este mismo evento; no tienes que crear nada desde cero.');
@@ -8337,7 +8347,7 @@ function initEvaBridgeSync(){
   },e=>console.error('Puente Eva:',e));
 }
 function aprobarPropuestaEva(id){
-  const h=(DB.hojas||[]).find(x=>x.id===id);if(!h)return;
+  const h=findHojaById(id);if(!h)return;
   const propuesta=h.eva_cambio_pendiente||h;
   const faltan=[!propuesta.cliente?'cliente':'',!propuesta.fecha?'fecha':'',!(parseInt(propuesta.pax)>0)?'pax':''].filter(Boolean);
   if(faltan.length){
@@ -8351,7 +8361,7 @@ function aprobarPropuestaEva(id){
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Seguir revisando después</button><button class="btn btn-green" onclick="confirmarPropuestaEva()">✓ Aprobar propuesta</button></div>`, 'lg');
 }
 function confirmarPropuestaEva(){
-  const id=window._evaBridgeReviewId,h=(DB.hojas||[]).find(x=>x.id===id);if(!h)return;
+  const id=window._evaBridgeReviewId,h=findHojaById(id);if(!h)return;
   const esCambio=Boolean(h.eva_cambio_pendiente),propuesta=JSON.parse(JSON.stringify(h.eva_cambio_pendiente||h));
   _evaRegistrarElaboracionesNuevas(propuesta);_evaCompletarPrecios(propuesta);
   let final=propuesta;
@@ -8370,12 +8380,12 @@ function confirmarPropuestaEva(){
   delete final.eva_revision_pendiente;delete final.eva_cambio_pendiente;
   final.estado=final.realizado?'realizado':'pendiente';final.eva_aprobado_en=new Date().toISOString();final.actualizado_en=final.eva_aprobado_en;
   final.revisiones=[...(h.revisiones||[]),{fecha:final.eva_aprobado_en,tipo:esCambio?'cambio_eva_aprobado':'evento_eva_aprobado',usuario:currentUserEmail||''}].slice(-20);
-  DB.hojas[DB.hojas.findIndex(x=>x.id===id)]=final;saveDB();
+  DB.hojas[findHojaIndexById(id)]=final;saveDB();
   if(messageId&&fbDB)fbDB.ref('eva_bridge_v1/inbox/'+messageId).update({estado:'aprobado',aprobado_en:final.eva_aprobado_en,aprobado_por:currentUserEmail||''});
   window._evaBridgeReviewId=null;closeModal('modal-universal');updateEvaPlanSummary();renderHojasTable();alert('✅ Propuesta de Eva aprobada y enlazada con el evento.');
 }
 function rechazarPropuestaEva(id){
-  const idx=(DB.hojas||[]).findIndex(x=>x.id===id);if(idx<0)return;const h=DB.hojas[idx];
+  const idx=findHojaIndexById(id);if(idx<0)return;const h=DB.hojas[idx];
   if(!confirm('¿Rechazar esta propuesta de Eva? El evento operativo anterior se conservará.'))return;
   const propuesta=h.eva_cambio_pendiente||h,messageId=propuesta.eva_bridge_message_id||h.eva_bridge_message_id;
   if(h.eva_cambio_pendiente)delete h.eva_cambio_pendiente;else DB.hojas.splice(idx,1);
@@ -19109,6 +19119,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
