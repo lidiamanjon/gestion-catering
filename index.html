@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-mejoras-fotos1 -->
+<!-- VERSION: v20260729-pistola-lotes1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-mejoras-fotos1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-lotes1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3785,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-mejoras-fotos1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-lotes1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3920,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-mejoras-fotos1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-lotes1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5605,7 +5605,7 @@ function registrarEntradaStockGestion({producto,cantidad,unidad,lote,recepcionId
   p.stock_actual=Math.round(((parseFloat(p.stock_actual)||0)+entrada)*1000)/1000;
   p.stock_actualizado_en=new Date().toISOString();
   p.actualizado_en=p.stock_actualizado_en;
-  if(lote)p.ultimo_lote=lote;
+  if(lote)_rememberProductLot(p,lote,'stock');
   if(!DB.movimientos_stock)DB.movimientos_stock=[];
   DB.movimientos_stock.push({
     id:uid(),tipo:'entrada_recepcion',producto_id:p.id,producto:p.nombre,
@@ -5614,6 +5614,64 @@ function registrarEntradaStockGestion({producto,cantidad,unidad,lote,recepcionId
   });
   DB.movimientos_stock=DB.movimientos_stock.slice(-2000);
   marcarPedidosParaRecalcular('Mercancía recibida: '+p.nombre,ped=>!ped.totales||Boolean(ped.totales[p.id]));
+  return p;
+}
+function _productLotHistory(productId,limit=8){
+  const p=(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return[];
+  const lots=[];
+  const add=(l,meta={})=>{
+    l=String(l||'').trim().toUpperCase();
+    if(!l||lots.some(x=>x.lote===l))return;
+    lots.push({lote:l,fecha:meta.fecha||'',origen:meta.origen||''});
+  };
+  add(p.ultimo_lote,{fecha:p.stock_actualizado_en||p.actualizado_en||'',origen:'último usado'});
+  (p.lotes_historial||[]).slice().reverse().forEach(x=>add(x.lote||x,{fecha:x.fecha||'',origen:x.origen||'producto'}));
+  (ld(K.recep)||[]).slice().reverse().forEach(r=>{
+    if((r.producto_id&&String(r.producto_id)===String(p.id))||_normNombreCatalogo(r.producto)===_normNombreCatalogo(p.nombre)){
+      add(r.lote,{fecha:r.ts||r.date||'',origen:'recepción'});
+    }
+  });
+  (DB.movimientos_stock||[]).slice().reverse().forEach(m=>{
+    if(String(m.producto_id||'')===String(p.id))add(m.lote,{fecha:m.fecha||'',origen:m.tipo||'stock'});
+  });
+  return lots.slice(0,limit);
+}
+function _rememberProductLot(p,lote,origen='recepción'){
+  if(!p||!lote)return;
+  const clean=String(lote||'').trim().toUpperCase();
+  if(!clean)return;
+  p.ultimo_lote=clean;
+  p.lotes_historial=(p.lotes_historial||[]).filter(x=>String(x.lote||x).toUpperCase()!==clean);
+  p.lotes_historial.push({lote:clean,fecha:new Date().toISOString(),origen});
+  p.lotes_historial=p.lotes_historial.slice(-20);
+}
+function _unidadCatalogoARecep(unidad){
+  const u=String(unidad||'').trim();
+  const map={'ud':'uds','uds':'uds','unidad':'uds','unidades':'uds','kg':'kg','g':'g','l':'L','L':'L','litro':'L','litros':'L','caja':'cajas','cajas':'cajas','bolsa':'bolsas','bolsas':'bolsas','lata':'latas','latas':'latas','brick':'bricks','bricks':'bricks','botella':'botellas','botellas':'botellas','saco':'sacos','sacos':'sacos','pack':'uds','packs':'uds'};
+  return map[u]||u||'uds';
+}
+function _ensureProductFromReception({nombre,proveedorId,proveedor,unidad,lote,codigo,categoria}){
+  const name=String(nombre||'').trim();if(!name)return null;
+  if(!Array.isArray(DB.productos))DB.productos=[];
+  const norm=_normNombreCatalogo(name);
+  let p=DB.productos.find(x=>_normNombreCatalogo(x.nombre)===norm)||buscarProductoCatalogo(name);
+  const now=new Date().toISOString();
+  if(!p){
+    p={id:uid(),nombre:name,categoria:categoria||'Otros',proveedor_id:proveedorId||'',proveedor:proveedor||'',unidad:_unidadCatalogoARecep(unidad||'uds'),precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:codigo||'',gtin:codigo||'',ean:codigo||'',barcode:codigo||'',ultimo_lote:'',ultima_caducidad:'',notas:'Creado automáticamente desde recepción/pistola. Revisar ficha técnica, precio y alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
+    DB.productos.push(p);
+  }else{
+    if(proveedorId&&!p.proveedor_id)p.proveedor_id=proveedorId;
+    if(proveedor&&!p.proveedor)p.proveedor=proveedor;
+    if(unidad&&!p.unidad)p.unidad=_unidadCatalogoARecep(unidad);
+    if(codigo){
+      if(!p.gtin)p.gtin=codigo;
+      if(!p.ean)p.ean=codigo;
+      if(!p.barcode)p.barcode=codigo;
+      if(!p.referencia)p.referencia=codigo;
+    }
+    p.actualizado_en=now;
+  }
+  _rememberProductLot(p,lote,'recepción');
   return p;
 }
 function registrarMovimientoStockGestion({productoId,tipo,cantidad,unidad,lote,origen,nota}){
@@ -6190,7 +6248,7 @@ function _pistolAssociateCode(productId,parsed){
   if(!p||!gtin)return null;
   p.gtin=gtin;p.ean=gtin;p.barcode=gtin;
   if(!p.referencia)p.referencia=gtin;
-  if(parsed?.lot)p.ultimo_lote=String(parsed.lot).trim().toUpperCase();
+  if(parsed?.lot)_rememberProductLot(p,parsed.lot,'pistola_stock');
   p.actualizado_en=new Date().toISOString();
   saveDB();
   try{if(typeof registerGTIN==='function')registerGTIN(gtin,{nombre:p.nombre,proveedor:provNombre(p.proveedor_id)||p.proveedor||''});}catch(e){}
@@ -6279,7 +6337,7 @@ function openPistolMode(context='recepcion'){
       </label>
       <div class="frow" style="margin-top:10px">
         <div class="fg"><label class="fl">Cantidad por escaneo</label><input class="fc" id="pistol-recep-fast-qty" type="number" step="0.01" value="1"></div>
-        <div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-recep-fast-unit"><option value="uds">uds</option><option value="kg">kg</option><option value="cajas">cajas</option><option value="bolsas">bolsas</option><option value="latas">latas</option><option value="bricks">bricks</option><option value="L">L</option></select></div>
+        <div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-recep-fast-unit"><option value="">Usar ficha del producto</option><option value="uds">uds</option><option value="kg">kg</option><option value="cajas">cajas</option><option value="bolsas">bolsas</option><option value="latas">latas</option><option value="bricks">bricks</option><option value="L">L</option></select></div>
       </div>
       <div class="fg" style="margin-top:8px"><label class="fl">Proveedor si quieres actualizarlo</label><select class="fc" id="pistol-recep-fast-prov">${_pistolProvOptions()}</select></div>
       <div style="font-size:11px;color:#166534;margin-top:6px">Si falta lote, te lo pedirá antes de guardar. La caducidad no se rellena automáticamente al leer con pistola.</div>
@@ -6392,14 +6450,19 @@ function _pistolAskMissingRecep(productId,parsed,prod,opts={}){
   if(!needLote)return false;
   window._pistolPendingRecep={productId,parsed:parsed||{},prod:prod||null,opts:opts||{}};
   const qty=opts.qty||document.getElementById('pistol-recep-fast-qty')?.value||'1';
-  const unit=opts.unit||document.getElementById('pistol-recep-fast-unit')?.value||prod?.unidad||'uds';
+  const unit=opts.unit||document.getElementById('pistol-recep-fast-unit')?.value||_unidadCatalogoARecep(prod?.unidad||'uds');
   const provId=opts.proveedorId||document.getElementById('pistol-recep-fast-prov')?.value||prod?.proveedor_id||'';
+  const lotesPrevios=prod?.id?_productLotHistory(prod.id,6):[];
   openModal(`<div class="mh"><h2>📦 Completar recepción</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
     <div style="background:#fff3cd;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px;font-size:13px;color:#78350f;margin-bottom:12px">
       Producto leído: <strong>${esc(prod?.nombre||parsed?.producto||'Producto')}</strong><br>
       Falta el <strong>lote</strong> para dejarlo trazado. Aquí puedes indicar también cuántas cajas/unidades entran de golpe.
     </div>
     <div class="fg"><label class="fl">Número de lote *</label><input class="fc" id="pistol-recep-lote" value="${esc(loteDetectado)}" style="font-family:monospace;font-weight:900" placeholder="Lote del proveedor"></div>
+    ${lotesPrevios.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 10px">
+      <span style="font-size:11px;color:#64748b;font-weight:800;align-self:center">Usar lote anterior:</span>
+      ${lotesPrevios.map(x=>`<button type="button" onclick="document.getElementById('pistol-recep-lote').value='${esc(x.lote)}';document.getElementById('pistol-recep-lote').style.borderColor='#27ae60'" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:999px;padding:5px 9px;font-size:11px;font-family:monospace;font-weight:900;cursor:pointer">${esc(x.lote)}</button>`).join('')}
+    </div>`:''}
     <div class="frow">
       <div class="fg"><label class="fl">Cantidad recibida *</label><input class="fc" id="pistol-recep-missing-qty" type="number" min="0" step="0.01" value="${esc(qty)}"></div>
       <div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-recep-missing-unit">
@@ -6431,20 +6494,22 @@ function confirmPistolRecepMissing(){
 function quickPistolRecepAdd(productId,parsed,prod,opts={}){
   const p=prod||(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return;
   const qty=Math.max(0,parseFloat(opts.qty||document.getElementById('pistol-recep-fast-qty')?.value||'1')||1);
-  const unit=opts.unit||document.getElementById('pistol-recep-fast-unit')?.value||p.unidad||'uds';
+  const unit=opts.unit||document.getElementById('pistol-recep-fast-unit')?.value||_unidadCatalogoARecep(p.unidad||'uds');
   const proveedorId=opts.proveedorId||document.getElementById('pistol-recep-fast-prov')?.value||'';
   const nextOpts={...opts,qty,unit,proveedorId};
   if(!parsed?.lot)return _pistolAskMissingRecep(productId,parsed,p,nextOpts);
   const lote=String(parsed.lot||'').trim().toUpperCase();
   const cad='';
-  if(unit&&String(unit)!==String(p.unidad||''))p.unidad=unit;
+  if(unit&&!p.unidad)p.unidad=unit;
   if(proveedorId&&String(proveedorId)!==String(p.proveedor_id||''))p.proveedor_id=proveedorId;
+  _ensureProductFromReception({nombre:p.nombre,proveedorId:p.proveedor_id,proveedor:p.proveedor,unidad:p.unidad,lote,codigo:parsed?.gtin||parsed?.raw||'',categoria:p.categoria||'Otros'});
+  _rememberProductLot(p,lote,'pistola');
   const prov=provNombre(p.proveedor_id)||p.proveedor||'';
   const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||_etqCurrentWorker();
-  const rec={id:genId(),ts:new Date().toISOString(),date:today(),proveedor:prov,producto:p.nombre||'',cantidad:qty,unidad:unit,cajas:undefined,temp:undefined,lote,caducidad:cad,emp,obs:'Recepción rápida con pistola',conforme:true};
+  const rec={id:genId(),ts:new Date().toISOString(),date:today(),proveedor:prov,producto:p.nombre||'',producto_id:p.id||'',cantidad:qty,unidad:unit,cajas:undefined,temp:undefined,lote,caducidad:cad,emp,obs:'Recepción rápida con pistola',conforme:true};
   const recs=ld(K.recep)||[];recs.push(rec);sv(K.recep,recs);
   registrarEntradaStockGestion({producto:p.nombre,cantidad:qty,unidad:unit,lote,recepcionId:rec.id});
-  p.ultimo_lote=lote;p.actualizado_en=new Date().toISOString();p.stock_actualizado_en=p.actualizado_en;
+  p.actualizado_en=new Date().toISOString();p.stock_actualizado_en=p.actualizado_en;
   _checkProdPendiente(p.nombre,prov);
   saveDB();
   refreshStockViews();
@@ -6641,7 +6706,7 @@ function savePistolStockAdjust(productId,opts={}){
   });
   p.stock_actual=Math.round(next*1000)/1000;
   const lote=(opts.lote||document.getElementById('pistol-stock-lote')?.value||'').trim().toUpperCase();
-  if(lote)p.ultimo_lote=lote;
+  if(lote)_rememberProductLot(p,lote,'pistola_stock');
   p.stock_actualizado_en=new Date().toISOString();
   p.actualizado_en=p.stock_actualizado_en;
   registrarMovimientoStockGestion({
@@ -13966,6 +14031,7 @@ function showRecepEntry(cat){
               <input class="fc" id="re-lote" value="${prefill.lote||''}" placeholder="Escribe o escanea el nº de lote..." style="flex:1;font-size:15px;font-family:monospace;font-weight:700">
               <button onclick="scanToFields({lote:'re-lote',cad:'re-cad'})" style="background:#1a4fa8;color:#fff;border:none;border-radius:10px;padding:0 14px;font-size:18px;cursor:pointer;flex-shrink:0" title="Escanear código de barras">📷</button>
             </div>
+            <div id="re-lote-suggestions" style="display:none;margin-top:6px;gap:6px;flex-wrap:wrap"></div>
           </div>
           <div class="fc-group"><label class="fc-label">📅 Fecha de caducidad</label>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
@@ -14070,18 +14136,23 @@ function saveRecep(cat){
   const unit=_rf('unit')||'kg';
   const cajas=_rf('cajas');
   const tempVal=parseFloat(temp);
+  const codigo=(recepAlbaranData&&recepAlbaranData.gtin)||'';
+  const prodObj=_ensureProductFromReception({nombre:prod,proveedor:prov,unidad:unit,lote,codigo,categoria:cat&&cat!=='manual'?cat:'Otros'});
+  const prodNombre=prodObj?.nombre||prod;
+  const prodUnidad=_unidadCatalogoARecep(unit||prodObj?.unidad||'uds');
+  const prodProveedor=prov||provNombre(prodObj?.proveedor_id)||prodObj?.proveedor||'';
   const recs=ld(K.recep)||[];
   const rec={id:genId(),ts:new Date().toISOString(),date:today(),
-    proveedor:prov,producto:prod,cantidad:cant,unidad:unit,
+    proveedor:prodProveedor,producto:prodNombre,producto_id:prodObj?.id||'',cantidad:cant,unidad:prodUnidad,
     cajas:cajas?parseInt(cajas):undefined,
     temp:temp!==''?tempVal:undefined,lote,caducidad:cad,emp,obs,
     conforme:isNaN(tempVal)||tempVal<=7
   };
   recs.push(rec);
   const productoVinculado=registrarEntradaStockGestion({
-    producto:prod,cantidad:cajas||cant,unidad:unit,lote,recepcionId:rec.id
+    producto:prodNombre,cantidad:cajas||cant,unidad:prodUnidad,lote,recepcionId:rec.id
   });
-  if(productoVinculado)saveDB();
+  if(productoVinculado||prodObj)saveDB();
   else rec.catalogo_pendiente=true;
   sv(K.recep,recs);
   refreshStockViews();
@@ -14094,15 +14165,15 @@ function saveRecep(cat){
   }
   recepAlbaranData=null;
   // Guardar para enlazar con elaboración siguiente
-  window._lastRecepData={id:rec.id,producto:prod,lote,caducidad:cad,proveedor:prov,emp,date:today(),ts:rec.ts};
+  window._lastRecepData={id:rec.id,producto:prodNombre,lote,caducidad:cad,proveedor:prodProveedor,emp,date:today(),ts:rec.ts};
   // Check if product exists in catalog and has ficha técnica
-  _checkProdPendiente(prod, prov);
+  _checkProdPendiente(prodNombre, prodProveedor);
   updateScoreChip();
   closeModalAPPCC();renderRecep();
   refreshStockViews();
   setTimeout(()=>addToLabelQueue({
     tipo:'📦 RECEPCIÓN',
-    producto:prod,lote,dlc:cad,proveedor:prov,emp,
+    producto:prodNombre,lote,dlc:cad,proveedor:prodProveedor,emp,
     ts:new Date().toISOString(),
     destino:'nevera',
     proceso:['📦 Recibido de '+(prov||'proveedor')+' · '+new Date().toLocaleDateString('es-ES')]
@@ -14432,25 +14503,13 @@ function _autoFillRecepFromCatalog(nombre){
     ||prods.find(p=>nom.includes((p.nombre||'').toLowerCase().trim().split(' ')[0])&&(p.nombre||'').length>3);
   const unitSel=document.getElementById('re-unit');
   const hint=document.getElementById('re-catalog-hint');
+  const loteBox=document.getElementById('re-lote-suggestions');
   if(!prod){
     if(hint)hint.style.display='none';
+    if(loteBox){loteBox.style.display='none';loteBox.innerHTML='';}
     return;
   }
-  // Map DB unidad → re-unit select options
-  const UNIT_MAP={
-    'kg':'kg','g':'g','l':'L','L':'L','ml':'ml',
-    'ud':'uds','uds':'uds','ud.':'uds',
-    'caja':'cajas','cajas':'cajas',
-    'bote':'uds','botes':'uds',
-    'sobre':'uds','sobres':'uds',
-    'pack':'uds','packs':'uds',
-    'bolsa':'bolsas','bolsas':'bolsas',
-    'lata':'latas','latas':'latas',
-    'brick':'bricks','bricks':'bricks',
-    'saco':'sacos','sacos':'sacos',
-    'botella':'botellas','botellas':'botellas'
-  };
-  const mappedUnit=UNIT_MAP[prod.unidad||'']||prod.unidad||'uds';
+  const mappedUnit=_unidadCatalogoARecep(prod.unidad||'uds');
   if(unitSel){
     // Try to set the option
     let set=false;
@@ -14476,6 +14535,16 @@ function _autoFillRecepFromCatalog(nombre){
       ${stock!==''?`<span style="font-size:11px;color:${parseFloat(stock)<(prod.stock_min||0)?'#e74c3c':'#27ae60'}">· Stock: ${stock}</span>`:''}
     </div>`;
     hint.style.display='block';
+  }
+  if(loteBox){
+    const lotes=_productLotHistory(prod.id,5);
+    if(lotes.length){
+      loteBox.innerHTML='<span style="font-size:11px;color:#64748b;font-weight:700;margin-right:2px">Lotes recientes:</span>'+
+        lotes.map(x=>`<button type="button" onclick="document.getElementById('re-lote').value='${esc(x.lote)}';document.getElementById('re-lote').style.borderColor='#27ae60'" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:999px;padding:4px 8px;font-size:11px;font-family:monospace;font-weight:800;cursor:pointer">${esc(x.lote)}</button>`).join('');
+      loteBox.style.display='flex';
+    }else{
+      loteBox.style.display='none';loteBox.innerHTML='';
+    }
   }
 }
 
