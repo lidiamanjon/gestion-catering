@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260728-etiqueta-62x50-estable"
+$BridgeVersion = "20260729-etiqueta-62x42-qr"
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
@@ -175,11 +175,12 @@ function Parse-LabelsFromHtml($html) {
     $cad = Clean-Text(([regex]::Match($block,'<div[^>]+class="[^"]*\bcad\b[^"]*"[^>]*>([\s\S]*?)</div>',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
     $creada = Clean-Text(([regex]::Match($block,'CREADA:\s*([^<]+)',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
     $hecha = Clean-Text(([regex]::Match($block,'HECHA POR:\s*([^<]+)',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
+    $qr = ([regex]::Match($block,'<img[^>]+src="(data:image\/[^"]+)"',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value
     if(!$producto){ $producto='Etiqueta' }
     if(!$destino){ $destino='NEVERA' }
     if(!$cad){ $cad=(Get-Date).AddDays(5).ToString('dd/MM/yy') }
     if(!$creada){ $creada=(Get-Date).ToString('dd/MM/yyyy') }
-    $labels += [pscustomobject]@{ producto=$producto; destino=$destino; lote=$lote; cad=$cad; creada=$creada; hecha=$hecha }
+    $labels += [pscustomobject]@{ producto=$producto; destino=$destino; lote=$lote; cad=$cad; creada=$creada; hecha=$hecha; qr=$qr }
   }
   return $labels
 }
@@ -209,7 +210,7 @@ function Print-LabelsDirect($job,$token,$printerName) {
   $doc.PrinterSettings.PrinterName = $printerName
   $doc.DocumentName = "ALBARABA etiquetas $id"
   $doc.PrintController = New-Object System.Drawing.Printing.StandardPrintController
-  $doc.DefaultPageSettings.PaperSize = New-Object System.Drawing.Printing.PaperSize("ALBARABA_62x50",244,197)
+  $doc.DefaultPageSettings.PaperSize = New-Object System.Drawing.Printing.PaperSize("ALBARABA_62x42",244,165)
   $doc.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0,0,0,0)
   $doc.DefaultPageSettings.Landscape = $false
   $script:LabelIndex = 0
@@ -223,19 +224,34 @@ function Print-LabelsDirect($job,$token,$printerName) {
     $gray = [System.Drawing.Brushes]::DimGray
     $red = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(190,40,40))
     $blue = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(28,70,140))
-    $small = New-Object System.Drawing.Font('Arial',5,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Point)
-    $mid = New-Object System.Drawing.Font('Arial',7,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Point)
-    $cadFont = New-Object System.Drawing.Font('Arial',14,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Point)
+    $small = New-Object System.Drawing.Font('Arial',4.4,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Point)
+    $mid = New-Object System.Drawing.Font('Arial',6.2,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Point)
+    $cadFont = New-Object System.Drawing.Font('Arial',12,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Point)
     $l = $labels[$script:LabelIndex]
-    $titleFont = Fit-Font $g $l.producto 13 8 ([System.Drawing.FontStyle]::Bold) 56
-    $g.DrawString('ALBARABA SL',$small,$gray,3,2)
-    $g.DrawString($l.producto,$titleFont,$black,3,5)
-    $g.DrawString(($l.destino).ToUpper(),$mid,$blue,3,14)
-    if($l.lote){ $g.DrawString(('LOTE: ' + $l.lote),$mid,$black,3,19) }
-    $g.DrawString(('CREADA: ' + $l.creada),$small,$gray,3,24)
-    if($l.hecha){ $g.DrawString(('HECHA POR: ' + $l.hecha),$small,$gray,3,28) }
-    $g.DrawString('CONSUMIR ANTES:',$small,$gray,3,32)
-    $g.DrawString($l.cad,$cadFont,$red,27,30)
+    $hasQr = -not [string]::IsNullOrWhiteSpace($l.qr)
+    $textWidth = $(if($hasQr){ 43 } else { 56 })
+    $titleFont = Fit-Font $g $l.producto 11 7 ([System.Drawing.FontStyle]::Bold) $textWidth
+    $g.DrawString('ALBARABA SL',$small,$gray,2.5,1.5)
+    $g.DrawString($l.producto,$titleFont,$black,2.5,4.4)
+    $g.DrawString(($l.destino).ToUpper(),$mid,$blue,2.5,13.2)
+    if($l.lote){ $g.DrawString(('LOTE: ' + $l.lote),$mid,$black,2.5,18.2) }
+    $g.DrawString(('CREADA: ' + $l.creada),$small,$gray,2.5,23.2)
+    if($l.hecha){ $g.DrawString(('HECHA POR: ' + $l.hecha),$small,$gray,2.5,26.2) }
+    $g.DrawString('CONSUMIR ANTES:',$small,$gray,2.5,30.2)
+    $g.DrawString($l.cad,$cadFont,$red,24,28.4)
+    if($hasQr){
+      try{
+        $b64 = [regex]::Replace([string]$l.qr,'^data:image\/[^;]+;base64,','')
+        $bytes = [Convert]::FromBase64String($b64)
+        $ms = New-Object System.IO.MemoryStream(,$bytes)
+        $img = [System.Drawing.Image]::FromStream($ms)
+        $g.DrawImage($img,48,4,11.5,11.5)
+        $img.Dispose(); $ms.Dispose()
+        $g.DrawString('TRAZA',$small,$gray,48.2,16.2)
+      } catch {
+        $g.DrawString('QR',$mid,$black,50,8)
+      }
+    }
     $titleFont.Dispose(); $red.Dispose(); $blue.Dispose(); $small.Dispose(); $mid.Dispose(); $cadFont.Dispose()
     $script:LabelIndex++
     $e.HasMorePages = ($script:LabelIndex -lt $labels.Count)

@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-recepcion-manual1 -->
+<!-- VERSION: v20260729-etiqueta-compacta2 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-recepcion-manual1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-compacta2'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3792,7 +3792,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-recepcion-manual1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-compacta2');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3928,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-recepcion-manual1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-compacta2';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -14822,7 +14822,7 @@ function showRecepEntry(cat){
   document.getElementById('recep-body').innerHTML=`
     <div class="card">
       <div class="card-body">
-        <button class="btn btn-sm btn-outline" onclick="renderRecep()" style="margin-bottom:12px">← Volver</button>
+        <button type="button" class="btn btn-sm btn-outline" onclick="renderRecep()" style="margin-bottom:12px">← Volver</button>
         <div class="fc-group"><label class="fc-label">Producto <span style="color:#c00;font-weight:700">*</span></label>
           <input class="fc" id="re-prod-search" placeholder="🔍 Buscar o escribe nombre nuevo..." oninput="filterRecepProd(this.value)" style="margin-bottom:6px;font-size:15px" value="${prefill.producto||''}">
           <select class="fc" id="re-prod" size="4" style="height:100px" onchange="document.getElementById('re-prod-search').value=this.value;document.getElementById('re-prod-search').style.borderColor='#27ae60';_autoFillRecepFromCatalog(this.value)">
@@ -14840,7 +14840,7 @@ function showRecepEntry(cat){
           <div class="fc-group"><label class="fc-label" style="font-size:13px;font-weight:700;color:#1a4fa8">🏷 Nº Lote del proveedor</label>
             <div style="display:flex;gap:8px">
               <input class="fc" id="re-lote" value="${prefill.lote||''}" placeholder="Escribe o escanea el nº de lote..." style="flex:1;font-size:15px;font-family:monospace;font-weight:700">
-              <button onclick="scanToFields({lote:'re-lote',cad:'re-cad'})" style="background:#1a4fa8;color:#fff;border:none;border-radius:10px;padding:0 14px;font-size:18px;cursor:pointer;flex-shrink:0" title="Escanear código de barras">📷</button>
+              <button type="button" onclick="scanToFields({lote:'re-lote',cad:'re-cad'})" style="background:#1a4fa8;color:#fff;border:none;border-radius:10px;padding:0 14px;font-size:18px;cursor:pointer;flex-shrink:0" title="Escanear código de barras">📷</button>
             </div>
             <div id="re-lote-suggestions" style="display:none;margin-top:6px;gap:6px;flex-wrap:wrap"></div>
           </div>
@@ -14903,12 +14903,12 @@ function showRecepEntry(cat){
             <input type="checkbox" id="re-conforme" checked style="width:20px;height:20px">
             <span style="font-weight:600">Recepción conforme</span>
           </label>
-          <button class="btn btn-sm btn-outline" style="margin-top:10px;width:100%" onclick="openAlbaranUpload()">📄 Subir albarán (auto-lote)</button>
+          <button type="button" class="btn btn-sm btn-outline" style="margin-top:10px;width:100%" onclick="openAlbaranUpload()">📄 Subir albarán (auto-lote)</button>
         </div>
         
         <div style="margin-top:14px;display:flex;gap:10px">
-          <button class="btn btn-outline" style="flex:1" onclick="renderRecep()">✕ Cancelar</button>
-          <button class="btn btn-green" style="flex:1" onclick="saveRecep('${cat}')">✓ Validar recepción</button>
+          <button type="button" class="btn btn-outline" style="flex:1" onclick="renderRecep()">✕ Cancelar</button>
+          <button type="button" class="btn btn-green" style="flex:1" onclick="saveRecep('${String(cat||'manual').replace(/'/g,"\\'")}')">✓ Validar recepción</button>
         </div>
       </div>
     </div>`;
@@ -14924,7 +14924,23 @@ function recepTabSwitch(el,tabId){
     const el2=document.getElementById(t);if(el2)el2.style.display=t===tabId?'':'none'
   });
 }
+let _recepSaving=false;
 function saveRecep(cat){
+  if(_recepSaving)return;
+  const btn=[...document.querySelectorAll('button')].find(b=>(b.getAttribute('onclick')||'').includes('saveRecep'));
+  _recepSaving=true;
+  if(btn){btn.disabled=true;btn.dataset._oldText=btn.innerHTML;btn.innerHTML='Guardando…';btn.style.opacity='.65';}
+  try{
+    _saveRecepCore(cat);
+  }catch(e){
+    console.error('Error validando recepción:',e);
+    alert('No se pudo validar la recepción.\n\nError: '+(e&&e.message?e.message:e)+'\n\nLos datos no se han borrado. Corrige si hace falta y vuelve a pulsar Validar.');
+  }finally{
+    _recepSaving=false;
+    if(btn){btn.disabled=false;btn.innerHTML=btn.dataset._oldText||'✓ Validar recepción';btn.style.opacity='';}
+  }
+}
+function _saveRecepCore(cat){
   // Lee de formulario modal (rc-*) o inline tabbed (re-*)
   const _rf=(n)=>{
     const el=document.getElementById('rc-'+n)||document.getElementById('re-'+n);
@@ -14984,6 +15000,8 @@ function saveRecep(cat){
   // Check if product exists in catalog and has ficha técnica
   _checkProdPendiente(prodNombre, prodProveedor);
   updateScoreChip();
+  if(typeof toast==='function')toast('✅ Recepción validada y stock actualizado');
+  else alert('✅ Recepción validada y stock actualizado');
   try{closeModalAPPCC();}catch(e){}
   renderRecep();
   refreshStockViews();
@@ -20028,7 +20046,7 @@ function savePlagas(){
 const LBL_SIZES={
   'QL-62x100mm':{label:'Brother QL grande 62×100mm',w:'62mm',h:'100mm',hPrint:'100mm',wpx:234,hpx:378,brother:true},
   'QL-29x90mm': {label:'Brother QL pequeña 29×90mm', w:'29mm',h:'90mm', hPrint:'90mm', wpx:110,hpx:340,brother:true,narrow:true},
-  'QL-62mm-cont':{label:'Brother QL rollo continuo 62×50mm compacto',w:'62mm',h:'auto',hPrint:'50mm',wpx:234,hpx:0,brother:true,cont:true},
+  'QL-62mm-cont':{label:'Brother QL rollo continuo 62×42mm compacto',w:'62mm',h:'auto',hPrint:'42mm',wpx:234,hpx:0,brother:true,cont:true},
   'QL-29mm-cont':{label:'Brother QL rollo continuo 29mm',w:'29mm',h:'auto',hPrint:'90mm',wpx:110,hpx:0,brother:true,cont:true,narrow:true},
   'QL-62x60mm': {label:'Brother QL 62×60mm', w:'62mm',h:'60mm', hPrint:'60mm', wpx:234,hpx:227,brother:true},
   'QL-62x29mm': {label:'Brother QL 62×29mm', w:'62mm',h:'29mm', hPrint:'29mm', wpx:234,hpx:110,brother:true},
@@ -20455,7 +20473,7 @@ async function _batchPrint(items, orient){
   const isLand = lblSize.cont||parseFloat(lblSize.hPrint||'100')<=70;
   const PAGE_W = lblSize.w;
   const PAGE_H = lblSize.hPrint||'100mm';
-  const QR_MM  = Math.max(11,Math.min(15,wMm*0.24));
+  const QR_MM  = lblSize.key==='QL-62mm-cont' ? 11.5 : Math.max(11,Math.min(15,wMm*0.24));
   const qrPx   = Math.round(QR_MM*5);
 
   // Loading screen while we generate QR codes
@@ -20482,14 +20500,14 @@ async function _batchPrint(items, orient){
     const fecha    = new Date().toLocaleDateString('es-ES');
     const emp      = r.etqEmp || _etqCurrentWorker();
     const proceso  = r.proceso  || [];
-    const hasTraceQr=tipo==='elab';
-    const qrText=hasTraceQr?_etqTraceText(r,tipo,empresa,fecha,emp):'';
-    const qrUrl = hasTraceQr?await _generateQRDataURL(qrText, qrPx):'';
-    allItems.push({r:Object.assign({},r,{dlc,caducidad:dlc,etqEmp:emp}), cop:cop||1, tipo, qrUrl, fecha});
+    const needsTraceQr=tipo==='elab';
+    const qrText=needsTraceQr?_etqTraceText(r,tipo,empresa,fecha,emp):'';
+    const qrUrl = needsTraceQr?await _generateQRDataURL(qrText, qrPx):'';
+    allItems.push({r:Object.assign({},r,{dlc,caducidad:dlc,etqEmp:emp}), cop:cop||1, tipo, qrUrl, fecha, needsTraceQr});
   }
 
   let labelsHtml = '';
-  allItems.forEach(({r, cop, tipo, qrUrl, fecha}) => {
+  allItems.forEach(({r, cop, tipo, qrUrl, fecha, needsTraceQr}) => {
     const producto = r.producto || '';
     const lote     = r.lote     || '';
     const dlc      = _etqGetDlc(r);
@@ -20498,8 +20516,8 @@ async function _batchPrint(items, orient){
     const proceso  = r.proceso  || [];
     const emp      = r.etqEmp || _etqCurrentWorker();
     const dlcFmt   = dlc ? fmtDate(dlc) : '—';
-    const hasQr    = !!qrUrl;
-    const qrImg    = hasQr ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm">` : '';
+    const hasQr    = !!needsTraceQr;
+    const qrImg    = hasQr ? (qrUrl ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm" alt="QR trazabilidad">` : `<div class="qr-fallback">QR</div>`) : '';
     for(let i=0;i<cop;i++){
       if(isLand){
         labelsHtml += `<div class="label ${hasQr?'with-qr':'basic'}"><div class="col-left">
@@ -20546,32 +20564,33 @@ async function _batchPrint(items, orient){
     }
     .label{
       width:${PAGE_W};height:${PAGE_H};
-      padding:${isLand?'2mm':'2.5mm'};background:#fff;
-      border:0.5mm solid #bbb;
-      margin:4mm auto;
+      padding:${isLand?'1.35mm':'2mm'};background:#fff;
+      border:0.25mm solid #bbb;
+      margin:1mm auto;
       display:flex;
       flex-direction:${isLand?'row':'column'};
-      gap:${isLand?'2mm':'1mm'};
+      gap:${isLand?'1.2mm':'0.8mm'};
       overflow:hidden;
       page-break-after:always;
       break-after:page;
-      box-shadow:0 2px 8px rgba(0,0,0,.18);
+      box-shadow:0 1px 5px rgba(0,0,0,.12);
     }
-    .col-left{flex:1;display:flex;flex-direction:column;gap:1mm;min-width:0;overflow:hidden}
-    .col-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;flex-shrink:0}
-    .emp{font-size:2mm;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-    .title{font-size:${isLand?'6.5mm':'5mm'};font-weight:900;color:#111;line-height:1.03;word-break:break-word;max-height:${isLand?'14mm':'13mm'};overflow:hidden}
-    .label.basic .title{font-size:${isLand?'6.8mm':'5.4mm'};max-height:${isLand?'14mm':'14mm'}}
-    .dest{font-size:${isLand?'4mm':'3.5mm'};font-weight:900;padding:1mm 2mm;border-radius:1.5mm;text-align:center;letter-spacing:.3px;flex-shrink:0}
-    .lote{font-size:${isLand?'3.2mm':'2.5mm'};font-family:monospace;font-weight:900;color:#111;background:#f0f0f0;padding:.6mm 1.4mm;border-radius:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .small-lbl{font-size:${isLand?'2.35mm':'2mm'};color:#555;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .cad-lbl{font-size:${isLand?'2.15mm':'2mm'};color:#888;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
-    .cad{font-size:${isLand?'6.8mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:.98;letter-spacing:.15mm;white-space:nowrap;overflow:visible}
-    .label.basic .cad{font-size:${isLand?'7.2mm':'8mm'}}
+    .col-left{flex:1;display:flex;flex-direction:column;gap:.45mm;min-width:0;overflow:hidden}
+    .col-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.45mm;flex-shrink:0;max-width:13mm}
+    .emp{font-size:1.55mm;font-weight:700;color:#9a9a9a;text-transform:uppercase;letter-spacing:.35px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+    .title{font-size:${isLand?'4.75mm':'5mm'};font-weight:900;color:#111;line-height:.97;word-break:break-word;max-height:${isLand?'9.5mm':'13mm'};overflow:hidden}
+    .label.basic .title{font-size:${isLand?'5.2mm':'5.4mm'};max-height:${isLand?'10.5mm':'14mm'}}
+    .dest{font-size:${isLand?'2.65mm':'3.5mm'};font-weight:900;padding:.35mm 1mm;border-radius:1.1mm;text-align:center;letter-spacing:.2px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .lote{font-size:${isLand?'2.15mm':'2.5mm'};font-family:monospace;font-weight:900;color:#111;background:#f0f0f0;padding:.25mm .8mm;border-radius:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .small-lbl{font-size:${isLand?'1.65mm':'2mm'};color:#555;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cad-lbl{font-size:${isLand?'1.45mm':'2mm'};color:#777;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap}
+    .cad{font-size:${isLand?'5.45mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:.9;letter-spacing:.05mm;white-space:nowrap;overflow:hidden}
+    .label.basic .cad{font-size:${isLand?'5.9mm':'8mm'}}
     .sep{height:.3mm;background:#e8e8e8;flex-shrink:0;margin:0.5mm 0}
     .qr-row{display:flex;flex-direction:row;align-items:center;gap:2mm;flex-shrink:0;margin-top:auto}
     .proc{font-size:1.8mm;color:#888;line-height:1.4;white-space:pre-line;max-width:${isLand?'60mm':'28mm'}}
-    .qr-lote{font-size:1.8mm;font-family:monospace;color:#666;text-align:center;max-width:${QR_MM}mm;word-break:break-all}
+    .qr-lote{font-size:1.25mm;font-family:monospace;color:#666;text-align:center;max-width:${QR_MM}mm;word-break:break-all;line-height:1.05}
+    .qr-fallback{width:${QR_MM}mm;height:${QR_MM}mm;border:.35mm solid #111;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:2mm;color:#111}
     .no-print{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:#fff;border-top:2px solid #ddd;z-index:999}
     .btn-p{padding:12px 36px;background:#27ae60;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
     .btn-c{padding:12px 20px;background:#f0f0f0;color:#333;border:1.5px solid #ccc;border-radius:8px;font-size:15px;cursor:pointer}
@@ -20615,7 +20634,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-recepcion-manual1'
+        source_version:'v20260729-etiqueta-compacta2'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
