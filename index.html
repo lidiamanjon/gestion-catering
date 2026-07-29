@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-etiqueta-compacta2 -->
+<!-- VERSION: v20260729-etiqueta-qr-cad3 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-compacta2'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-qr-cad3'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3792,7 +3792,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-compacta2');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-qr-cad3');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3928,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-compacta2';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-qr-cad3';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -15868,34 +15868,7 @@ function saveElab(){
   setTimeout(()=>addToLabelQueue({tipo:'🍳 ELABORACIÓN',producto:rec.producto,lote:rec.lote,dlc:rec.dlc,emp:rec.emp,ts:rec.ts,destino:dest,proceso:_elabProceso}),300);
 }
 function printElabLabel(rid){
-  const r=ld(K.elab).find(x=>x.id===rid);if(!r)return;
-  const size=getLabelSize();
-  const w=window.open('','_blank','width=420,height=340');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <style>body{font-family:Arial,sans-serif;margin:0;padding:0}
-  @page{size:${size.w} ${size.hPrint};margin:0}
-  @media print{body{margin:0;padding:0}}
-  .label{width:${size.w};min-height:${size.hPrint};padding:4mm;border:1px solid #000;box-sizing:border-box}
-  .lb-brand{font-size:14px;font-weight:900;color:#1a4fa8;letter-spacing:1px}
-  .lb-prod{font-size:18px;font-weight:700;margin:3mm 0;color:#000}
-  .lb-lot{font-family:monospace;font-size:12px;background:#f0f0f0;padding:2mm 4mm;border-radius:2mm;display:inline-block}
-  .lb-row{font-size:11px;color:#333;margin-top:2mm}
-  .lb-dlc{font-size:13px;font-weight:700;color:#c0392b;margin-top:3mm}
-  .lb-dest{font-size:11px;font-weight:700;text-transform:uppercase;color:#2980b9}
-  </style>  ${'<'+'/script>'}
-</head><body>
-  <div class="label">
-    <div class="lb-brand">ALBARABA SL</div>
-    <div class="lb-prod">${r.producto}</div>
-    <div><span class="lb-lot">LOTE: ${r.lote}</span></div>
-    <div class="lb-row">Elaborado: ${fmtDate(r.ts)} · ${r.emp}</div>
-    <div class="lb-row">Cantidad: ${r.cantidad} ${r.unidad}</div>
-    <div class="lb-dlc">Consumir antes de: ${r.dlc}</div>
-    <div class="lb-dest">${r.destino==='congelador'?'❄ CONGELADOR':'🌡 NEVERA'}</div>
-    <div id="alb-qr-elab" style="margin-top:4px;text-align:center"></div>
-  </div>
-  <script>window.addEventListener('load',function(){window.print();setTimeout(()=>window.close(),800);if(window.QRCode){new QRCode(document.getElementById('alb-qr-elab'),{text:'ALB|'+encodeURIComponent(r.producto)+'|'+encodeURIComponent(r.lote)+'|'+encodeURIComponent(r.dlc)+'|'+encodeURIComponent(r.emp)+'|'+new Date().toISOString(),width:72,height:72,correctLevel:QRCode.CorrectLevel.M})}})${'<'+'/script>'}
-  </body></html>`);w.document.close();
+  _printElabLabel(rid);
 }
 
 
@@ -20475,6 +20448,7 @@ async function _batchPrint(items, orient){
   const PAGE_H = lblSize.hPrint||'100mm';
   const QR_MM  = lblSize.key==='QL-62mm-cont' ? 11.5 : Math.max(11,Math.min(15,wMm*0.24));
   const qrPx   = Math.round(QR_MM*5);
+  const escAttr = v => esc(v).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
   // Loading screen while we generate QR codes
   if(w){w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -20503,11 +20477,11 @@ async function _batchPrint(items, orient){
     const needsTraceQr=tipo==='elab';
     const qrText=needsTraceQr?_etqTraceText(r,tipo,empresa,fecha,emp):'';
     const qrUrl = needsTraceQr?await _generateQRDataURL(qrText, qrPx):'';
-    allItems.push({r:Object.assign({},r,{dlc,caducidad:dlc,etqEmp:emp}), cop:cop||1, tipo, qrUrl, fecha, needsTraceQr});
+    allItems.push({r:Object.assign({},r,{dlc,caducidad:dlc,etqEmp:emp}), cop:cop||1, tipo, qrUrl, qrText, fecha, needsTraceQr});
   }
 
   let labelsHtml = '';
-  allItems.forEach(({r, cop, tipo, qrUrl, fecha, needsTraceQr}) => {
+  allItems.forEach(({r, cop, tipo, qrUrl, qrText, fecha, needsTraceQr}) => {
     const producto = r.producto || '';
     const lote     = r.lote     || '';
     const dlc      = _etqGetDlc(r);
@@ -20520,7 +20494,7 @@ async function _batchPrint(items, orient){
     const qrImg    = hasQr ? (qrUrl ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm" alt="QR trazabilidad">` : `<div class="qr-fallback">QR</div>`) : '';
     for(let i=0;i<cop;i++){
       if(isLand){
-        labelsHtml += `<div class="label ${hasQr?'with-qr':'basic'}"><div class="col-left">
+        labelsHtml += `<div class="label ${hasQr?'with-qr':'basic'}" data-trace="${escAttr(qrText||'')}" data-cad="${escAttr(dlcFmt)}" data-qr="${escAttr(qrUrl||'')}"><div class="col-left">
           <div class="emp">${empresa}</div>
           <div class="title">${producto}</div>
           <div class="dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
@@ -20533,7 +20507,7 @@ async function _batchPrint(items, orient){
           ${lote?`<div class="qr-lote">${lote}</div>`:''}
         </div>`:''}</div>`;
       } else {
-        labelsHtml += `<div class="label ${hasQr?'with-qr':'basic'}">
+        labelsHtml += `<div class="label ${hasQr?'with-qr':'basic'}" data-trace="${escAttr(qrText||'')}" data-cad="${escAttr(dlcFmt)}" data-qr="${escAttr(qrUrl||'')}">
           <div class="emp">${empresa}</div>
           <div class="sep"></div>
           <div class="title">${producto}</div>
@@ -20597,6 +20571,25 @@ async function _batchPrint(items, orient){
   `;
 
   const totalCopies = allItems.reduce((s,x)=>s+x.cop,0);
+  const bridgeLabels=[];
+  allItems.forEach(({r,cop,tipo,qrUrl,qrText,fecha,needsTraceQr})=>{
+    const dlc=_etqGetDlc(r);
+    const destino=r.destino||'nevera';
+    const emp=r.etqEmp||_etqCurrentWorker();
+    for(let i=0;i<(parseInt(cop)||1);i++){
+      bridgeLabels.push({
+        producto:r.producto||'Etiqueta',
+        destino,
+        lote:r.lote||'',
+        cad:dlc?fmtDate(dlc):'—',
+        creada:fecha,
+        hecha:emp,
+        qr:qrUrl||'',
+        trace:qrText||'',
+        tipo:needsTraceQr?'elab':tipo
+      });
+    }
+  });
 
   // Write final HTML and auto-print
   const finalHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -20629,12 +20622,13 @@ async function _batchPrint(items, orient){
         status:'pending',
         type:'labels',
         html:finalHtml,
+        labels:bridgeLabels,
         copies:totalCopies,
         printer:'Brother QL-820NWB',
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-etiqueta-compacta2'
+        source_version:'v20260729-etiqueta-qr-cad3'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');

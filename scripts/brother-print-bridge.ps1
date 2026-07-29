@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260729-etiqueta-62x42-qr"
+$BridgeVersion = "20260729-etiqueta-62x42-qr-cad3"
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
@@ -176,6 +176,8 @@ function Parse-LabelsFromHtml($html) {
     $creada = Clean-Text(([regex]::Match($block,'CREADA:\s*([^<]+)',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
     $hecha = Clean-Text(([regex]::Match($block,'HECHA POR:\s*([^<]+)',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
     $qr = ([regex]::Match($block,'<img[^>]+src="(data:image\/[^"]+)"',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value
+    if(!$qr){ $qr = ([regex]::Match($block,'data-qr="([^"]*)"',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value }
+    if(!$cad){ $cad = Clean-Text(([regex]::Match($block,'data-cad="([^"]*)"',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value) }
     if(!$producto){ $producto='Etiqueta' }
     if(!$destino){ $destino='NEVERA' }
     if(!$cad){ $cad=(Get-Date).AddDays(5).ToString('dd/MM/yy') }
@@ -183,6 +185,35 @@ function Parse-LabelsFromHtml($html) {
     $labels += [pscustomobject]@{ producto=$producto; destino=$destino; lote=$lote; cad=$cad; creada=$creada; hecha=$hecha; qr=$qr }
   }
   return $labels
+}
+
+function Labels-FromJob($job) {
+  $out = @()
+  try {
+    if($job.data.labels) {
+      foreach($x in @($job.data.labels)) {
+        $producto = Clean-Text $x.producto
+        if(!$producto){ $producto='Etiqueta' }
+        $destino = Clean-Text $x.destino
+        if(!$destino){ $destino='NEVERA' }
+        $cad = Clean-Text $x.cad
+        if(!$cad){ $cad=(Get-Date).AddDays(5).ToString('dd/MM/yy') }
+        $creada = Clean-Text $x.creada
+        if(!$creada){ $creada=(Get-Date).ToString('dd/MM/yyyy') }
+        $out += [pscustomobject]@{
+          producto=$producto
+          destino=$destino
+          lote=(Clean-Text $x.lote)
+          cad=$cad
+          creada=$creada
+          hecha=(Clean-Text $x.hecha)
+          qr=([string]$x.qr)
+        }
+      }
+    }
+  } catch {}
+  if($out.Count -gt 0){ return $out }
+  return @(Parse-LabelsFromHtml $job.data.html)
 }
 
 function Fit-Font($g,$text,$maxPt,$minPt,$style,$maxWidthMm) {
@@ -197,7 +228,7 @@ function Fit-Font($g,$text,$maxPt,$minPt,$style,$maxWidthMm) {
 
 function Print-LabelsDirect($job,$token,$printerName) {
   $id = $job.id
-  $labels = @(Parse-LabelsFromHtml $job.data.html)
+  $labels = @(Labels-FromJob $job)
   if(!$labels -or $labels.Count -eq 0) {
     Invoke-FirebasePatch "print_jobs/$id" $token @{ status="error"; error="No pude leer etiquetas del HTML para impresion directa"; error_at=(Get-Date).ToString("o"); printer=$printerName }
     Write-Host "ERROR: no pude leer etiquetas del trabajo $id" -ForegroundColor Red

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260729-etiqueta-compacta2';
+const CACHE_NAME = 'albaraba-appcc-v20260729-etiqueta-qr-cad3';
 const APP_SHELL = [
   './',
   './index.html',
