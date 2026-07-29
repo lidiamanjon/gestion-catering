@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-eva-unlock1 -->
+<!-- VERSION: v20260729-pistola-auto1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-eva-unlock1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-auto1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3785,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-eva-unlock1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-auto1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3920,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-eva-unlock1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-auto1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6135,7 +6135,8 @@ function openPistolMode(context='recepcion'){
     <div style="background:#fff8e1;border:1.5px solid #f59e0b;border-radius:12px;padding:12px;margin-bottom:12px">
       <label class="fl">Campo de escaneo</label>
       <input class="fc" id="pistol-input" inputmode="none" autocomplete="off" placeholder="Escanea aquí..." style="font-family:monospace;font-size:20px;font-weight:900;text-align:center;letter-spacing:1px"
-        onkeydown="if(event.key==='Enter'){event.preventDefault();submitPistolScan('${context}')}">
+        oninput="schedulePistolScan('${context}')"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();submitPistolScan('${context}',true)}">
       <div id="pistol-status" style="font-size:12px;color:#92400e;margin-top:8px">Esperando lectura…</div>
     </div>
     ${context==='producto'?`<div class="fg"><label class="fl">Si el código no existe, asociarlo a producto</label><select class="fc" id="pistol-product-select"><option value="">Elegir después / crear nuevo</option>${_pistolProductOptions()}</select></div>`:''}
@@ -6145,11 +6146,24 @@ function openPistolMode(context='recepcion'){
     </div>`, 'lg');
   setTimeout(()=>document.getElementById('pistol-input')?.focus(),120);
 }
-function submitPistolScan(context){
+let _pistolScanTimer=null;
+let _pistolLastAutoValue='';
+function schedulePistolScan(context){
+  clearTimeout(_pistolScanTimer);
+  const inp=document.getElementById('pistol-input');
+  const raw=(inp?.value||'').trim();
+  const st=document.getElementById('pistol-status');
+  if(st)st.textContent=raw?'Lectura recibida, comprobando producto…':'Esperando lectura…';
+  if(!raw||raw.length<4)return;
+  _pistolScanTimer=setTimeout(()=>submitPistolScan(context,false),320);
+}
+function submitPistolScan(context,manual=false){
   const inp=document.getElementById('pistol-input');
   const raw=(inp?.value||'').trim();
   const st=document.getElementById('pistol-status');
   if(!raw){if(inp)inp.style.borderColor='#e74c3c';return;}
+  if(!manual&&raw===_pistolLastAutoValue)return;
+  _pistolLastAutoValue=raw;
   const parsed=_pistolParse(raw);
   const prod=_pistolFindProduct(parsed);
   if(prod){
@@ -19119,6 +19133,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
