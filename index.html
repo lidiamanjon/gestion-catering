@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-etiqueta-50mm-qr1 -->
+<!-- VERSION: v20260729-expediente-evento1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-50mm-qr1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-expediente-evento1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3792,7 +3792,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-50mm-qr1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-expediente-evento1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3928,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-50mm-qr1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-expediente-evento1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5626,9 +5626,9 @@ const DRIVE_FOLDERS_ALBARABA={
   no_conformidades:{id:'1hFDRXcYQ_Wp6Gpvq4dSvXgF_URpNTNkb',url:'https://drive.google.com/drive/folders/1hFDRXcYQ_Wp6Gpvq4dSvXgF_URpNTNkb',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA09_No_Conformidades_Acciones_Correctivas'},
   cierres_appcc:{id:'16cfLhIXaFgDzNjcv0nkK4QWWlOlLP8iH',url:'https://drive.google.com/drive/folders/16cfLhIXaFgDzNjcv0nkK4QWWlOlLP8iH',path:'ALBARABA_APPCC_SANIDAD/09_Cierres_Mensuales'},
   eventos:{id:'1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',url:'https://drive.google.com/drive/folders/1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',path:'ALBARABA_EMPRESA_GESTION/Eventos/2026'},
-  facturas:{id:'15d-lRDuDzoyARrzHT0Akg3L5u6EZFJ8N',url:'https://drive.google.com/drive/folders/15d-lRDuDzoyARrzHT0Akg3L5u6EZFJ8N',path:'ALBARABA_EMPRESA_GESTION/Facturas_Billin'},
-  presupuestos:{id:'1aHAQ7-N87eVoHV996JrIE_PAyabG8ZNn',url:'https://drive.google.com/drive/folders/1aHAQ7-N87eVoHV996JrIE_PAyabG8ZNn',path:'ALBARABA_EMPRESA_GESTION/Presupuestos'},
-  hojas_servicio:{id:'1fAnOHH3-v0pc23cVLuw8jNtQIM7hflzM',url:'https://drive.google.com/drive/folders/1fAnOHH3-v0pc23cVLuw8jNtQIM7hflzM',path:'ALBARABA_EMPRESA_GESTION/Hojas_Servicio_EVA'},
+  facturas:{id:'1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',url:'https://drive.google.com/drive/folders/1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',path:'ALBARABA_EMPRESA_GESTION/Eventos/2026/{cliente_evento}/Factura',alias_evento:true},
+  presupuestos:{id:'1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',url:'https://drive.google.com/drive/folders/1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',path:'ALBARABA_EMPRESA_GESTION/Eventos/2026/{cliente_evento}/Presupuesto',alias_evento:true},
+  hojas_servicio:{id:'1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',url:'https://drive.google.com/drive/folders/1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',path:'ALBARABA_EMPRESA_GESTION/Eventos/2026/{cliente_evento}/Hoja_Servicio_EVA',alias_evento:true},
   compras:{id:'1TvK1BqUM6zcQ3iSVisqeIzYCbD7f1slv',url:'https://drive.google.com/drive/folders/1TvK1BqUM6zcQ3iSVisqeIzYCbD7f1slv',path:'ALBARABA_EMPRESA_GESTION/Compras_y_Albaranes'},
   stock_movimientos:{id:'1L6z4qJpmek_5aumuRe8xdL8-uiVM6SGR',url:'https://drive.google.com/drive/folders/1L6z4qJpmek_5aumuRe8xdL8-uiVM6SGR',path:'ALBARABA_EMPRESA_GESTION/Stock_y_Movimientos'},
   cuentas:{id:'1r4EP3tzo_Yi5hABKSKgDgZxTDP0b3IUw',url:'https://drive.google.com/drive/folders/1r4EP3tzo_Yi5hABKSKgDgZxTDP0b3IUw',path:'ALBARABA_EMPRESA_GESTION/Cuentas'},
@@ -7475,7 +7475,7 @@ function descargarMapaDriveEVA(){
     uso:'Mapa oficial de carpetas Drive para que EVA y la app archiven informes APPCC, empresa, eventos, cuentas y movimientos sin mezclar documentos.',
     reglas:{
       sanidad:'Los registros APPCC oficiales se archivan en ALBARABA_APPCC_SANIDAD. No inventar registros: solo documentos reales generados por app/EVA.',
-      empresa:'Presupuestos, facturas, cuentas, compras, stock y eventos se archivan en ALBARABA_EMPRESA_GESTION.',
+      empresa:'Presupuestos, facturas y hojas de servicio se archivan dentro del expediente de cada cliente/evento. Las carpetas generales de empresa guardan cuentas, compras, stock, informes y resúmenes, no duplicados.',
       eventos:'Cada evento debe tener carpeta propia dentro de ALBARABA_EMPRESA_GESTION/Eventos/2026 con presupuesto, hoja EVA, pedido, APPCC evento, factura y cobro/cierre.',
       errores:'Si falta lote, fecha, proveedor, temperatura, cliente o responsable, enviar a Informes_EVA/Errores_Revision_Humana.'
     },
@@ -20518,7 +20518,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-etiqueta-50mm-qr1'
+        source_version:'v20260729-expediente-evento1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');

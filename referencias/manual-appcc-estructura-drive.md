@@ -102,9 +102,6 @@ Estructura empresa creada:
 ALBARABA_EMPRESA_GESTION
 ├── Eventos
 │   └── 2026
-├── Facturas_Billin
-├── Presupuestos
-├── Hojas_Servicio_EVA
 ├── Proveedores
 ├── Compras_y_Albaranes
 ├── Stock_y_Movimientos
@@ -119,6 +116,8 @@ ALBARABA_EMPRESA_GESTION
     ├── Salida_APP_a_EVA
     └── Errores_Revision_Humana
 ```
+
+Nota de archivo: presupuestos, facturas y hojas de servicio no deben archivarse en carpetas generales duplicadas. Su ubicación principal es siempre la carpeta del cliente/evento dentro de `Eventos/2026`. En carpetas generales solo se permiten índices, resúmenes o enlaces si hacen falta para control.
 
 ## 3. Nombres normalizados de archivos
 
@@ -187,7 +186,7 @@ Paquetes automáticos actuales:
 - `recepcion_materias_primas`: recepciones y entradas de mercancía.
 - `stock_lotes`: stock actual de productos y elaboraciones con lotes.
 - `trazabilidad_lotes`: movimientos con lote o impacto de trazabilidad.
-- `cuentas_mensuales`: eventos, cobros, facturación, gastos y presupuestos.
+- `cuentas_mensuales`: eventos, cobros, facturación, gastos y referencias a presupuestos/facturas guardados en cada expediente de evento.
 - `mapa_drive_eva`: mapa oficial de carpetas para EVA.
 
 Regla para EVA:
