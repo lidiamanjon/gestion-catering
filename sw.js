@@ -1,8 +1,9 @@
-const CACHE_NAME = 'albaraba-appcc-v20260729-qr-pistola-stocknevera1';
+const CACHE_NAME = 'albaraba-appcc-v20260729-qr-pistola-local1';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.json',
+  './vendor/qrcode.min.js',
   './icon-192.png',
   './icon-512.png'
 ];

@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260729-etiqueta-62x42-qr-cad3"
+$BridgeVersion = "20260729-qr-local-codigo1"
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
@@ -182,7 +182,9 @@ function Parse-LabelsFromHtml($html) {
     if(!$destino){ $destino='NEVERA' }
     if(!$cad){ $cad=(Get-Date).AddDays(5).ToString('dd/MM/yy') }
     if(!$creada){ $creada=(Get-Date).ToString('dd/MM/yyyy') }
-    $labels += [pscustomobject]@{ producto=$producto; destino=$destino; lote=$lote; cad=$cad; creada=$creada; hecha=$hecha; qr=$qr }
+    $codigo = Clean-Text(([regex]::Match($block,'<div[^>]+class="[^"]*\bscan-code\b[^"]*"[^>]*>([\s\S]*?)</div>',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
+    if(!$codigo -and $lote){ $codigo = "ALB-" + $lote }
+    $labels += [pscustomobject]@{ producto=$producto; destino=$destino; lote=$lote; cad=$cad; creada=$creada; hecha=$hecha; qr=$qr; codigo=$codigo }
   }
   return $labels
 }
@@ -208,6 +210,7 @@ function Labels-FromJob($job) {
           creada=$creada
           hecha=(Clean-Text $x.hecha)
           qr=([string]$x.qr)
+          codigo=(Clean-Text $x.codigo)
         }
       }
     }
@@ -270,6 +273,7 @@ function Print-LabelsDirect($job,$token,$printerName) {
     if($l.hecha){ $g.DrawString(('HECHA POR: ' + $l.hecha),$small,$gray,2.5,26.2) }
     $g.DrawString('CONSUMIR ANTES:',$small,$gray,2.5,30.2)
     $g.DrawString($l.cad,$cadFont,$red,24,28.4)
+    if($l.codigo){ $g.DrawString(([string]$l.codigo),$small,$black,2.5,38.0) }
     if($hasQr){
       try{
         $b64 = [regex]::Replace([string]$l.qr,'^data:image\/[^;]+;base64,','')

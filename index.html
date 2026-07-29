@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-qr-pistola-stocknevera1 -->
+<!-- VERSION: v20260729-qr-pistola-local1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-qr-pistola-stocknevera1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-qr-pistola-local1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -61,6 +61,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="./vendor/qrcode.min.js"></script>
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
@@ -512,7 +513,7 @@ html,body{height:100%;color-scheme:light!important}
 
 </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" async></script>
+<!-- QR local: no dependemos de internet/CDN para imprimir etiquetas con pistolita -->
 </head>
 <body>
 <!-- HOJA FULLSCREEN OVERLAY -->
@@ -3792,7 +3793,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-qr-pistola-stocknevera1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-qr-pistola-local1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3929,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-qr-pistola-stocknevera1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-qr-pistola-local1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -18985,6 +18986,9 @@ function _gs1FallbackLotFields(original,out,FNC1){
 function parseInternalQR(raw) {
   const text=String(raw||'');
   const first=text.split(/\r?\n/)[0]||text;
+  if (/^ALB-[A-Z0-9._/-]{2,64}$/i.test(first.trim())) {
+    return { isInternal:true, isShortCode:true, lot:first.trim().replace(/^ALB-/i,''), raw:text };
+  }
   if (first.startsWith('ALBTRAZ|')) {
     const parts = first.split('|');
     return {
@@ -20149,6 +20153,11 @@ function _etqBasicText(r,tipo,empresa,fecha,emp){
     'HECHA POR: '+emp
   ].filter(Boolean).join('\n').slice(0,550);
 }
+function _etqShortScanCode(r){
+  const raw=String((r&&r.lote)||_etqPreferredLot(r)||r?.id||'').trim().toUpperCase();
+  const safe=raw.replace(/[^A-Z0-9._/-]/g,'').slice(0,42);
+  return safe ? ('ALB-'+safe) : ('ALB-'+new Date().toISOString().slice(2,10).replace(/-/g,''));
+}
 function _buildEtiquetaProductRows(){
   const productos=(DB.productos||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
   const receps=(ld(K.recep)||[]).slice().sort((a,b)=>new Date(b.ts||b.date)-new Date(a.ts||a.date));
@@ -20434,7 +20443,8 @@ function _generateQRDataURL(text, sizePx){
       new QRCode(div,{text,width:sizePx,height:sizePx,correctLevel:QRCode.CorrectLevel.M});
       setTimeout(()=>{
         const canvas=div.querySelector('canvas');
-        const url=canvas?canvas.toDataURL('image/png'):'';
+        const img=div.querySelector('img');
+        const url=canvas?canvas.toDataURL('image/png'):(img?img.src:'');
         document.body.removeChild(div);
         finish(url);
       },80);
@@ -20449,7 +20459,7 @@ function _generateQRDataURL(text, sizePx){
       return;
     }
     const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.src='./vendor/qrcode.min.js';
     s.async=true;
     s.setAttribute('data-albaraba-qrcode','1');
     s.onload=make;
@@ -20522,6 +20532,7 @@ async function _batchPrint(items, orient){
     const proceso  = r.proceso  || [];
     const emp      = r.etqEmp || _etqCurrentWorker();
     const dlcFmt   = dlc ? fmtDate(dlc) : '—';
+    const scanCode = _etqShortScanCode(r);
     const hasQr    = !!needsTraceQr;
     const qrImg    = hasQr ? (qrUrl ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm" alt="QR trazabilidad">` : `<div class="qr-fallback">QR</div>`) : '';
     for(let i=0;i<cop;i++){
@@ -20532,6 +20543,7 @@ async function _batchPrint(items, orient){
           <div class="dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
           ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
           <div class="small-lbl">CREADA: ${fecha} · ${emp}${r.proveedor?' · '+r.proveedor:''}</div>
+          <div class="scan-code">${scanCode}</div>
           <div class="cad-lbl">CONSUMIR ANTES DE:</div>
           <div class="cad">${dlcFmt}</div>
         </div>${hasQr?`<div class="col-right">${qrImg}
@@ -20547,6 +20559,7 @@ async function _batchPrint(items, orient){
           ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
           <div class="small-lbl">CREADA: ${fecha}</div>
           <div class="small-lbl">HECHA POR: ${emp}</div>
+          <div class="scan-code">${scanCode}</div>
           <div class="sep"></div>
           <div class="cad-lbl">CONSUMIR ANTES DE:</div>
           <div class="cad">${dlcFmt}</div>
@@ -20589,6 +20602,7 @@ async function _batchPrint(items, orient){
     .dest{font-size:${isLand?'2.65mm':'3.5mm'};font-weight:900;padding:.35mm 1mm;border-radius:1.1mm;text-align:center;letter-spacing:.2px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .lote{font-size:${isLand?'2.15mm':'2.5mm'};font-family:monospace;font-weight:900;color:#111;background:#f0f0f0;padding:.25mm .8mm;border-radius:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .small-lbl{font-size:${isLand?'1.65mm':'2mm'};color:#555;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .scan-code{font-size:${isLand?'1.65mm':'1.9mm'};font-family:monospace;font-weight:900;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .cad-lbl{font-size:${isLand?'1.45mm':'2mm'};color:#777;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap}
     .cad{font-size:${isLand?'5.45mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:.9;letter-spacing:.05mm;white-space:nowrap;overflow:hidden}
     .label.basic .cad{font-size:${isLand?'5.9mm':'8mm'}}
@@ -20617,6 +20631,7 @@ async function _batchPrint(items, orient){
         creada:fecha,
         hecha:emp,
         qr:qrUrl||'',
+        codigo:_etqShortScanCode(r),
         trace:qrText||'',
         tipo:needsTraceQr?'elab':tipo
       });
@@ -20660,7 +20675,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-qr-pistola-stocknevera1'
+        source_version:'v20260729-qr-pistola-local1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
