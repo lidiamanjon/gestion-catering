@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-print-bridge-all1 -->
+<!-- VERSION: v20260729-elab-archivo1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-print-bridge-all1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-elab-archivo1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3787,7 +3787,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-print-bridge-all1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-elab-archivo1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3922,7 +3922,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-print-bridge-all1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-elab-archivo1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5921,7 +5921,7 @@ function renderStockTable(q=''){
 }
 function renderCongeladorStock(){
   // Get APPCC batches in freezer
-  const elabBatches=ld(K.elab).filter(x=>x.estado==='congelado'||x.destino==='congelador');
+  const elabBatches=ld(K.elab).filter(x=>!_elabArchivada(x)&&(x.estado==='congelado'||x.destino==='congelador'));
   // Get direct congel records
   const congelRecs=ld(K.congel);
   // Get all regenerations to subtract
@@ -6025,7 +6025,7 @@ function _storageDestLabel(destino){
     : {body:'nevera-elab-stock-body',icon:'❄️',title:'Elaboraciones en nevera',empty:'La nevera de elaboraciones está vacía',color:'#0ea5e9'};
 }
 function _buildElabStorageList(destino){
-  const elabBatches=ld(K.elab).filter(x=>(x.destino||'nevera')===destino&&x.estado!=='servido'&&x.estado!=='regenerado'&&x.estado!=='eliminado');
+  const elabBatches=ld(K.elab).filter(x=>!_elabArchivada(x)&&(x.destino||'nevera')===destino&&x.estado!=='servido'&&x.estado!=='regenerado'&&x.estado!=='eliminado');
   const items={};
   elabBatches.forEach(b=>{
     const key=(b.producto||b.nombre||'?')+'|'+(b.lote||'');
@@ -12889,7 +12889,7 @@ function renderHomeAlerts(){
   const box=document.getElementById('home-alerts');if(!box)return;
   const alerts=[];
   // Elaboraciones próximas a caducar
-  ld(K.elab).forEach(e=>{
+  ld(K.elab).filter(e=>!_elabArchivada(e)).forEach(e=>{
     const d=daysLeft(e.dlc);
     if(d!==null&&d<=2&&d>=0&&e.estado!=='servido')alerts.push({type:'warn',msg:`<strong>${e.producto}</strong> caduca en ${d===0?'HOY':d+' día(s)'} · Lote ${e.lote}`,mod:'elab'});
     if(d!==null&&d<0&&e.estado!=='servido')alerts.push({type:'error',msg:`<strong>${e.producto}</strong> CADUCADO (${e.dlc}) · Lote ${e.lote}`,mod:'elab'});
@@ -14519,9 +14519,12 @@ function editRecepCad(id){
 
 function renderElab(){
   const recs=ld(K.elab).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const visibles=recs.filter(r=>!_elabArchivada(r));
   const today_str=today();
-  const todayRecs=recs.filter(r=>r.date===today_str);
-  const otherRecs=recs.filter(r=>r.date!==today_str).slice(0,20);
+  const todayRecs=visibles.filter(r=>r.date===today_str&&!_elabSinEventoStock(r));
+  const sinEventoStock=visibles.filter(r=>_elabSinEventoStock(r)).slice(0,30);
+  const otherRecs=visibles.filter(r=>r.date!==today_str&&!_elabSinEventoStock(r)).slice(0,20);
+  const archivadas=recs.filter(r=>_elabArchivada(r));
   const evaPend=typeof getEvaPendingElaborations==='function'?getEvaPendingElaborations():[];
   
   function recHtml(r){
@@ -14558,6 +14561,7 @@ function renderElab(){
           <button class="btn-icon" onclick="_printElabLabel('${r.id}')" title="Imprimir etiqueta">🏷</button>
           <button class="btn-icon" onclick="editElabDlc('${r.id}')" title="Editar caducidad" style="color:#e67e22">📅</button>
           <button class="btn-icon" onclick="viewTrazDetail('${r.id}')" title="Ver expediente completo" style="font-size:13px">📋</button>
+          <button class="btn-icon" onclick="okArchiveElab('${r.id}')" title="OK · quitar de elaboración diaria" style="color:#16a34a">✅</button>
         </div>
       </div>
     </div>`;
@@ -14578,10 +14582,62 @@ function renderElab(){
       </div>
       <div>${todayRecs.map(recHtml).join('')||'<div style="padding:14px;color:#aaa;text-align:center">Sin elaboraciones hoy. Toca + para registrar.</div>'}</div>
     </div>
+    <div class="card" style="border-left:4px solid #0ea5e9">
+      <div class="card-head"><h3>📦 Elaboraciones sin evento específico (${sinEventoStock.length})</h3></div>
+      <div style="padding:0 14px 10px;color:#64748b;font-size:12px">Comida preparada para stock. Se queda aquí hasta que se descongele, se regenere o se asigne a un cliente.</div>
+      <div>${sinEventoStock.map(recHtml).join('')||'<div style="padding:14px;color:#aaa;text-align:center">No hay elaboraciones sin evento en stock.</div>'}</div>
+    </div>
     ${otherRecs.length?`<div class="card">
       <div class="card-head"><h3>Anteriores</h3></div>
       <div>${otherRecs.map(recHtml).join('')}</div>
+    </div>`:''}
+    ${archivadas.length?`<div class="card" style="border-left:4px solid #94a3b8">
+      <div class="card-head"><h3>✅ Archivadas / realizadas (${archivadas.length})</h3><button class="btn btn-sm btn-outline" onclick="viewArchivedElabs()">Ver últimas</button></div>
+      <div style="padding:12px 14px;color:#64748b;font-size:12px">No aparecen ya en elaboraciones diarias, pero siguen en trazabilidad e informes APPCC.</div>
     </div>`:''}`;
+}
+function _elabArchivada(r){
+  return Boolean(r&&(
+    r.archivada_en||r.archivada||
+    r.estado==='archivado'||r.estado==='archivo_drive'||r.estado==='eliminado'
+  ));
+}
+function _elabSinEventoStock(r){
+  if(!r||r.evento_id||r.evento_cliente)return false;
+  if(r.estado==='servido'||r.estado==='regenerado'||r.estado==='eliminado'||r.archivada_en)return false;
+  return r.destino==='congelador'||r.destino==='nevera'||r.estado==='en_stock'||!r.estado;
+}
+function okArchiveElab(id){
+  const recs=ld(K.elab)||[];
+  const i=recs.findIndex(x=>x.id===id);if(i<0)return;
+  const r=recs[i];
+  const destino=r.evento_id||r.evento_cliente?'carpeta_evento_cliente':'elaboraciones_sin_evento';
+  const msg=destino==='carpeta_evento_cliente'
+    ?'Esto quitará la elaboración de la pantalla diaria y la dejará marcada para expediente/carpeta del cliente. La trazabilidad NO se borra.'
+    :'Esto quitará la elaboración de la pantalla diaria y la dejará archivada como elaboración sin evento. La trazabilidad NO se borra.';
+  if(!confirm('OK / archivar elaboración\n\n'+(r.producto||'Elaboración')+'\nLote: '+(r.lote||'—')+'\n\n'+msg+'\n\n¿Continuar?'))return;
+  recs[i].archivada_en=new Date().toISOString();
+  recs[i].archivada_por=currentUserEmail||localStorage.getItem(K.wActive)||'';
+  recs[i].archivo_destino=destino;
+  recs[i].pendiente_drive=destino==='carpeta_evento_cliente';
+  recs[i].estado='archivado';
+  recs[i].proceso=[...(recs[i].proceso||[]),'✅ Archivado/retirado de elaboraciones diarias · '+new Date().toLocaleString('es-ES')];
+  sv(K.elab,recs);
+  saveDB();
+  renderElab();renderHomeAlerts();
+  if(typeof toast==='function')toast('Elaboración archivada; trazabilidad conservada.');
+}
+function viewArchivedElabs(){
+  const rows=(ld(K.elab)||[]).filter(_elabArchivada).sort((a,b)=>String(b.archivada_en||b.ts||'').localeCompare(String(a.archivada_en||a.ts||''))).slice(0,40);
+  openModalAPPCC(`<div class="modal-title">✅ Elaboraciones archivadas</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:10px">Historial conservado para informes, trazabilidad y carpetas Drive.</div>
+    <div style="max-height:420px;overflow:auto">${rows.map(r=>`<div class="list-row">
+      <div class="list-icon">📁</div><div class="list-main"><div class="list-title">${esc(r.producto||'—')}</div>
+      <div class="list-sub"><span class="lot-code">${esc(r.lote||'—')}</span> · ${esc(r.evento_cliente||'Sin evento')} · ${esc(r.archivo_destino||'archivo')}</div>
+      <div class="list-sub">Archivada: ${esc(r.archivada_en?fmtDT(r.archivada_en):'—')}</div></div>
+      <div class="list-right"><button class="btn btn-sm btn-outline" onclick="viewTrazDetail('${esc(r.id)}')">Expediente</button></div>
+    </div>`).join('')||'<div style="padding:16px;color:#aaa;text-align:center">Sin archivadas todavía</div>'}</div>
+    <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModalAPPCC()">Cerrar</button></div>`);
 }
 
 function toggleAlerg(id){
@@ -15492,7 +15548,7 @@ function buscarLote(lote){
 }
 function verTrazElabFromModal(id){closeModalAPPCC();viewTrazDetail(id)}
 function openTrazAsociar(){
-  const elabs=ld(K.elab).filter(e=>e.estado!=='servido').slice(0,30);
+  const elabs=ld(K.elab).filter(e=>!_elabArchivada(e)&&e.estado!=='servido').slice(0,30);
   const receps=ld(K.recep).slice(0,20);
   openModalAPPCC(`<div class="modal-title">🔗 Asociar producto a elaboración</div>
     <div class="fc-group"><label class="fc-label">Lote / producto recibido</label>
@@ -16177,7 +16233,7 @@ function renderCongel(){
     </div>`;
 }
 function openCongelModal(){
-  const elabs=ld(K.elab).filter(r=>r.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const elabs=ld(K.elab).filter(r=>!_elabArchivada(r)&&r.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   const prods=ld(K.recep).sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,30);
 
   function itemBtn(nombre,lote,cant,unidad){
@@ -16312,7 +16368,7 @@ function saveCongel(){
 // ============================================================
 function renderDescongel(){
   const recs=ld(K.descongel).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
-  const elabsCongelados=ld(K.elab).filter(r=>r.destino==='congelador'&&r.estado==='en_stock');
+  const elabsCongelados=ld(K.elab).filter(r=>!_elabArchivada(r)&&r.destino==='congelador'&&r.estado==='en_stock');
   document.getElementById('descongel-body').innerHTML=`
     ${elabsCongelados.length?`<div class="card">
       <div class="card-head"><h3>En congelador — disponibles (${elabsCongelados.length})</h3></div>
@@ -16379,7 +16435,7 @@ function openDescongelFor(elabId){
 }
 function openDescongelModal(){
   // Elaboraciones congeladas disponibles
-  const congeladas=ld(K.elab).filter(x=>x.destino==='congelador'&&x.estado!=='servido'&&x.estado!=='regenerado'&&x.estado!=='eliminado')
+  const congeladas=ld(K.elab).filter(x=>!_elabArchivada(x)&&x.destino==='congelador'&&x.estado!=='servido'&&x.estado!=='regenerado'&&x.estado!=='eliminado')
     .sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   // También productos en congelador (de K.congel)
   const prodCongel=ld(K.congel||'a_congel').filter(x=>!x.fechaDescongel)
@@ -16475,6 +16531,7 @@ function openScanAndApplyTo(callback){
 function renderRegen(){
   const body=document.getElementById('regen-body');if(!body)return;
   const enNevera=(ld(K.elab)||[]).filter(r=>
+    !_elabArchivada(r)&&
     (r.destino==='nevera'||r.destino==='refrigerado'||r.destino==='fridge')&&
     r.estado!=='servido'&&r.estado!=='regenerado'
   );
@@ -16543,7 +16600,7 @@ function openRegenForDescongel(descongelId){
 function openRegenModal(){
   window._regenRef={origen:'manual'};
   // Build list of available elaborations: nevera + congelador + descongeladas
-  const elabs=(ld(K.elab)||[]).filter(x=>x.estado!=='servido'&&(x.destino==='nevera'||x.destino==='congelador'));
+  const elabs=(ld(K.elab)||[]).filter(x=>!_elabArchivada(x)&&x.estado!=='servido'&&(x.destino==='nevera'||x.destino==='congelador'));
   const descs=(ld(K.descongel)||[]).filter(x=>!x.estado||x.estado!=='servido');
   const items=[
     ...elabs.map(e=>({id:e.id,tipo:'elab',prod:e.producto,lote:e.lote||'',origen:e.destino,
@@ -16740,7 +16797,7 @@ function renderTserv(){
     </div>`;
 }
 function openTservModal(){
-  const emps=ld(K.emp);const elabs=ld(K.elab).filter(r=>r.estado!=='servido');
+  const emps=ld(K.emp);const elabs=ld(K.elab).filter(r=>!_elabArchivada(r)&&r.estado!=='servido');
   openModalAPPCC(`<div class="modal-title">🌡 Temperatura de Servicio</div>
     <div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:10px">
       <button onclick="scanToFields({prod:'ts2-prod', lote:'ts2-lote'})" style="background:#1a4fa8;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;width:100%">📷 Escanear código de barras</button>
@@ -18676,7 +18733,7 @@ function renderAbat(){
 }
 function openAbatModal(){
   // All active elaborations (en_stock is the state used by saveElab)
-  const elabs=ld(K.elab).filter(x=>x.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const elabs=ld(K.elab).filter(x=>!_elabArchivada(x)&&x.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts));
   const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
   openModalAPPCC(`<div class="modal-title">❄ Registro Abatidor</div>
 
@@ -19449,7 +19506,7 @@ function _buildEtiquetaProductRows(){
 function renderEtiquetas(){
   const savedOrient=localStorage.getItem('a_lbl_orient')||'portrait';
   const lblSize=getLabelSize();
-  const elabs=(ld(K.elab)||[]).filter(e=>e.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50);
+  const elabs=(ld(K.elab)||[]).filter(e=>!_elabArchivada(e)&&e.estado!=='servido').sort((a,b)=>new Date(b.ts)-new Date(a.ts)).slice(0,50);
   const productRows=_buildEtiquetaProductRows();
   const openSections=JSON.parse(localStorage.getItem('a_etq_open')||'{"prod":true,"elab":true,"manual":false}');
 
