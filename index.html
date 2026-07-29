@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-recepcion-stock1 -->
+<!-- VERSION: v20260729-pistola-sin-cad1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-recepcion-stock1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-sin-cad1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3784,7 +3784,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-recepcion-stock1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-sin-cad1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3919,7 +3919,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-recepcion-stock1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-sin-cad1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6111,6 +6111,12 @@ function _pistolParse(raw){
   try{if(typeof parseScan==='function')return parseScan(clean)||{raw:clean};}catch(e){}
   return{raw:clean,gtin:/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(clean)?clean:'',lot:''};
 }
+function _pistolNoCaducidad(parsed){
+  const p={...(parsed||{})};
+  delete p.expiry;
+  delete p.caducidad;
+  return p;
+}
 function _pistolFindProduct(parsedOrRaw){
   const parsed=typeof parsedOrRaw==='string'?_pistolParse(parsedOrRaw):(parsedOrRaw||{});
   if(parsed.isInternal&&parsed.producto){
@@ -6133,7 +6139,6 @@ function _pistolAssociateCode(productId,parsed){
   p.gtin=gtin;p.ean=gtin;p.barcode=gtin;
   if(!p.referencia)p.referencia=gtin;
   if(parsed?.lot)p.ultimo_lote=String(parsed.lot).trim().toUpperCase();
-  if(parsed?.expiry)p.ultima_caducidad=String(parsed.expiry).trim();
   p.actualizado_en=new Date().toISOString();
   saveDB();
   try{if(typeof registerGTIN==='function')registerGTIN(gtin,{nombre:p.nombre,proveedor:provNombre(p.proveedor_id)||p.proveedor||''});}catch(e){}
@@ -6213,7 +6218,7 @@ function openPistolMode(context='recepcion'){
         <div class="fg"><label class="fl">Cantidad por escaneo</label><input class="fc" id="pistol-recep-fast-qty" type="number" step="0.01" value="1"></div>
         <div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-recep-fast-unit"><option value="uds">uds</option><option value="kg">kg</option><option value="cajas">cajas</option><option value="bolsas">bolsas</option><option value="latas">latas</option><option value="bricks">bricks</option><option value="L">L</option></select></div>
       </div>
-      <div style="font-size:11px;color:#166534;margin-top:6px">Si falta lote o caducidad, te lo pedirá antes de guardar. Si desmarcas este modo, abre el formulario completo.</div>
+      <div style="font-size:11px;color:#166534;margin-top:6px">Si falta lote, te lo pedirá antes de guardar. La caducidad no se rellena automáticamente al leer con pistola.</div>
     </div>`:''}
     ${context==='producto'?`<div class="fg"><label class="fl">Si el código no existe, asociarlo a producto</label><select class="fc" id="pistol-product-select"><option value="">Elegir después / crear nuevo</option>${_pistolProductOptions()}</select></div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
@@ -6240,19 +6245,17 @@ function submitPistolScan(context,manual=false){
   if(!raw){if(inp)inp.style.borderColor='#e74c3c';return;}
   if(!manual&&raw===_pistolLastAutoValue)return;
   _pistolLastAutoValue=raw;
-  const parsed=_pistolParse(raw);
+  const parsed=_pistolNoCaducidad(_pistolParse(raw));
   const prod=_pistolFindProduct(parsed);
   if(prod){
     if(parsed.gtin&&!prod.gtin)_pistolAssociateCode(prod.id,parsed);
-    if(parsed.lot||parsed.expiry){
+    if(parsed.lot){
       if(parsed.lot)prod.ultimo_lote=String(parsed.lot).trim().toUpperCase();
-      if(parsed.expiry)prod.ultima_caducidad=String(parsed.expiry).trim();
       prod.actualizado_en=new Date().toISOString();
       saveDB();
     }
     if(st)st.innerHTML='✅ Encontrado: <strong>'+esc(prod.nombre||'')+'</strong>'+[
-      parsed.lot?'lote '+esc(parsed.lot):'',
-      parsed.expiry?'cad. '+esc(fmtExpiryDisplay(parsed.expiry)):''
+      parsed.lot?'lote '+esc(parsed.lot):''
     ].filter(Boolean).map(x=>' · <strong>'+x+'</strong>').join('');
     if(context==='stock'){
       const quick=document.getElementById('pistol-stock-quick')?.checked;
@@ -6279,16 +6282,14 @@ function submitPistolScan(context,manual=false){
 }
 function _pistolAskMissingRecep(productId,parsed,prod,opts={}){
   const needLote=!parsed?.lot;
-  const needCad=!parsed?.expiry;
-  if(!needLote&&!needCad)return false;
+  if(!needLote)return false;
   window._pistolPendingRecep={productId,parsed:parsed||{},prod:prod||null,opts:opts||{}};
   openModal(`<div class="mh"><h2>📦 Completar recepción</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
     <div style="background:#fff3cd;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px;font-size:13px;color:#78350f;margin-bottom:12px">
       Producto leído: <strong>${esc(prod?.nombre||parsed?.producto||'Producto')}</strong><br>
-      Falta ${[needLote?'lote':null,needCad?'caducidad':null].filter(Boolean).join(' y ')} para dejarlo bien trazado.
+      Falta el <strong>lote</strong> para dejarlo trazado. La caducidad no se rellena automáticamente con pistola.
     </div>
-    ${needLote?`<div class="fg"><label class="fl">Número de lote *</label><input class="fc" id="pistol-recep-lote" style="font-family:monospace;font-weight:900" placeholder="Lote del proveedor"></div>`:''}
-    ${needCad?`<div class="fg"><label class="fl">Caducidad *</label><input class="fc" id="pistol-recep-cad" type="date" value="${_etqDefaultDlc()}"></div>`:''}
+    <div class="fg"><label class="fl">Número de lote *</label><input class="fc" id="pistol-recep-lote" style="font-family:monospace;font-weight:900" placeholder="Lote del proveedor"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       <button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button>
       <button class="btn btn-green" onclick="confirmPistolRecepMissing()">✓ Guardar recepción</button>
@@ -6300,27 +6301,25 @@ function confirmPistolRecepMissing(){
   const p=window._pistolPendingRecep||{};
   const parsed={...(p.parsed||{})};
   const lote=(document.getElementById('pistol-recep-lote')?.value||'').trim().toUpperCase();
-  const cad=(document.getElementById('pistol-recep-cad')?.value||'').trim();
   if(document.getElementById('pistol-recep-lote')&&!lote){document.getElementById('pistol-recep-lote').style.borderColor='#e74c3c';return;}
-  if(document.getElementById('pistol-recep-cad')&&!cad){document.getElementById('pistol-recep-cad').style.borderColor='#e74c3c';return;}
   if(lote)parsed.lot=lote;
-  if(cad)parsed.expiry=cad;
+  delete parsed.expiry;
   closeModal('modal-universal');
   return quickPistolRecepAdd(p.productId,parsed,p.prod,p.opts||{});
 }
 function quickPistolRecepAdd(productId,parsed,prod,opts={}){
   const p=prod||(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return;
-  if(!parsed?.lot||!parsed?.expiry)return _pistolAskMissingRecep(productId,parsed,p,opts);
+  if(!parsed?.lot)return _pistolAskMissingRecep(productId,parsed,p,opts);
   const qty=Math.max(0,parseFloat(opts.qty||document.getElementById('pistol-recep-fast-qty')?.value||'1')||1);
   const unit=opts.unit||document.getElementById('pistol-recep-fast-unit')?.value||p.unidad||'uds';
   const lote=String(parsed.lot||'').trim().toUpperCase();
-  const cad=String(parsed.expiry||'').trim();
+  const cad='';
   const prov=provNombre(p.proveedor_id)||p.proveedor||'';
   const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||_etqCurrentWorker();
   const rec={id:genId(),ts:new Date().toISOString(),date:today(),proveedor:prov,producto:p.nombre||'',cantidad:qty,unidad:unit,cajas:undefined,temp:undefined,lote,caducidad:cad,emp,obs:'Recepción rápida con pistola',conforme:true};
   const recs=ld(K.recep)||[];recs.push(rec);sv(K.recep,recs);
   registrarEntradaStockGestion({producto:p.nombre,cantidad:qty,unidad:unit,lote,recepcionId:rec.id});
-  p.ultimo_lote=lote;p.ultima_caducidad=cad;p.actualizado_en=new Date().toISOString();p.stock_actualizado_en=p.actualizado_en;
+  p.ultimo_lote=lote;p.actualizado_en=new Date().toISOString();p.stock_actualizado_en=p.actualizado_en;
   _checkProdPendiente(p.nombre,prov);
   saveDB();
   refreshStockViews();
@@ -6395,7 +6394,6 @@ function quickPistolStockAdd(productId,parsed,opts={}){
   const next=action==='sub'?Math.max(0,current-qty):current+qty;
   p.stock_actual=Math.round(next*1000)/1000;
   if(parsed?.lot)p.ultimo_lote=String(parsed.lot).trim().toUpperCase();
-  if(parsed?.expiry)p.ultima_caducidad=String(parsed.expiry).trim();
   p.stock_actualizado_en=new Date().toISOString();
   p.actualizado_en=p.stock_actualizado_en;
   registrarMovimientoStockGestion({
@@ -6435,7 +6433,7 @@ function openPistolUnknownProduct(parsed,context){
   window._pistolUnknownContext=context;
   openModal(`<div class="mh"><h2>📦 Producto no reconocido</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
     <div style="background:#fff3cd;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px;font-size:13px;color:#78350f;margin-bottom:12px">
-      Código leído: <code>${esc(gtin||parsed.raw||'')}</code>${parsed.lot?` · lote <code>${esc(parsed.lot)}</code>`:''}${parsed.expiry?` · cad. <code>${esc(fmtExpiryDisplay(parsed.expiry))}</code>`:''}
+      Código leído: <code>${esc(gtin||parsed.raw||'')}</code>${parsed.lot?` · lote <code>${esc(parsed.lot)}</code>`:''}
     </div>
     <div style="background:#eef4ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;font-size:12px;color:#1e3a8a;margin-bottom:12px;line-height:1.45">
       <strong>Ahora mismo hay que decidir qué producto es:</strong><br>
@@ -6459,10 +6457,9 @@ function savePistolUnknownProduct(context=window._pistolUnknownContext,parsed=wi
   if(prod){
     if(gtin){prod.gtin=gtin;prod.ean=gtin;prod.barcode=gtin;if(!prod.referencia)prod.referencia=gtin;}
     if(parsed?.lot)prod.ultimo_lote=String(parsed.lot).trim().toUpperCase();
-    if(parsed?.expiry)prod.ultima_caducidad=String(parsed.expiry).trim();
     prod.actualizado_en=now;
   }else{
-    prod={id:uid(),nombre:name,categoria:document.getElementById('pistol-new-cat')?.value||'Otros',proveedor_id:document.getElementById('pistol-new-prov')?.value||'',unidad:document.getElementById('pistol-new-unit')?.value||'kg',precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:gtin,gtin,ean:gtin,barcode:gtin,ultimo_lote:parsed?.lot?String(parsed.lot).trim().toUpperCase():'',ultima_caducidad:parsed?.expiry?String(parsed.expiry).trim():'',notas:'Añadido desde pistola lectora. Pendiente revisar ficha técnica/alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
+    prod={id:uid(),nombre:name,categoria:document.getElementById('pistol-new-cat')?.value||'Otros',proveedor_id:document.getElementById('pistol-new-prov')?.value||'',unidad:document.getElementById('pistol-new-unit')?.value||'kg',precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:gtin,gtin,ean:gtin,barcode:gtin,ultimo_lote:parsed?.lot?String(parsed.lot).trim().toUpperCase():'',ultima_caducidad:'',notas:'Añadido desde pistola lectora. Pendiente revisar ficha técnica/alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
     DB.productos.push(prod);
   }
   saveDB();
