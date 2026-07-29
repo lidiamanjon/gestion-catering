@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-plan-eva-botones1 -->
+<!-- VERSION: v20260729-mejoras-fotos1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-plan-eva-botones1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-mejoras-fotos1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3785,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-plan-eva-botones1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-mejoras-fotos1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3920,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-plan-eva-botones1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-mejoras-fotos1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -8239,6 +8239,7 @@ function fileToBase64(file){
   });
 }
 async function guardarMejora(){
+  if(!Array.isArray(DB.mejoras))DB.mejoras=[];
   const titulo=document.getElementById('mej-titulo').value.trim();
   if(!titulo){alert('Escribe un título para la mejora');return;}
   const fileInput=document.getElementById('mej-foto-antes');
@@ -8260,11 +8261,14 @@ async function guardarMejora(){
   document.getElementById('mej-titulo').value='';
   document.getElementById('mej-desc').value='';
   fileInput.value='';
+  switchMejorasTab(document.querySelector('#section-mejoras .tabs .tab'), 'mej-tab-pendientes');
   renderMejoras();
+  alert('✅ Mejora guardada en pendientes.');
 }
 function renderMejoras(){
-  const pendientes=DB.mejoras.filter(m=>m.estado==='pendiente');
-  const completadas=DB.mejoras.filter(m=>m.estado==='completada');
+  if(!Array.isArray(DB.mejoras))DB.mejoras=[];
+  const pendientes=DB.mejoras.filter(m=>String(m.estado||'pendiente')==='pendiente');
+  const completadas=DB.mejoras.filter(m=>String(m.estado||'')==='completada');
   const prioBadge=p=>p==='alta'?'<span class="badge b-red">🔴 Alta</span>':p==='media'?'<span class="badge b-warn">🟡 Media</span>':'<span class="badge b-ok">🟢 Baja</span>';
   const cardPend=m=>`<div class="card" style="border-left:4px solid ${m.prioridad==='alta'?'#dc2626':m.prioridad==='media'?'#f59e0b':'#16a34a'}">
     <div style="padding:14px">
@@ -8296,7 +8300,7 @@ function renderMejoras(){
       </div>
     </div>
   </div>`;
-  const lp=document.ggetElementById('mej-list-pendientes');
+  const lp=document.getElementById('mej-list-pendientes');
   const lc=document.getElementById('mej-list-completadas');
   if(lp)lp.innerHTML=pendientes.length?pendientes.map(cardPend).join(''):'<div style="text-align:center;padding:30px;color:var(--muted)">✅ Sin mejoras pendientes</div>';
   if(lc)lc.innerHTML=completadas.length?completadas.map(cardComp).join(''):'<div style="text-align:center;padding:30px;color:var(--muted)">Sin mejoras completadas aún</div>';
@@ -8308,6 +8312,7 @@ function abrirModalCompletar(id){
   document.getElementById('modal-completar').style.display='flex';
 }
 async function confirmarCompletada(){
+  if(!Array.isArray(DB.mejoras))DB.mejoras=[];
   const id=document.getElementById('modal-mej-id').value;
   const m=DB.mejoras.find(x=>x.id===id);
   if(!m)return;
@@ -8320,6 +8325,7 @@ async function confirmarCompletada(){
   saveDB();
   document.getElementById('modal-completar').style.display='none';
   renderMejoras();
+  alert('✅ Mejora marcada como completada.');
 }
 function deleteMejora(id){
   if(!confirm('¿Eliminar esta mejora?'))return;
