@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-sanidad-drive1 -->
+<!-- VERSION: v20260729-etiqueta-elab-qr1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-sanidad-drive1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-elab-qr1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3792,7 +3792,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-sanidad-drive1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-elab-qr1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3928,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-sanidad-drive1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-elab-qr1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -20080,6 +20080,17 @@ function _etqPreferredLot(r){
   if(hist[0]?.lote)return hist[0].lote;
   return _etqAutoLot(r?.producto||'');
 }
+function _etqGetDlc(r){
+  const raw = r && (
+    r.dlc || r.caducidad || r.fecha_caducidad || r.fechaCaducidad ||
+    r.consumir_antes || r.consumirAntes || r.fecha_consumo || r.fechaConsumo ||
+    r.dlc_fin || r.fecha_fin || r.fechaFinal || ''
+  );
+  if(raw)return String(raw).slice(0,10);
+  const destino=String((r&&r.destino)||'').toLowerCase();
+  if(destino.includes('congel'))return addDays(today(),90);
+  return _etqDefaultDlc();
+}
 function _etqFindEventoForElab(r){
   const sid=String(r.evento_id||r.hoja_id||r.hojaId||r.eva_evento_id||'');
   let h=sid&&typeof findHojaByAnyId==='function'?findHojaByAnyId(sid):null;
@@ -20089,7 +20100,7 @@ function _etqFindEventoForElab(r){
 function _etqTraceText(r,tipo,empresa,fecha,emp){
   const producto=r.producto||'';
   const lote=r.lote||'';
-  const dlc=r.dlc||r.caducidad||'';
+  const dlc=_etqGetDlc(r);
   const ev=_etqFindEventoForElab(r)||{};
   const recep=(ld(K.recep)||[]).find(x=>(lote&&String(x.lote||'')===String(lote))||(_etqNorm(x.producto||'')===_etqNorm(producto)&&String(x.caducidad||x.dlc||'')===String(dlc||'')))||{};
   const traceId=r.id||r.elab_id||('TRZ-'+Date.now());
@@ -20155,9 +20166,10 @@ function renderEtiquetas(){
   }
 
   function itemRow(r, tipo, def){
+    const dlcVal=_etqGetDlc(r);
     const sub = tipo==='elab'
-      ? (r.lote?'L:'+r.lote+' · ':'')+(r.dlc?'Cad:'+fmtDate(r.dlc):'')
-      : (r.lote?'L:'+r.lote+' · ':'')+(r.dlc||r.caducidad?'Cad:'+fmtDate(r.dlc||r.caducidad)+' · ':'')+(r.proveedor||'')+(r.origen?' · '+r.origen:(r.date?' · '+r.date:''));
+      ? (r.lote?'L:'+r.lote+' · ':'')+'Cad:'+fmtDate(dlcVal)
+      : (r.lote?'L:'+r.lote+' · ':'')+'Cad:'+fmtDate(dlcVal)+' · '+(r.proveedor||'')+(r.origen?' · '+r.origen:(r.date?' · '+r.date:''));
     return `<div style="border-bottom:1px solid #f0f0f0">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 12px">
         <input type="checkbox" id="chk-${tipo}-${r.id}" style="width:20px;height:20px;flex-shrink:0;accent-color:#1a4fa8">
@@ -20360,7 +20372,7 @@ async function _printSelected(tipo){
       const cop=parseInt((document.getElementById('cop-'+t+'-'+r.id)||{}).textContent)||1;
       const destEl=document.getElementById('dest-'+t+'-'+r.id);
       const destino=destEl?destEl.value:(r.destino||'nevera');
-      const cad=r.dlc||r.caducidad||_etqDefaultDlc();
+      const cad=_etqGetDlc(r);
       const lote=_etqPreferredLot(r);
       items.push({r:Object.assign({},r,{destino,lote,dlc:cad,caducidad:cad,ts:new Date().toISOString(),etqEmp:_etqCurrentWorker()}),cop,tipo:t});
     });
@@ -20371,7 +20383,7 @@ async function _printSelected(tipo){
     const r=it.r||{};
     const nombre=r.producto||'Etiqueta';
     const lote=r.lote?(' · lote '+r.lote):'';
-    const cad=(r.dlc||r.caducidad)?(' · cad '+(r.dlc||r.caducidad)):'';
+    const cad=' · cad '+_etqGetDlc(r);
     return '- '+(parseInt(it.cop)||1)+' x '+nombre+lote+cad;
   }).join('\n');
   const extra=items.length>18?'\n... y '+(items.length-18)+' linea(s) mas':'';
@@ -20385,6 +20397,10 @@ async function _printSelected(tipo){
 }
 function _generateQRDataURL(text, sizePx){
   return new Promise(resolve=>{
+    let done=false;
+    const finish=(url='')=>{if(done)return;done=true;resolve(url);};
+    const make=()=>{
+    if(done)return;
     const div=document.createElement('div');
     div.style.cssText='position:absolute;left:-9999px;top:-9999px';
     document.body.appendChild(div);
@@ -20394,9 +20410,26 @@ function _generateQRDataURL(text, sizePx){
         const canvas=div.querySelector('canvas');
         const url=canvas?canvas.toDataURL('image/png'):'';
         document.body.removeChild(div);
-        resolve(url);
+        finish(url);
       },80);
-    }catch(e){document.body.removeChild(div);resolve('');}
+    }catch(e){document.body.removeChild(div);finish('');}
+    };
+    if(window.QRCode)return make();
+    const existing=document.querySelector('script[data-albaraba-qrcode]');
+    if(existing){
+      existing.addEventListener('load',make,{once:true});
+      existing.addEventListener('error',()=>finish(''),{once:true});
+      setTimeout(()=>{if(window.QRCode)make();else finish('');},2500);
+      return;
+    }
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+    s.async=true;
+    s.setAttribute('data-albaraba-qrcode','1');
+    s.onload=make;
+    s.onerror=()=>finish('');
+    document.head.appendChild(s);
+    setTimeout(()=>{if(window.QRCode)make();else finish('');},3000);
   });
 }
 
@@ -20440,7 +20473,7 @@ async function _batchPrint(items, orient){
   for(const {r, cop, tipo} of items){
     const producto = r.producto || '';
     const lote     = r.lote     || '';
-    const dlc      = r.dlc      || r.caducidad || _etqDefaultDlc();
+    const dlc      = _etqGetDlc(r);
     const fecha    = new Date().toLocaleDateString('es-ES');
     const emp      = r.etqEmp || _etqCurrentWorker();
     const proceso  = r.proceso  || [];
@@ -20454,7 +20487,7 @@ async function _batchPrint(items, orient){
   allItems.forEach(({r, cop, tipo, qrUrl, fecha}) => {
     const producto = r.producto || '';
     const lote     = r.lote     || '';
-    const dlc      = r.dlc      || r.caducidad || _etqDefaultDlc();
+    const dlc      = _etqGetDlc(r);
     const destino  = r.destino  || 'nevera';
     const ds       = DEST_STYLES[destino] || DEST_STYLES.nevera;
     const proceso  = r.proceso  || [];
@@ -20577,7 +20610,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-sanidad-drive1'
+        source_version:'v20260729-etiqueta-elab-qr1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
