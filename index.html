@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-unica1 -->
+<!-- VERSION: v20260729-pistola-cantidad1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-unica1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-cantidad1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3784,7 +3784,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-unica1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-cantidad1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3919,7 +3919,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-unica1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-cantidad1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6295,12 +6295,22 @@ function _pistolAskMissingRecep(productId,parsed,prod,opts={}){
   const needLote=!parsed?.lot;
   if(!needLote)return false;
   window._pistolPendingRecep={productId,parsed:parsed||{},prod:prod||null,opts:opts||{}};
+  const qty=opts.qty||document.getElementById('pistol-recep-fast-qty')?.value||'1';
+  const unit=opts.unit||document.getElementById('pistol-recep-fast-unit')?.value||prod?.unidad||'uds';
+  const provId=opts.proveedorId||document.getElementById('pistol-recep-fast-prov')?.value||prod?.proveedor_id||'';
   openModal(`<div class="mh"><h2>📦 Completar recepción</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
     <div style="background:#fff3cd;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px;font-size:13px;color:#78350f;margin-bottom:12px">
       Producto leído: <strong>${esc(prod?.nombre||parsed?.producto||'Producto')}</strong><br>
-      Falta el <strong>lote</strong> para dejarlo trazado. La caducidad no se rellena automáticamente con pistola.
+      Falta el <strong>lote</strong> para dejarlo trazado. Aquí puedes indicar también cuántas cajas/unidades entran de golpe.
     </div>
     <div class="fg"><label class="fl">Número de lote *</label><input class="fc" id="pistol-recep-lote" style="font-family:monospace;font-weight:900" placeholder="Lote del proveedor"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Cantidad recibida *</label><input class="fc" id="pistol-recep-missing-qty" type="number" min="0" step="0.01" value="${esc(qty)}"></div>
+      <div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-recep-missing-unit">
+        ${['uds','kg','cajas','bolsas','latas','bricks','L'].map(u=>`<option value="${esc(u)}" ${String(u)===String(unit)?'selected':''}>${esc(u)}</option>`).join('')}
+      </select></div>
+    </div>
+    <div class="fg"><label class="fl">Proveedor si quieres actualizarlo</label><select class="fc" id="pistol-recep-missing-prov">${_pistolProvOptions(provId)}</select></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       <button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button>
       <button class="btn btn-green" onclick="confirmPistolRecepMissing()">✓ Guardar recepción</button>
@@ -6312,11 +6322,15 @@ function confirmPistolRecepMissing(){
   const p=window._pistolPendingRecep||{};
   const parsed={...(p.parsed||{})};
   const lote=(document.getElementById('pistol-recep-lote')?.value||'').trim().toUpperCase();
+  const qty=parseFloat(document.getElementById('pistol-recep-missing-qty')?.value||'');
+  const unit=document.getElementById('pistol-recep-missing-unit')?.value||p.opts?.unit||'uds';
+  const proveedorId=document.getElementById('pistol-recep-missing-prov')?.value||p.opts?.proveedorId||'';
   if(document.getElementById('pistol-recep-lote')&&!lote){document.getElementById('pistol-recep-lote').style.borderColor='#e74c3c';return;}
+  if(!qty||qty<=0){const q=document.getElementById('pistol-recep-missing-qty');if(q)q.style.borderColor='#e74c3c';return;}
   if(lote)parsed.lot=lote;
   delete parsed.expiry;
   closeModal('modal-universal');
-  return quickPistolRecepAdd(p.productId,parsed,p.prod,p.opts||{});
+  return quickPistolRecepAdd(p.productId,parsed,p.prod,{...(p.opts||{}),qty,unit,proveedorId});
 }
 function quickPistolRecepAdd(productId,parsed,prod,opts={}){
   const p=prod||(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return;
