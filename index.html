@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-expediente-evento1 -->
+<!-- VERSION: v20260729-sanidad-drive1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-expediente-evento1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-sanidad-drive1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3792,7 +3792,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-expediente-evento1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-sanidad-drive1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3928,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-expediente-evento1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-sanidad-drive1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5609,8 +5609,15 @@ const DRIVE_FOLDERS_ALBARABA={
   sanidad_root:{id:'19n5f182RWGNtqmb1aIPDSwmZ_j0m5Sfn',url:'https://drive.google.com/drive/folders/19n5f182RWGNtqmb1aIPDSwmZ_j0m5Sfn',path:'ALBARABA_APPCC_SANIDAD'},
   empresa_root:{id:'1zZvaOPOMO3ySMmGWulwWNjWWHV6Y739R',url:'https://drive.google.com/drive/folders/1zZvaOPOMO3ySMmGWulwWNjWWHV6Y739R',path:'ALBARABA_EMPRESA_GESTION'},
   manual_indice:{id:'1HCJKIsX74lCujp-CepSzcDwSQD-opuRD',url:'https://drive.google.com/drive/folders/1HCJKIsX74lCujp-CepSzcDwSQD-opuRD',path:'ALBARABA_APPCC_SANIDAD/00_Indice_y_Manual'},
+  diseno_appcc:{id:'1BeqeKuwGhAWps7avL4akHiuimJou_rQR',url:'https://drive.google.com/drive/folders/1BeqeKuwGhAWps7avL4akHiuimJou_rQR',path:'ALBARABA_APPCC_SANIDAD/01_Diseno_Sistema_APPCC'},
+  empresa_equipo:{id:'1CQdotTGhcv9u9t2v581YBlXCDjiemqek',url:'https://drive.google.com/drive/folders/1CQdotTGhcv9u9t2v581YBlXCDjiemqek',path:'ALBARABA_APPCC_SANIDAD/02_Empresa_Equipo_Compromiso'},
   producto_recetas:{id:'1uwAutsMAquERjU1nQj-oSohzRGNXx62E',url:'https://drive.google.com/drive/folders/1uwAutsMAquERjU1nQj-oSohzRGNXx62E',path:'ALBARABA_APPCC_SANIDAD/03_Producto_Recetas_Fichas'},
+  listado_productos:{id:'1-8YfUo42nAbFuOoCwqCqQUTh0zmgDE98',url:'https://drive.google.com/drive/folders/1-8YfUo42nAbFuOoCwqCqQUTh0zmgDE98',path:'ALBARABA_APPCC_SANIDAD/03_Producto_Recetas_Fichas/Listado_productos'},
+  recetas_sanidad:{id:'18hHNezpx9Jiysv3WotB1BwSsy-e28ynb',url:'https://drive.google.com/drive/folders/18hHNezpx9Jiysv3WotB1BwSsy-e28ynb',path:'ALBARABA_APPCC_SANIDAD/03_Producto_Recetas_Fichas/Recetas'},
+  fichas_producto_final:{id:'1jU7qhkCKx7yX9bgKgbiBVInb9_T8ujyG',url:'https://drive.google.com/drive/folders/1jU7qhkCKx7yX9bgKgbiBVInb9_T8ujyG',path:'ALBARABA_APPCC_SANIDAD/03_Producto_Recetas_Fichas/Fichas_producto_final'},
   fichas_materias_primas:{id:'1MF8k6Te18Uj8DdvW0C5tCziTJn-MVe2U',url:'https://drive.google.com/drive/folders/1MF8k6Te18Uj8DdvW0C5tCziTJn-MVe2U',path:'ALBARABA_APPCC_SANIDAD/03_Producto_Recetas_Fichas/Fichas_materias_primas_proveedores'},
+  procesos_diagramas:{id:'10kZeg756FovrUP-sXDoD0wbA5hwJEUBd',url:'https://drive.google.com/drive/folders/10kZeg756FovrUP-sXDoD0wbA5hwJEUBd',path:'ALBARABA_APPCC_SANIDAD/04_Procesos_Diagramas_Flujo'},
+  peligros_pcc:{id:'1jWVP_tnAxRrNVHIC0Wx1xIofID-MGfFD',url:'https://drive.google.com/drive/folders/1jWVP_tnAxRrNVHIC0Wx1xIofID-MGfFD',path:'ALBARABA_APPCC_SANIDAD/05_Analisis_Peligros_PCC'},
   produccion:{id:'1rBTtLcPn0R_Rdfiuo3-c4RHggWPmWhqy',url:'https://drive.google.com/drive/folders/1rBTtLcPn0R_Rdfiuo3-c4RHggWPmWhqy',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/F1_Registro_Produccion'},
   recepcion:{id:'1SvaY4kb0A2eQFolAeT2C4NuZk9iWJHjw',url:'https://drive.google.com/drive/folders/1SvaY4kb0A2eQFolAeT2C4NuZk9iWJHjw',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/F2_Recepcion_Materias_Primas'},
   temperaturas:{id:'17GjyXhiFtAW0fDLkBA7jSFVGFTZMUTQL',url:'https://drive.google.com/drive/folders/17GjyXhiFtAW0fDLkBA7jSFVGFTZMUTQL',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/F3_Temperatura_Camaras'},
@@ -5619,10 +5626,15 @@ const DRIVE_FOLDERS_ALBARABA={
   aceite:{id:'1ZJ6L7R_VoYMCHoKSrSb0cX0lMcPmeXD6',url:'https://drive.google.com/drive/folders/1ZJ6L7R_VoYMCHoKSrSb0cX0lMcPmeXD6',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/Control_Aceite'},
   trazabilidad:{id:'1v8knqcH16E1bX5UbIDJAC5G9DAQnjvwX',url:'https://drive.google.com/drive/folders/1v8knqcH16E1bX5UbIDJAC5G9DAQnjvwX',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/Trazabilidad_Lotes'},
   verificacion:{id:'13FFx519gNQfpfZCW5S_kPJsHUTCtHaKm',url:'https://drive.google.com/drive/folders/13FFx519gNQfpfZCW5S_kPJsHUTCtHaKm',path:'ALBARABA_APPCC_SANIDAD/07_Verificacion_Auditorias'},
+  bpm:{id:'13W-mYqeDV1vGDhyN4Ql6qqSGC49l9OSZ',url:'https://drive.google.com/drive/folders/13W-mYqeDV1vGDhyN4Ql6qqSGC49l9OSZ',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA01_BPM_Buenas_Practicas'},
   limpieza:{id:'1Oe6v6kXCjI4ppNn-XA6aw7ZIoPttsNiv',url:'https://drive.google.com/drive/folders/1Oe6v6kXCjI4ppNn-XA6aw7ZIoPttsNiv',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA02_Limpieza_Desinfeccion/F1_PA02_Registro_Limpieza_Desinfeccion'},
+  limpieza_plan:{id:'11cSILRSlAgRePMCH8_yRZGG5zXpfwtP9',url:'https://drive.google.com/drive/folders/11cSILRSlAgRePMCH8_yRZGG5zXpfwtP9',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA02_Limpieza_Desinfeccion'},
+  plagas:{id:'12Dq9eblWv1Ay1vSj6OcYFOZeJRueWZuo',url:'https://drive.google.com/drive/folders/12Dq9eblWv1Ay1vSj6OcYFOZeJRueWZuo',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA03_Control_Plagas'},
+  formacion:{id:'1gKRYrB0i9KcOcHJUaAiLXcAsnPe1MNFj',url:'https://drive.google.com/drive/folders/1gKRYrB0i9KcOcHJUaAiLXcAsnPe1MNFj',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA04_Formacion'},
   proveedores_sanidad:{id:'1kTsIBt_hEQuwsi7zrhgJ9BuTkwWpo-uK',url:'https://drive.google.com/drive/folders/1kTsIBt_hEQuwsi7zrhgJ9BuTkwWpo-uK',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA05_Proveedores'},
   mantenimiento:{id:'1_XP6ovWC40_UUpiSlsF0gjl5s5-WDcOg',url:'https://drive.google.com/drive/folders/1_XP6ovWC40_UUpiSlsF0gjl5s5-WDcOg',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA06_Mantenimiento_Equipos'},
   agua:{id:'1UYvj4lJHnHx8EuudPz633gg7KJ9ZABLD',url:'https://drive.google.com/drive/folders/1UYvj4lJHnHx8EuudPz633gg7KJ9ZABLD',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA07_Control_Agua'},
+  trazabilidad_plan:{id:'14pCEGFCl4pWlKFh6aVkD6Sr7RbspbVvP',url:'https://drive.google.com/drive/folders/14pCEGFCl4pWlKFh6aVkD6Sr7RbspbVvP',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA08_Trazabilidad'},
   no_conformidades:{id:'1hFDRXcYQ_Wp6Gpvq4dSvXgF_URpNTNkb',url:'https://drive.google.com/drive/folders/1hFDRXcYQ_Wp6Gpvq4dSvXgF_URpNTNkb',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA09_No_Conformidades_Acciones_Correctivas'},
   cierres_appcc:{id:'16cfLhIXaFgDzNjcv0nkK4QWWlOlLP8iH',url:'https://drive.google.com/drive/folders/16cfLhIXaFgDzNjcv0nkK4QWWlOlLP8iH',path:'ALBARABA_APPCC_SANIDAD/09_Cierres_Mensuales'},
   eventos:{id:'1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',url:'https://drive.google.com/drive/folders/1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',path:'ALBARABA_EMPRESA_GESTION/Eventos/2026'},
@@ -5651,6 +5663,13 @@ function _driveReportPeriodo(tipo,fecha=new Date()){
 }
 function _driveFolderTypeForReport(tipo){
   const t=String(tipo||'').toLowerCase();
+  if(/bpm|pa01/.test(t))return 'bpm';
+  if(/plagas|pa03|ddd/.test(t))return 'plagas';
+  if(/formacion|pa04/.test(t))return 'formacion';
+  if(/mantenimiento|pa06/.test(t))return 'mantenimiento';
+  if(/agua|pa07/.test(t))return 'agua';
+  if(/aceite/.test(t))return 'aceite';
+  if(/noconf|no_conform|pa09/.test(t))return 'no_conformidades';
   if(/recepcion|materias/.test(t))return 'recepcion';
   if(/temperatura|camara/.test(t))return 'temperaturas';
   if(/trazabilidad|lote/.test(t))return 'trazabilidad';
@@ -5666,6 +5685,21 @@ function driveReportFileName(tipo,fecha=new Date(),extra='',ext='json'){
   const names={
     movimientos_empresa:'ALBARABA_libro_movimientos_empresa',
     recepcion_materias_primas:'F2_MA05_recepcion_materias_primas',
+    appcc_temperaturas:'F3_MA05_temperatura_camaras',
+    appcc_limpieza:'F1_PA02_limpieza_desinfeccion',
+    appcc_bpm:'F1_PA01_buenas_practicas_manipulacion',
+    appcc_agua:'PA07_control_agua',
+    appcc_aceite:'F2_MA4_control_aceite',
+    appcc_plagas:'PA03_control_plagas',
+    appcc_formacion:'PA04_formacion_personal',
+    appcc_mantenimiento:'PA06_mantenimiento_equipos',
+    appcc_no_conformidades:'PA09_no_conformidades_acciones_correctivas',
+    appcc_abatidor:'F_ABAT_control_abatidor',
+    appcc_lavavajillas:'F_LAVA_temperaturas_lavavajillas',
+    appcc_residuos:'F_BASU_residuos_organicos',
+    appcc_descongelacion:'F5_MA4_descongelacion',
+    appcc_regeneracion:'APPCC_regeneracion_producto',
+    appcc_temperatura_servicio:'CCP5_temperatura_servicio',
     stock_lotes:'ALBARABA_stock_lotes_productos_elaboraciones',
     trazabilidad_lotes:'ALBARABA_trazabilidad_lotes',
     cuentas_mensuales:'ALBARABA_cuentas_facturacion_gastos',
@@ -5737,6 +5771,31 @@ function autoPrepararPaquetesDrive(motivo='auto',marcarPersistencia=true){
     empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,total:recepciones.length,
     recepciones:recepciones.slice(-1000)
   },{folderType:'recepcion',periodicidad:'diaria/automatica',periodo:hoy});
+  const reg=(key)=>ld((typeof K!=='undefined'&&K[key])||'')||[];
+  const appccJobs=[
+    ['appcc_temperaturas','temperaturas','temps','Temperaturas de cámaras'],
+    ['appcc_limpieza','limpieza','limp','Limpieza y desinfección'],
+    ['appcc_bpm','bpm','bpm','Buenas prácticas de manipulación'],
+    ['appcc_agua','agua','agua','Control de agua'],
+    ['appcc_aceite','aceite','aceite','Control de aceite'],
+    ['appcc_plagas','plagas','plagas','Control de plagas'],
+    ['appcc_formacion','formacion','formacion','Formación del personal'],
+    ['appcc_mantenimiento','mantenimiento','mant','Mantenimiento de equipos'],
+    ['appcc_no_conformidades','no_conformidades','noconf','No conformidades y acciones correctivas'],
+    ['appcc_abatidor','produccion','abat','Control abatidor'],
+    ['appcc_lavavajillas','verificacion','lava','Temperaturas lavavajillas'],
+    ['appcc_residuos','verificacion','basura','Residuos orgánicos'],
+    ['appcc_descongelacion','congelacion','descongel','Descongelación'],
+    ['appcc_regeneracion','produccion','regen','Regeneración de producto'],
+    ['appcc_temperatura_servicio','distribucion','tserv','Temperatura de servicio']
+  ];
+  appccJobs.forEach(([tipo,folderType,k,label])=>{
+    const registros=reg(k);
+    queueDriveReport(tipo,{
+      empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,
+      modulo:label,total:registros.length,registros:registros.slice(-1000)
+    },{folderType,periodicidad:'diaria/automatica',periodo:hoy});
+  });
   queueDriveReport('stock_lotes',{
     empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,
     stock:_snapshotStockLotes()
@@ -20518,7 +20577,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-expediente-evento1'
+        source_version:'v20260729-sanidad-drive1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
