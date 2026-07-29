@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-lote1 -->
+<!-- VERSION: v20260729-stock-unificado1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-lote1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-stock-unificado1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3785,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-lote1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-stock-unificado1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3920,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-lote1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-stock-unificado1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5581,6 +5581,19 @@ function registrarEntradaStockGestion({producto,cantidad,unidad,lote,recepcionId
   marcarPedidosParaRecalcular('Mercancía recibida: '+p.nombre,ped=>!ped.totales||Boolean(ped.totales[p.id]));
   return p;
 }
+function registrarMovimientoStockGestion({productoId,tipo,cantidad,unidad,lote,origen,nota}){
+  const p=(DB.productos||[]).find(x=>String(x.id||'')===String(productoId||''));
+  if(!p)return null;
+  const qty=Math.max(0,parseFloat(cantidad)||0);
+  const now=new Date().toISOString();
+  if(!DB.movimientos_stock)DB.movimientos_stock=[];
+  DB.movimientos_stock.push({
+    id:uid(),tipo:tipo||'ajuste_stock',producto_id:p.id,producto:p.nombre,
+    cantidad:qty,unidad:unidad||p.unidad||'',lote:lote||'',origen:origen||'',nota:nota||'',fecha:now
+  });
+  DB.movimientos_stock=DB.movimientos_stock.slice(-2000);
+  return p;
+}
 function openElabModal(){
   document.getElementById('elab-id').value='';
   document.getElementById('elab-nombre').value='';
@@ -6103,11 +6116,10 @@ function _pistolFindProduct(parsedOrRaw){
   const parsed=typeof parsedOrRaw==='string'?_pistolParse(parsedOrRaw):(parsedOrRaw||{});
   const raw=String(parsed.raw||'').trim();
   const gtin=String(parsed.gtin||'').trim();
-  const lot=String(parsed.lot||'').trim();
-  const candidates=[gtin,raw,lot].filter(Boolean).map(_pistolNorm);
+  const candidates=[gtin,raw].filter(Boolean).map(_pistolNorm);
   if(!candidates.length)return null;
   return (DB.productos||[]).find(p=>{
-    const fields=[p.gtin,p.ean,p.barcode,p.codigo,p.cod,p.referencia,p.ref,p.ultimo_lote].filter(Boolean).map(_pistolNorm);
+    const fields=[p.gtin,p.ean,p.barcode,p.codigo,p.cod,p.referencia,p.ref].filter(Boolean).map(_pistolNorm);
     return candidates.some(c=>fields.some(f=>f===c));
   }) || null;
 }
@@ -6294,13 +6306,24 @@ function savePistolStockAdjust(productId){
   if(isNaN(qty)){alert('Cantidad no válida');return;}
   const action=document.getElementById('pistol-stock-action')?.value||'add';
   const current=parseFloat(p.stock_actual)||0;
-  p.stock_actual=action==='set'?qty:action==='sub'?Math.max(0,current-qty):current+qty;
+  const next=action==='set'?qty:action==='sub'?Math.max(0,current-qty):current+qty;
+  const diff=Math.round((next-current)*1000)/1000;
+  p.stock_actual=Math.round(next*1000)/1000;
   const lote=(document.getElementById('pistol-stock-lote')?.value||'').trim().toUpperCase();
   if(lote)p.ultimo_lote=lote;
   p.stock_actualizado_en=new Date().toISOString();
   p.actualizado_en=p.stock_actualizado_en;
+  registrarMovimientoStockGestion({
+    productoId,
+    tipo:action==='add'?'entrada_pistola':action==='sub'?'salida_pistola':'ajuste_pistola',
+    cantidad:Math.abs(diff||qty),
+    unidad:p.unidad||'',
+    lote,
+    origen:'pistola_stock',
+    nota:'Stock actualizado con pistola'
+  });
   marcarPedidosParaRecalcular('Stock actualizado con pistola: '+p.nombre,r=>!r.totales||Boolean(r.totales[productId]));
-  saveDB();closeModal('modal-universal');renderStockTable();renderProdTable();
+  saveDB();closeModal('modal-universal');refreshStockViews();
 }
 
 // ═══════════════════════════════════════════════════
@@ -17731,11 +17754,12 @@ function registerGTIN(gtin, entry) {
   const db = getGtinDB();
   db[gtin] = { ...entry, ts: new Date().toISOString() };
   saveGtinDB(db);
-  // Also register in ALBARABA_GESTION catalog if loaded
+  // Also register in ALBARABA_GESTION catalog if loaded, keeping the live DB in memory.
   try {
-    const gDB = JSON.parse(localStorage.getItem('albaraba_v2')||'{}');
+    const liveDB=(typeof DB!=='undefined'&&DB&&Array.isArray(DB.productos))?DB:null;
+    const gDB = liveDB || JSON.parse(localStorage.getItem('albaraba_v2')||'{}');
     if (gDB.productos) {
-      const exists = gDB.productos.find(p => p.gtin===gtin);
+      const exists = gDB.productos.find(p => p.gtin===gtin || p.ean===gtin || p.barcode===gtin || p.referencia===gtin);
       if (!exists) {
         const provObj = gDB.proveedores && gDB.proveedores.find(p => p.nombre===entry.proveedor);
         gDB.productos.push({
@@ -17753,8 +17777,9 @@ function registerGTIN(gtin, entry) {
           alergenos: [],
           rendimiento: 0
         });
-        localStorage.setItem('albaraba_v2', JSON.stringify(gDB));
       }
+      if(liveDB)saveDB();
+      else localStorage.setItem('albaraba_v2', JSON.stringify(gDB));
     }
   } catch(e) {}
 }
@@ -19241,6 +19266,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
