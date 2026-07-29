@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-elab-lotes1 -->
+<!-- VERSION: v20260729-plan-eva-botones1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-elab-lotes1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-plan-eva-botones1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -1370,7 +1370,7 @@ if(FB_READY){
 // ═══════════════════════════════════════════════════
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2)}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function jsArg(v){return JSON.stringify(String(v||''))}
+function jsArg(v){return "'"+String(v??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ')+"'"}
 function safeDomId(prefix,id){return prefix+'-'+String(id||'').replace(/[^a-zA-Z0-9_-]/g,'_')}
 function safeRender(label,fn,fallback=''){
   try{return fn()}
@@ -3785,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-elab-lotes1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-plan-eva-botones1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3920,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-elab-lotes1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-plan-eva-botones1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6943,6 +6943,7 @@ function renderHojasTable(q=''){
         ${h.fuente?`<span class="badge" style="background:rgba(99,102,241,.1);color:#4338ca;font-size:10px">${h.fuente==='alaboca'?'🍽 Alaboca':'🌿 PV'}</span>`:''}
         ${facturado?'<span class="badge" style="background:#dbeafe;color:#1e40af">🧾 Facturado</span>':'<span class="badge" style="background:#f3f4f6;color:#6b7280">Sin facturar</span>'}
         ${estadoCobro==='cobrado'?'<span class="badge b-ok">💶 Pagado</span>':estadoCobro==='parcial'?'<span class="badge" style="background:#fff7ed;color:#9a3412">💶 Pago parcial</span>':'<span class="badge" style="background:#fef2f2;color:#991b1b">Cobro pendiente</span>'}
+        <button class="btn btn-sm btn-outline" onclick="event.stopPropagation();toggleHojaBody(${hid})">Abrir detalles</button>
         ${h.eva_revision_pendiente||h.eva_cambio_pendiente?`<span class="badge b-warn">✨ Revisión de Eva pendiente</span>${evaMissing.length?`<span class="badge" style="background:#fee2e2;color:#991b1b">Falta: ${evaMissing.join(', ')}</span>`:''}<button class="btn btn-sm btn-green" onclick="event.stopPropagation();aprobarPropuestaEva(${hid})">${evaMissing.length?'✏️ Completar datos':'✓ Revisar y aprobar'}</button><button class="btn btn-sm btn-del" onclick="event.stopPropagation();rechazarPropuestaEva(${hid})">Rechazar</button>`:(h.realizado?`<span class="badge b-ok">✅ Realizado</span>`:`<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;font-weight:600" onclick="event.stopPropagation();confirmarServicioRealizado(${hid})">✅ Confirmar realizado</button>`)}
         ${!(h.eva_revision_pendiente||h.eva_cambio_pendiente)&&evaMissing.length?`<span class="badge" style="background:#fee2e2;color:#991b1b">Aviso EVA: falta ${evaMissing.join(', ')}</span>`:''}
         <button class="btn btn-sm btn-green" onclick="event.stopPropagation();exportarHojaPDF(${hid})" title="${h.documentos?.hoja_servicio_url?'Abrir el PDF final preparado por EVA':'El PDF de EVA todavía está pendiente'}">📄 PDF EVA</button>
