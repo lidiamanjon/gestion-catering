@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-sync-airbag3 -->
+<!-- VERSION: v20260729-sync-empresa4 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-sync-airbag3'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-sync-empresa4'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3763,7 +3763,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-sync-airbag3');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-sync-empresa4');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3787,7 +3787,17 @@ function saveDB(){
       const token=payload._sync.actualizado_en;
       let backupData=payload;try{if(previous)backupData=JSON.parse(previous);}catch(e){}
       _backupCloudOnce(backupData).then(()=>fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,payload)))
-        .then(()=>{const actual=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');if(actual?._sync?.actualizado_en===token)localStorage.removeItem('_albaraba_pending_sync');setSyncStatus('ok');})
+        .then(result=>{
+          const server=result&&result.snapshot?result.snapshot.val():null;
+          if(server){
+            const mergedBack=_mergeDBPreservingRecords(server,payload);
+            DB=mergedBack;
+            localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+          }
+          const actual=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');
+          if(actual?._sync?.actualizado_en===token||server)localStorage.removeItem('_albaraba_pending_sync');
+          setSyncStatus('ok');
+        })
         .catch(()=>setSyncStatus('error'));
     },250);
   }else setSyncStatus('offline');
@@ -3888,7 +3898,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-sync-airbag3';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-sync-empresa4';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4072,16 +4082,16 @@ function loadDB(){
         if(mergedPending)saveDB();else setSyncStatus('ok');
         if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
         if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
-      } else if(raw){
-        // Firebase vacío pero tenemos datos locales → subirlos
-        fbDB.ref('albaraba_v2').set(DB).then(()=>setSyncStatus('ok'));
+      } else if(raw&&_dbRecordScore(DB)>0){
+        // Firebase vacío pero tenemos datos locales reales → fusionarlos sin usar set destructivo
+        _saveLocalRecoveryPoint(raw,'nube vacía antes de recuperar desde local',true);
+        DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),recuperado_desde_local:true};
+        fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,DB)).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
       } else {
-        // Todo vacío → inicializar
-        DB.elaboraciones=ELAB_INICIAL.map(e=>({id:uid(),nombre:e.n,categoria:e.c,raciones_base:10,ingredientes:[],proceso:'',notas:'',foto:''}));
-        DB.proveedores=PROVEEDORES_INICIAL.map(p=>({...p,id:uid()}));
-        DB.appcc={temperaturas:[],limpiezas:[],incidencias:[]};DB.mejoras=[];
-        saveDB();
-        setSyncStatus('ok');
+        // Empresa en producción: nunca inicializar una nube vacía desde un dispositivo vacío.
+        // Evita que una tablet/móvil nuevo machaque el trabajo real con datos de arranque.
+        setSyncStatus('error');
+        alert('⚠️ Nube vacía o no disponible. Por seguridad esta app NO va a crear datos vacíos. Abre primero el ordenador principal y usa “Subir/fusionar este dispositivo a nube”.');
       }
     }).then(()=>initMainCloudRealtime()).catch(()=>setSyncStatus('error'));
   } else if(!FB_READY){
@@ -18935,6 +18945,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
