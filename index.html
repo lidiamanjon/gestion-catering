@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-sin-cad1 -->
+<!-- VERSION: v20260729-pistola-unica1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-sin-cad1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-unica1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -607,7 +607,7 @@ html,body{height:100%;color-scheme:light!important}
   </div>
   <!-- ACCESO RÁPIDO — siempre visible -->
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px">
-    <div onclick="openPistolMode('recepcion_appcc')" style="background:linear-gradient(135deg,#111827,#374151);border:3px solid #f59e0b;border-radius:16px;padding:20px 10px;text-align:center;cursor:pointer;transition:box-shadow .15s;box-shadow:0 6px 22px rgba(15,23,42,.18)" onmouseover="this.style.boxShadow='0 7px 24px rgba(15,23,42,.32)'" onmouseout="this.style.boxShadow='0 6px 22px rgba(15,23,42,.18)'">
+    <div onclick="openPistolMode('recepcion')" style="background:linear-gradient(135deg,#111827,#374151);border:3px solid #f59e0b;border-radius:16px;padding:20px 10px;text-align:center;cursor:pointer;transition:box-shadow .15s;box-shadow:0 6px 22px rgba(15,23,42,.18)" onmouseover="this.style.boxShadow='0 7px 24px rgba(15,23,42,.32)'" onmouseout="this.style.boxShadow='0 6px 22px rgba(15,23,42,.18)'">
       <div style="font-size:42px;line-height:1">🔫</div>
       <div style="font-weight:900;font-size:16px;color:#fff;margin-top:7px">PISTOLA</div>
       <div style="font-size:11px;color:#fde68a;margin-top:2px">Recepción rápida</div>
@@ -3784,7 +3784,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-sin-cad1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-unica1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3919,7 +3919,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-sin-cad1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-unica1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6185,8 +6185,16 @@ function _pistolProductOptions(){
   return (DB.productos||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'))
     .map(p=>`<option value="${esc(p.id)}">${esc(p.nombre||'Producto')}${p.gtin?' · '+esc(p.gtin):''}</option>`).join('');
 }
+function _pistolProvOptions(selected=''){
+  return '<option value="">Proveedor del producto</option>'+(DB.proveedores||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'))
+    .map(p=>`<option value="${esc(p.id)}" ${String(p.id)===String(selected)?'selected':''}>${esc(p.nombre||'Proveedor')}</option>`).join('');
+}
+function _pistolCtx(context){
+  return context==='recepcion_appcc'?'recepcion':(context||'recepcion');
+}
 function openPistolMode(context='recepcion'){
-  const titles={recepcion:'Recepción con pistola',recepcion_appcc:'Recepción APPCC con pistola',stock:'Actualizar stock con pistola',producto:'Asociar código a producto'};
+  context=_pistolCtx(context);
+  const titles={recepcion:'Recepción con pistola',stock:'Actualizar stock con pistola',producto:'Asociar código a producto'};
   openModal(`<div class="mh"><h2>🔫 ${titles[context]||'Pistola lectora'}</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
     <div style="padding:4px 2px 12px;color:#475569;font-size:13px;line-height:1.45">
       La pistola debe estar en modo <strong>teclado/HID</strong> y enviar <strong>Enter</strong> al final. Enchufar, pinchar en el campo y escanear.
@@ -6209,7 +6217,7 @@ function openPistolMode(context='recepcion'){
       </div>
       <div style="font-size:11px;color:#166534;margin-top:6px">Ejemplo: si escaneas 3 veces el mismo código con cantidad 1, suma 3 unidades.</div>
     </div>`:''}
-    ${(context==='recepcion'||context==='recepcion_appcc')?`<div style="background:#eefaf0;border:1.5px solid #86efac;border-radius:12px;padding:12px;margin-bottom:12px">
+    ${context==='recepcion'?`<div style="background:#eefaf0;border:1.5px solid #86efac;border-radius:12px;padding:12px;margin-bottom:12px">
       <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:800;color:#166534">
         <input type="checkbox" id="pistol-recep-quick" checked style="width:20px;height:20px;margin-top:0">
         <span>Recepción rápida: cada escaneo registra entrada, suma stock y queda en últimas recepciones</span>
@@ -6218,6 +6226,7 @@ function openPistolMode(context='recepcion'){
         <div class="fg"><label class="fl">Cantidad por escaneo</label><input class="fc" id="pistol-recep-fast-qty" type="number" step="0.01" value="1"></div>
         <div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-recep-fast-unit"><option value="uds">uds</option><option value="kg">kg</option><option value="cajas">cajas</option><option value="bolsas">bolsas</option><option value="latas">latas</option><option value="bricks">bricks</option><option value="L">L</option></select></div>
       </div>
+      <div class="fg" style="margin-top:8px"><label class="fl">Proveedor si quieres actualizarlo</label><select class="fc" id="pistol-recep-fast-prov">${_pistolProvOptions()}</select></div>
       <div style="font-size:11px;color:#166534;margin-top:6px">Si falta lote, te lo pedirá antes de guardar. La caducidad no se rellena automáticamente al leer con pistola.</div>
     </div>`:''}
     ${context==='producto'?`<div class="fg"><label class="fl">Si el código no existe, asociarlo a producto</label><select class="fc" id="pistol-product-select"><option value="">Elegir después / crear nuevo</option>${_pistolProductOptions()}</select></div>`:''}
@@ -6230,6 +6239,7 @@ function openPistolMode(context='recepcion'){
 let _pistolScanTimer=null;
 let _pistolLastAutoValue='';
 function schedulePistolScan(context){
+  context=_pistolCtx(context);
   clearTimeout(_pistolScanTimer);
   const inp=document.getElementById('pistol-input');
   const raw=(inp?.value||'').trim();
@@ -6239,6 +6249,7 @@ function schedulePistolScan(context){
   _pistolScanTimer=setTimeout(()=>submitPistolScan(context,false),320);
 }
 function submitPistolScan(context,manual=false){
+  context=_pistolCtx(context);
   const inp=document.getElementById('pistol-input');
   const raw=(inp?.value||'').trim();
   const st=document.getElementById('pistol-status');
@@ -6263,7 +6274,7 @@ function submitPistolScan(context,manual=false){
       return openPistolStockAdjust(prod.id,parsed);
     }
     if(context==='producto'){closeModal('modal-universal');editProducto(prod.id);return;}
-    if((context==='recepcion'||context==='recepcion_appcc')&&document.getElementById('pistol-recep-quick')?.checked!==false){
+    if(context==='recepcion'&&document.getElementById('pistol-recep-quick')?.checked!==false){
       return quickPistolRecepAdd(prod.id,parsed,prod);
     }
     closeModal('modal-universal');
@@ -6309,11 +6320,15 @@ function confirmPistolRecepMissing(){
 }
 function quickPistolRecepAdd(productId,parsed,prod,opts={}){
   const p=prod||(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return;
-  if(!parsed?.lot)return _pistolAskMissingRecep(productId,parsed,p,opts);
   const qty=Math.max(0,parseFloat(opts.qty||document.getElementById('pistol-recep-fast-qty')?.value||'1')||1);
   const unit=opts.unit||document.getElementById('pistol-recep-fast-unit')?.value||p.unidad||'uds';
+  const proveedorId=opts.proveedorId||document.getElementById('pistol-recep-fast-prov')?.value||'';
+  const nextOpts={...opts,qty,unit,proveedorId};
+  if(!parsed?.lot)return _pistolAskMissingRecep(productId,parsed,p,nextOpts);
   const lote=String(parsed.lot||'').trim().toUpperCase();
   const cad='';
+  if(unit&&String(unit)!==String(p.unidad||''))p.unidad=unit;
+  if(proveedorId&&String(proveedorId)!==String(p.proveedor_id||''))p.proveedor_id=proveedorId;
   const prov=provNombre(p.proveedor_id)||p.proveedor||'';
   const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||_etqCurrentWorker();
   const rec={id:genId(),ts:new Date().toISOString(),date:today(),proveedor:prov,producto:p.nombre||'',cantidad:qty,unidad:unit,cajas:undefined,temp:undefined,lote,caducidad:cad,emp,obs:'Recepción rápida con pistola',conforme:true};
@@ -6417,16 +6432,18 @@ function quickPistolStockAdd(productId,parsed,opts={}){
   _pistolLastAutoValue='';
 }
 function openPistolUnknownProduct(parsed,context){
+  context=_pistolCtx(context);
   const gtin=String(parsed?.gtin||parsed?.raw||'').trim();
   window._pistolUnknownQuickStock=context==='stock'?{
     quick:document.getElementById('pistol-stock-quick')?.checked!==false,
     qty:document.getElementById('pistol-stock-fast-qty')?.value||'1',
     action:document.getElementById('pistol-stock-fast-action')?.value||'add'
   }:null;
-  window._pistolUnknownQuickRecep=(context==='recepcion'||context==='recepcion_appcc')?{
+  window._pistolUnknownQuickRecep=context==='recepcion'?{
     quick:document.getElementById('pistol-recep-quick')?.checked!==false,
     qty:document.getElementById('pistol-recep-fast-qty')?.value||'1',
-    unit:document.getElementById('pistol-recep-fast-unit')?.value||'uds'
+    unit:document.getElementById('pistol-recep-fast-unit')?.value||'uds',
+    proveedorId:document.getElementById('pistol-recep-fast-prov')?.value||''
   }:null;
   closeModal('modal-universal');
   window._pistolUnknownParsed=parsed;
@@ -6457,6 +6474,10 @@ function savePistolUnknownProduct(context=window._pistolUnknownContext,parsed=wi
   if(prod){
     if(gtin){prod.gtin=gtin;prod.ean=gtin;prod.barcode=gtin;if(!prod.referencia)prod.referencia=gtin;}
     if(parsed?.lot)prod.ultimo_lote=String(parsed.lot).trim().toUpperCase();
+    const newProv=document.getElementById('pistol-new-prov')?.value||'';
+    const newUnit=document.getElementById('pistol-new-unit')?.value||'';
+    if(newProv)prod.proveedor_id=newProv;
+    if(newUnit)prod.unidad=newUnit;
     prod.actualizado_en=now;
   }else{
     prod={id:uid(),nombre:name,categoria:document.getElementById('pistol-new-cat')?.value||'Otros',proveedor_id:document.getElementById('pistol-new-prov')?.value||'',unidad:document.getElementById('pistol-new-unit')?.value||'kg',precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:gtin,gtin,ean:gtin,barcode:gtin,ultimo_lote:parsed?.lot?String(parsed.lot).trim().toUpperCase():'',ultima_caducidad:'',notas:'Añadido desde pistola lectora. Pendiente revisar ficha técnica/alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
@@ -6475,7 +6496,7 @@ function savePistolUnknownProduct(context=window._pistolUnknownContext,parsed=wi
     }
     openPistolStockAdjust(prod.id,parsed);
   }
-  else if(context==='recepcion'||context==='recepcion_appcc'){
+  else if(context==='recepcion'){
     const quick=window._pistolUnknownQuickRecep;
     if(quick&&quick.quick){
       quickPistolRecepAdd(prod.id,parsed,prod,quick);
@@ -13746,7 +13767,7 @@ function renderRecep(){
         <span style="font-size:24px">📷</span> Escanear caja / etiqueta
         <span style="font-size:11px;opacity:.8;font-weight:400;margin-left:4px">GS1-128 · EAN · QR</span>
       </button>
-      <button onclick="openPistolMode('recepcion_appcc')" style="width:100%;background:linear-gradient(135deg,#111827,#374151);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+      <button onclick="openPistolMode('recepcion')" style="width:100%;background:linear-gradient(135deg,#111827,#374151);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px">
         🔫 Pistola lectora USB/Bluetooth
       </button>
       <button onclick="abrirFotoLoteBolsa('recep')" style="width:100%;background:#f39c12;color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px">
