@@ -560,7 +560,7 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni" id="ni-congelador" onclick="nav('congelador')"><span class="ic">🧊</span> Stock Congelador</div>
     <div class="nav-label admin-only">Documentos</div>
     <div class="ni admin-only" id="ni-informes" onclick="nav('informes')"><span class="ic">📄</span> Informes</div>
-    <div class="ni admin-only" id="ni-gastos" onclick="nav('gastos')"><span class="ic">💰</span> Gastos</div>
+    <div class="ni admin-only" id="ni-gastos" onclick="nav('gastos')"><span class="ic">💰</span> Cuentas</div>
     <div class="nav-label">Equipo</div>
     <div class="ni" id="ni-mejoras" onclick="nav('mejoras')"><span class="ic">🔧</span> Mejoras</div>
     <div class="ni" id="ni-tareas" onclick="nav('tareas')"><span class="ic">📝</span> Tareas</div>
@@ -881,10 +881,10 @@ html,body{height:100%;color-scheme:light!important}
   </div>
 </div>
 
-<!-- GASTOS -->
+<!-- CUENTAS / GASTOS -->
 <div class="section" id="section-gastos">
   <div class="topbar">
-    <div><div class="pg-title">💰 Gastos</div><div class="pg-sub">Coste por evento y por proveedor</div></div>
+    <div><div class="pg-title">💰 Cuentas</div><div class="pg-sub">Eventos, proveedores, facturación, cobros, costes y margen</div></div>
     <button class="btn btn-outline" onclick="descargarGastos()">📥 Descargar</button>
     <button class="btn btn-gold" onclick="exportarGastosExcel()">📊 Exportar Excel</button>
   </div>
@@ -8125,9 +8125,19 @@ function renderGastos(){
 
   // Aggregate
   let totalGlobal=0;const byProvGlobal={};
+  let totalFacturado=0,totalCobrado=0,totalPendiente=0,eventosFacturados=0,eventosCobrados=0,paxTotal=0;
   hojas.forEach(h=>{
     const r=calcCostoHoja(h);
     totalGlobal+=r.totalEfectivo;
+    paxTotal+=parseFloat(h.pax)||0;
+    const fac=h.facturacion||{};
+    const venta=parseFloat(fac.total_factura||h.precio_venta||h.total||0)||0;
+    const cobrado=parseFloat(fac.importe_cobrado||0)||0;
+    const facturado=['facturado','cerrado'].includes(String(h.estado_comercial||'').toLowerCase())||Boolean(fac.numero_factura||h.documentos?.factura_url||venta);
+    if(facturado){eventosFacturados++;totalFacturado+=venta;}
+    if(String(fac.estado_cobro||'').toLowerCase()==='cobrado'||(venta>0&&cobrado>=venta)){eventosCobrados++;}
+    totalCobrado+=cobrado;
+    totalPendiente+=Math.max(0,venta-cobrado);
     if(!r.ajustado){
       Object.entries(r.byProv).forEach(([pid,d])=>{
         if(!byProvGlobal[pid])byProvGlobal[pid]={nombre:d.nombre,coste:0};
@@ -8137,13 +8147,45 @@ function renderGastos(){
   });
 
   const fmtEur=n=>n.toFixed(2).replace('.',',')+'€';
+  const margenGlobal=totalFacturado-totalGlobal;
+  const margenPct=totalFacturado>0?Math.round(margenGlobal/totalFacturado*100):0;
   // Stats
   const sinPrecio=DB.hojas.length?DB.productos.filter(p=>!parseFloat(p.precio_compra||p.precio||0)).length:0;
   document.getElementById('gastos-stats').innerHTML=`
     <div class="sc"><div class="sc-ic g">💰</div><div><div class="sc-v">${fmtEur(totalGlobal)}</div><div class="sc-l">Coste total periodo</div></div></div>
+    <div class="sc"><div class="sc-ic b">🧾</div><div><div class="sc-v">${fmtEur(totalFacturado)}</div><div class="sc-l">Facturado / previsto</div></div></div>
+    <div class="sc"><div class="sc-ic gr">💶</div><div><div class="sc-v">${fmtEur(totalCobrado)}</div><div class="sc-l">Cobrado</div></div></div>
+    <div class="sc"><div class="sc-ic r">⏳</div><div><div class="sc-v">${fmtEur(totalPendiente)}</div><div class="sc-l">Pendiente de cobro</div></div></div>
     <div class="sc"><div class="sc-ic b">📋</div><div><div class="sc-v">${hojas.length}</div><div class="sc-l">Eventos</div></div></div>
-    <div class="sc"><div class="sc-ic gr">👥</div><div><div class="sc-v">${hojas.length?fmtEur(totalGlobal/hojas.length):'0,00€'}</div><div class="sc-l">Coste medio/evento</div></div></div>
+    <div class="sc"><div class="sc-ic gr">📈</div><div><div class="sc-v">${fmtEur(margenGlobal)}</div><div class="sc-l">Margen bruto ${totalFacturado?`(${margenPct}%)`:''}</div></div></div>
     ${sinPrecio?`<div class="sc"><div class="sc-ic r">⚠️</div><div><div class="sc-v">${sinPrecio}</div><div class="sc-l">Prods sin precio</div></div></div>`:''}`;
+
+  const mesesChart=new Map();
+  DB.hojas.forEach(h=>{
+    const key=(h.fecha||'fecha-pendiente').slice(0,7);
+    if(!mesesChart.has(key))mesesChart.set(key,{mes:key,eventos:0,pax:0,coste:0,facturado:0,cobrado:0});
+    const m=mesesChart.get(key),r=calcCostoHoja(h),fac=h.facturacion||{};
+    const venta=parseFloat(fac.total_factura||h.precio_venta||h.total||0)||0;
+    m.eventos++;m.pax+=parseFloat(h.pax)||0;m.coste+=r.totalEfectivo;m.facturado+=venta;m.cobrado+=parseFloat(fac.importe_cobrado||0)||0;
+  });
+  const chartRows=[...mesesChart.values()].filter(x=>/^\d{4}-\d{2}$/.test(x.mes)).sort((a,b)=>a.mes.localeCompare(b.mes)).slice(-12);
+  const maxChart=Math.max(...chartRows.map(x=>Math.max(x.facturado,x.coste,x.eventos*100)),1);
+  const chartHtml=chartRows.length?`<div class="card" style="margin-bottom:16px"><div class="card-head"><h3>📊 Meses en trabajo y facturación</h3><span style="font-size:11px;color:var(--muted)">Últimos 12 meses</span></div>
+    <div style="padding:16px;display:grid;gap:10px">
+      ${chartRows.map(x=>{
+        const lbl=(()=>{const [y,m]=x.mes.split('-');return new Date(y,parseInt(m)-1,1).toLocaleString('es-ES',{month:'short',year:'2-digit'});})();
+        const wFact=Math.max(2,Math.round(x.facturado/maxChart*100));
+        const wCost=Math.max(2,Math.round(x.coste/maxChart*100));
+        return`<div style="display:grid;grid-template-columns:72px 1fr 110px;gap:10px;align-items:center">
+          <div style="font-weight:800;font-size:12px;color:#334155;text-transform:capitalize">${esc(lbl)}</div>
+          <div style="display:grid;gap:3px">
+            <div title="Facturado" style="height:14px;width:${wFact}%;background:#1a4fa8;border-radius:999px"></div>
+            <div title="Coste" style="height:10px;width:${wCost}%;background:#d4a017;border-radius:999px"></div>
+          </div>
+          <div style="font-size:11px;color:#475569;text-align:right">${x.eventos} ev · ${fmtEur(x.facturado)}</div>
+        </div>`}).join('')}
+      <div style="display:flex;gap:14px;font-size:11px;color:#64748b"><span><b style="color:#1a4fa8">━━</b> Facturación</span><span><b style="color:#d4a017">━━</b> Coste</span></div>
+    </div></div>`:'';
 
   // By supplier summary
   const provRows=Object.values(byProvGlobal).sort((a,b)=>b.coste-a.coste).map(p=>`
@@ -8187,14 +8229,17 @@ function renderGastos(){
   }).join(''):'<div class="empty"><div class="ic">💰</div><p>No hay eventos en este periodo.<br>Asegúrate de añadir precios a los productos.</p></div>';
 
   document.getElementById('gastos-content').innerHTML=`
+    ${chartHtml}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div class="card"><div class="card-head"><h3>🏭 Gasto por proveedor</h3></div>
         <div style="padding:16px">${provRows||'<div class="empty"><p>Sin datos. Añade precios a los productos.</p></div>'}</div>
       </div>
-      <div class="card"><div class="card-head"><h3>ℹ️ Ayuda</h3></div>
+      <div class="card"><div class="card-head"><h3>🧾 Estado de facturación</h3></div>
         <div style="padding:16px;font-size:13px;color:var(--muted);line-height:1.6">
-          Los costes se calculan automáticamente a partir del <strong>precio por unidad</strong> de cada producto y los ingredientes de cada elaboración.<br><br>
-          Para ver datos: asegúrate de que los productos tienen <strong>precio</strong> y las elaboraciones tienen <strong>ingredientes</strong> asignados.
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:6px 0"><span>Eventos facturados</span><strong>${eventosFacturados}/${hojas.length}</strong></div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:6px 0"><span>Eventos cobrados</span><strong>${eventosCobrados}/${hojas.length}</strong></div>
+          <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border);padding:6px 0"><span>PAX totales</span><strong>${Math.round(paxTotal)}</strong></div>
+          <div style="margin-top:10px">Los costes se calculan desde ingredientes/precios; la facturación se lee de la hoja/evento y Billin cuando EVA lo deje marcado.</div>
         </div>
       </div>
     </div>
