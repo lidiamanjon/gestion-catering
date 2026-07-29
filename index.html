@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-etiqueta-qr-cad3 -->
+<!-- VERSION: v20260729-qr-pistola-stocknevera1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-qr-cad3'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-qr-pistola-stocknevera1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3792,7 +3792,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-qr-cad3');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-qr-pistola-stocknevera1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3928,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-qr-cad3';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-qr-pistola-stocknevera1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6510,23 +6510,34 @@ function openElabStockManual(destino,producto='',lote=''){
     <div class="frow" style="justify-content:flex-end;margin-top:14px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-gold" onclick="saveElabStockManual('${destino}')">Guardar</button></div>`, 'lg');
 }
 function saveElabStockManual(destino){
-  const producto=(document.getElementById('elab-stock-prod')||{}).value?.trim();
-  const cantidad=parseFloat((document.getElementById('elab-stock-cant')||{}).value);
-  if(!producto||!cantidad||cantidad<=0){alert('Pon elaboración y cantidad válida');return;}
-  const unidad=(document.getElementById('elab-stock-unidad')||{}).value?.trim()||'raciones';
-  const lote=(document.getElementById('elab-stock-lote')||{}).value?.trim()||genLot();
-  const dlc=(document.getElementById('elab-stock-dlc')||{}).value||'';
-  const fecha=(document.getElementById('elab-stock-fecha')||{}).value;
-  const emp=(document.getElementById('elab-stock-emp')||{}).value?.trim()||currentUserName||currentUserEmail||'';
-  const obs=(document.getElementById('elab-stock-obs')||{}).value?.trim()||'Entrada manual de stock de elaboración';
-  const recs=ld(K.elab);
-  recs.push({id:genId(),producto,cantidad,cantidad_inicial:cantidad,unidad,lote,dlc,emp,obs,destino,estado:'en_stock',ts:fecha?new Date(fecha).toISOString():new Date().toISOString(),manual:true,proceso:[`${destino==='congelador'?'🧊':'❄️'} Entrada manual en ${destino} · ${new Date().toLocaleDateString('es-ES')}`]});
-  registrarMovimientoEmpresa({modulo:'Stock elaboraciones '+destino,tipo:'entrada_manual_elaboracion',accion:'Entrada manual de elaboración',producto,lote,cantidad,unidad,detalle:obs,usuario:emp});
-  sv(K.elab,recs);
-  saveDB();
-  closeModal('modal-universal');
-  if(destino==='congelador')renderCongeladorStock();else renderNeveraElabStock();
-  alert('✅ Elaboración añadida al stock de '+(destino==='congelador'?'congelador':'nevera'));
+  try{
+    destino=destino==='congelador'?'congelador':'nevera';
+    const producto=(document.getElementById('elab-stock-prod')||{}).value?.trim();
+    const cantidad=parseFloat((document.getElementById('elab-stock-cant')||{}).value);
+    if(!producto||!cantidad||cantidad<=0){alert('Pon elaboración y cantidad válida');return;}
+    const unidad=(document.getElementById('elab-stock-unidad')||{}).value?.trim()||'raciones';
+    const lote=(document.getElementById('elab-stock-lote')||{}).value?.trim()||genLot();
+    const dlc=(document.getElementById('elab-stock-dlc')||{}).value||'';
+    const fecha=(document.getElementById('elab-stock-fecha')||{}).value;
+    const emp=(document.getElementById('elab-stock-emp')||{}).value?.trim()||currentUserName||currentUserEmail||'';
+    const obs=(document.getElementById('elab-stock-obs')||{}).value?.trim()||'Entrada manual de stock de elaboración';
+    const rec={id:genId(),producto,cantidad,cantidad_inicial:cantidad,unidad,lote,dlc,emp,obs,destino,estado:'en_stock',ts:fecha?new Date(fecha).toISOString():new Date().toISOString(),manual:true,proceso:[`${destino==='congelador'?'🧊':'❄️'} Entrada manual en ${destino} · ${new Date().toLocaleDateString('es-ES')}`]};
+    const recs=ld(K.elab)||[];
+    recs.push(rec);
+    registrarMovimientoEmpresa({modulo:'Stock elaboraciones '+destino,tipo:'entrada_manual_elaboracion',accion:'Entrada manual de elaboración',producto,lote,cantidad,unidad,detalle:obs,usuario:emp});
+    sv(K.elab,recs);
+    try{prepareDriveReportsQueue&&prepareDriveReportsQueue('entrada_manual_elaboracion');}catch(_e){}
+    saveDB();
+    const saved=(ld(K.elab)||[]).some(x=>String(x.id||'')===String(rec.id));
+    if(!saved)throw new Error('La entrada no quedó en el almacenamiento local APPCC.');
+    closeModal('modal-universal');
+    if(destino==='congelador')renderCongeladorStock();else renderNeveraElabStock();
+    if(typeof toast==='function')toast('✅ Elaboración añadida al stock de '+(destino==='congelador'?'congelador':'nevera'));
+    else alert('✅ Elaboración añadida al stock de '+(destino==='congelador'?'congelador':'nevera'));
+  }catch(e){
+    console.error('No se pudo guardar stock manual de elaboración:',e);
+    alert('No se pudo guardar el ajuste manual.\n\nError: '+(e&&e.message?e.message:e)+'\n\nLos datos siguen en pantalla para que no los pierdas.');
+  }
 }
 
 function openElabStockGroup(destino, idsStr){
@@ -20119,6 +20130,25 @@ function _etqTraceText(r,tipo,empresa,fecha,emp){
   ].filter(Boolean);
   return lines.join('\n').slice(0,900);
 }
+function _etqBasicText(r,tipo,empresa,fecha,emp){
+  const producto=String(r.producto||r.nombre||'').trim();
+  const lote=String(r.lote||_etqPreferredLot(r)||'').trim();
+  const dlc=_etqGetDlc(r);
+  const id=String(r.producto_id||r.id||'').trim();
+  const gtin=String(r.gtin||r.ean||r.barcode||r.codigo||r.referencia||'').trim();
+  const proveedor=String(r.proveedor||'').trim();
+  const head=['ALB',producto,lote,dlc,emp,new Date().toISOString(),tipo,id,gtin]
+    .map(x=>String(x||'').replace(/[|\n\r]/g,' ').trim()).join('|');
+  return [head,
+    'EMPRESA: '+empresa,
+    'PRODUCTO: '+producto,
+    lote?'LOTE: '+lote:'',
+    dlc?'CAD/DLC: '+dlc:'',
+    proveedor?'PROVEEDOR: '+proveedor:'',
+    'ETIQUETA: '+fecha,
+    'HECHA POR: '+emp
+  ].filter(Boolean).join('\n').slice(0,550);
+}
 function _buildEtiquetaProductRows(){
   const productos=(DB.productos||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
   const receps=(ld(K.recep)||[]).slice().sort((a,b)=>new Date(b.ts||b.date)-new Date(a.ts||a.date));
@@ -20474,9 +20504,11 @@ async function _batchPrint(items, orient){
     const fecha    = new Date().toLocaleDateString('es-ES');
     const emp      = r.etqEmp || _etqCurrentWorker();
     const proceso  = r.proceso  || [];
-    const needsTraceQr=tipo==='elab';
-    const qrText=needsTraceQr?_etqTraceText(r,tipo,empresa,fecha,emp):'';
-    const qrUrl = needsTraceQr?await _generateQRDataURL(qrText, qrPx):'';
+    const needsTraceQr=true;
+    const qrText=tipo==='elab'
+      ? _etqTraceText(r,tipo,empresa,fecha,emp)
+      : _etqBasicText(r,tipo,empresa,fecha,emp);
+    const qrUrl = await _generateQRDataURL(qrText, qrPx);
     allItems.push({r:Object.assign({},r,{dlc,caducidad:dlc,etqEmp:emp}), cop:cop||1, tipo, qrUrl, qrText, fecha, needsTraceQr});
   }
 
@@ -20628,7 +20660,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-etiqueta-qr-cad3'
+        source_version:'v20260729-qr-pistola-stocknevera1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
@@ -20658,6 +20690,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
