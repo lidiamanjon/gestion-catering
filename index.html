@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-stock1 -->
+<!-- VERSION: v20260729-pistola-buscar1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-stock1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-buscar1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3785,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-stock1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-buscar1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3920,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-stock1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-buscar1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6130,6 +6130,37 @@ function refreshStockViews(){
   try{if(currentSection==='dashboard')renderDashboard();}catch(e){}
   try{updateEvaPlanSummary&&updateEvaPlanSummary();}catch(e){}
 }
+function _pistolNameSuggestions(q){
+  q=_pistolNorm(q);
+  if(!q)return[];
+  return (DB.productos||[]).filter(p=>{
+    const hay=[p.nombre,p.categoria,provNombre(p.proveedor_id),p.proveedor,p.gtin,p.referencia,p.ultimo_lote].filter(Boolean).join(' ');
+    return _pistolNorm(hay).includes(q);
+  }).sort((a,b)=>{
+    const an=_pistolNorm(a.nombre),bn=_pistolNorm(b.nombre);
+    const aw=an.startsWith(q)?0:1,bw=bn.startsWith(q)?0:1;
+    return aw-bw||(a.nombre||'').localeCompare(b.nombre||'','es');
+  }).slice(0,12);
+}
+function updatePistolProductSuggestions(){
+  const inp=document.getElementById('pistol-new-name');
+  const box=document.getElementById('pistol-prod-suggestions');
+  if(!inp||!box)return;
+  const list=_pistolNameSuggestions(inp.value);
+  if(!list.length){box.style.display='none';box.innerHTML='';return;}
+  box.innerHTML=list.map(p=>`<button type="button" onclick="selectPistolProductSuggestion('${esc(String(p.id||''))}')" style="display:block;width:100%;text-align:left;border:none;background:#fff;padding:10px 12px;border-bottom:1px solid #e5e7eb;cursor:pointer">
+    <div style="font-weight:800;color:#111827">${esc(p.nombre||'Producto')}</div>
+    <div style="font-size:11px;color:#64748b">${[p.categoria,provNombre(p.proveedor_id)||p.proveedor,p.gtin||p.referencia,p.ultimo_lote?'Lote '+p.ultimo_lote:''].filter(Boolean).map(esc).join(' · ')}</div>
+  </button>`).join('');
+  box.style.display='block';
+}
+function selectPistolProductSuggestion(id){
+  const p=(DB.productos||[]).find(x=>String(x.id||'')===String(id||''));if(!p)return;
+  const inp=document.getElementById('pistol-new-name');
+  const box=document.getElementById('pistol-prod-suggestions');
+  if(inp)inp.value=p.nombre||'';
+  if(box){box.style.display='none';box.innerHTML='';}
+}
 function _pistolProductOptions(){
   return (DB.productos||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'))
     .map(p=>`<option value="${esc(p.id)}">${esc(p.nombre||'Producto')}${p.gtin?' · '+esc(p.gtin):''}</option>`).join('');
@@ -6207,7 +6238,7 @@ function openPistolUnknownProduct(parsed,context){
       1) Si ya existe, empieza a escribir y selecciónalo del listado.<br>
       2) Si es nuevo, escribe el nombre y se creará en Productos, asociado a este código para la próxima vez.
     </div>
-    <div class="fg"><label class="fl">Buscar producto existente o crear producto nuevo *</label><input class="fc" id="pistol-new-name" list="pistol-prod-list" placeholder="Ej: Alitas de pollo / Tomate triturado..." autocomplete="off"><datalist id="pistol-prod-list">${(DB.productos||[]).map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist></div>
+    <div class="fg" style="position:relative"><label class="fl">Buscar producto existente o crear producto nuevo *</label><input class="fc" id="pistol-new-name" list="pistol-prod-list" placeholder="Ej: Alitas de pollo / Tomate triturado..." autocomplete="off" oninput="updatePistolProductSuggestions()" onfocus="updatePistolProductSuggestions()"><datalist id="pistol-prod-list">${(DB.productos||[]).map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist><div id="pistol-prod-suggestions" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30020;background:#fff;border:1px solid #bfdbfe;border-radius:0 0 12px 12px;box-shadow:0 12px 30px rgba(15,23,42,.18);max-height:260px;overflow-y:auto"></div></div>
     <div class="fg"><label class="fl">Proveedor habitual</label><select class="fc" id="pistol-new-prov"><option value="">Sin proveedor</option>${(DB.proveedores||[]).map(p=>`<option value="${esc(p.id)}">${esc(p.nombre||'')}</option>`).join('')}</select></div>
     <div class="frow"><div class="fg"><label class="fl">Categoría</label><select class="fc" id="pistol-new-cat"><option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option><option>Lácteos y huevos</option><option>Conservas</option><option>Salsas y condimentos</option><option>Otros</option></select></div><div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-new-unit"><option>kg</option><option>ud</option><option>caja</option><option>bolsa</option><option>l</option><option>pack</option></select></div></div>
     <div style="font-size:11px;color:#64748b;margin-top:8px">Si lo creas nuevo, después podrás completar precio, ficha técnica, alérgenos y stock mínimo desde Productos.</div>
@@ -19152,6 +19183,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
