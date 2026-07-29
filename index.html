@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-etiqueta-elab-qr1 -->
+<!-- VERSION: v20260729-recepcion-manual1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-elab-qr1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-recepcion-manual1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3792,7 +3792,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-elab-qr1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-recepcion-manual1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3928,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-elab-qr1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-recepcion-manual1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -14822,7 +14822,7 @@ function showRecepEntry(cat){
   document.getElementById('recep-body').innerHTML=`
     <div class="card">
       <div class="card-body">
-        <button class="btn btn-sm btn-outline" onclick="showRecepProdSelect()" style="margin-bottom:12px">← ${cat}</button>
+        <button class="btn btn-sm btn-outline" onclick="renderRecep()" style="margin-bottom:12px">← Volver</button>
         <div class="fc-group"><label class="fc-label">Producto <span style="color:#c00;font-weight:700">*</span></label>
           <input class="fc" id="re-prod-search" placeholder="🔍 Buscar o escribe nombre nuevo..." oninput="filterRecepProd(this.value)" style="margin-bottom:6px;font-size:15px" value="${prefill.producto||''}">
           <select class="fc" id="re-prod" size="4" style="height:100px" onchange="document.getElementById('re-prod-search').value=this.value;document.getElementById('re-prod-search').style.borderColor='#27ae60';_autoFillRecepFromCatalog(this.value)">
@@ -14932,20 +14932,24 @@ function saveRecep(cat){
     if(el.id==='re-np-disp')return String(el._val||'').trim()||el.textContent.replace('—','').trim();
     return(el.value||'').trim();
   };
-  // Use search text if no catalog item selected
+  // Manual reception: what the user types has priority over the select list.
   const _searchTxt=(document.getElementById('re-prod-search')||{}).value||'';
-  const prod=_rf('prod')||(document.getElementById('re-prod')||{}).value||_searchTxt.trim()||'';
-  if(!prod){alert('Introduce el nombre del producto');return;}
-  const emp=_rf('emp')||localStorage.getItem(K.wActive)||ld(K.emp)[0]||'';
+  const selectProd=(document.getElementById('re-prod')||{}).value||'';
+  const prod=(_searchTxt.trim()||_rf('prod')||selectProd||'').trim();
+  if(!prod){alert('Introduce el nombre del producto');document.getElementById('re-prod-search')?.focus();return;}
+  const emp=_rf('emp')||localStorage.getItem(K.wActive)||currentUserEmail||fbAuth?.currentUser?.email||ld(K.emp)[0]||'';
   const tempDisp=document.getElementById('re-np-disp');
   const temp=_rf('temp')||(tempDisp?String(tempDisp._val||''):'');
-  const lote=_rf('lote');
+  const lote=_rf('lote').toUpperCase();
   const cad=_rf('cad');
   const obs=_rf('obs');
   const prov=_rf('prov')||recepProv?.name||'';
-  const cant=_rf('cant');
+  const cantRaw=_rf('cant');
+  const cantNum=parseFloat(String(cantRaw).replace(',','.'));
   const unit=_rf('unit')||'kg';
   const cajas=_rf('cajas');
+  if(!lote){alert('El número de lote es obligatorio para validar recepción.');document.getElementById('re-lote')?.focus();return;}
+  if(!cantRaw||isNaN(cantNum)||cantNum<=0){alert('Indica la cantidad recibida.');document.getElementById('re-cant')?.focus();return;}
   const tempVal=parseFloat(temp);
   const codigo=(recepAlbaranData&&recepAlbaranData.gtin)||'';
   const prodObj=_ensureProductFromReception({nombre:prod,proveedor:prov,unidad:unit,lote,codigo,categoria:cat&&cat!=='manual'?cat:'Otros'});
@@ -14954,14 +14958,14 @@ function saveRecep(cat){
   const prodProveedor=prov||provNombre(prodObj?.proveedor_id)||prodObj?.proveedor||'';
   const recs=ld(K.recep)||[];
   const rec={id:genId(),ts:new Date().toISOString(),date:today(),
-    proveedor:prodProveedor,producto:prodNombre,producto_id:prodObj?.id||'',cantidad:cant,unidad:prodUnidad,
+    proveedor:prodProveedor,producto:prodNombre,producto_id:prodObj?.id||'',cantidad:cantNum,unidad:prodUnidad,
     cajas:cajas?parseInt(cajas):undefined,
     temp:temp!==''?tempVal:undefined,lote,caducidad:cad,emp,obs,
     conforme:isNaN(tempVal)||tempVal<=7
   };
   recs.push(rec);
   const productoVinculado=registrarEntradaStockGestion({
-    producto:prodNombre,cantidad:cajas||cant,unidad:prodUnidad,lote,recepcionId:rec.id
+    producto:prodNombre,cantidad:cajas||cantNum,unidad:prodUnidad,lote,recepcionId:rec.id
   });
   if(productoVinculado||prodObj)saveDB();
   else rec.catalogo_pendiente=true;
@@ -14980,7 +14984,8 @@ function saveRecep(cat){
   // Check if product exists in catalog and has ficha técnica
   _checkProdPendiente(prodNombre, prodProveedor);
   updateScoreChip();
-  closeModalAPPCC();renderRecep();
+  try{closeModalAPPCC();}catch(e){}
+  renderRecep();
   refreshStockViews();
   setTimeout(()=>addToLabelQueue({
     tipo:'📦 RECEPCIÓN',
@@ -20610,7 +20615,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-etiqueta-elab-qr1'
+        source_version:'v20260729-recepcion-manual1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');

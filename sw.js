@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260729-etiqueta-elab-qr1';
+const CACHE_NAME = 'albaraba-appcc-v20260729-recepcion-manual1';
 const APP_SHELL = [
   './',
   './index.html',
