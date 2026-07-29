@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-lotes1 -->
+<!-- VERSION: v20260729-informe-lotes1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-lotes1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-informe-lotes1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -788,6 +788,7 @@ html,body{height:100%;color-scheme:light!important}
       <div class="rep-card" onclick="informe_elaboraciones()"><div class="ic">👨‍🍳</div><div><h4>Fichas de elaboración</h4><p>Receta, ingredientes, alergenos</p></div></div>
       <div class="rep-card" onclick="informe_alergenos()"><div class="ic">⚠️</div><div><h4>Tabla de alergenos</h4><p>Por elaboración y categoría</p></div></div>
       <div class="rep-card" onclick="informe_proveedores()"><div class="ic">🏭</div><div><h4>Listado de proveedores</h4><p>Contactos y productos suministrados</p></div></div>
+      <div class="rep-card" onclick="informe_productosSinFichaProveedor()"><div class="ic">📄</div><div><h4>Stock sin ficha técnica</h4><p>Por proveedor · stock e histórico de almacén</p></div></div>
     </div>
   </div>
   <div id="tab-pedidos-hist" style="display:none">
@@ -799,6 +800,7 @@ html,body{height:100%;color-scheme:light!important}
       <div class="rep-card" onclick="exportarProductosExcel()"><div class="ic">📊</div><div><h4>Productos Excel</h4><p>Catálogo completo de ingredientes</p></div></div>
       <div class="rep-card" onclick="exportarElaboracionesExcel()"><div class="ic">📊</div><div><h4>Elaboraciones Excel</h4><p>Listado con ingredientes y alergenos</p></div></div>
       <div class="rep-card" onclick="exportarStockExcel()"><div class="ic">📊</div><div><h4>Stock Excel</h4><p>Inventario actual con niveles</p></div></div>
+      <div class="rep-card" onclick="exportarProductosSinFichaExcel()"><div class="ic">📊</div><div><h4>Sin ficha por proveedor</h4><p>Excel para reclamar documentación</p></div></div>
     </div>
   </div>
 </div>
@@ -3785,7 +3787,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-lotes1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-informe-lotes1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3920,7 +3922,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-lotes1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-informe-lotes1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6423,25 +6425,107 @@ function showPistolStockLots(productId,parsed={}){
   const lotes={};
   receps.forEach(r=>{
     const lote=String(r.lote||'SIN LOTE').toUpperCase();
-    if(!lotes[lote])lotes[lote]={lote,cantidad:0,unidad:r.unidad||p.unidad||'',cad:r.caducidad||r.dlc||'',proveedor:r.proveedor||'',ultimo:r.ts||r.date||''};
+    if(!lotes[lote])lotes[lote]={lote,cantidad:0,unidad:r.unidad||p.unidad||'',cad:r.caducidad||r.dlc||'',proveedor:r.proveedor||'',ultimo:r.ts||r.date||'',base:0,ajustado:false};
     lotes[lote].cantidad+=parseFloat(r.cantidad)||0;
+    lotes[lote].base+=parseFloat(r.cantidad)||0;
     if(r.caducidad||r.dlc)lotes[lote].cad=r.caducidad||r.dlc;
     if(r.proveedor)lotes[lote].proveedor=r.proveedor;
     if(String(r.ts||r.date||'')>String(lotes[lote].ultimo||''))lotes[lote].ultimo=r.ts||r.date||'';
   });
+  _applyStockLotAdjustments(p.id,lotes);
   const loteRows=Object.values(lotes).sort((a,b)=>String(a.cad||a.ultimo||'9999').localeCompare(String(b.cad||b.ultimo||'9999')));
   closeModal('modal-universal');
   openModal(`<div class="mh"><h2>🔎 Stock y lotes</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
     <div style="font-size:18px;font-weight:900;color:#111827">${esc(p.nombre||'Producto')}</div>
     <div style="font-size:13px;color:#475569;margin:4px 0 12px">Stock actual: <strong>${esc(p.stock_actual||0)} ${esc(p.unidad||'')}</strong>${parsed.lot?' · lote escaneado <strong>'+esc(parsed.lot)+'</strong>':''}</div>
     <div class="card" style="margin:0 0 12px"><div class="card-head"><h3>📦 Lotes encontrados</h3></div>
-      <div style="padding:10px">${loteRows.length?`<table style="width:100%;font-size:12px"><thead><tr><th>Lote</th><th>Cantidad recibida</th><th>Cad.</th><th>Proveedor</th><th>Último mov.</th></tr></thead><tbody>
-        ${loteRows.map(l=>`<tr><td><span class="lot-code">${esc(l.lote)}</span></td><td>${esc(Math.round(l.cantidad*1000)/1000)} ${esc(l.unidad||'')}</td><td>${esc(l.cad||'—')}</td><td>${esc(l.proveedor||'—')}</td><td>${esc(l.ultimo?fmtDate(l.ultimo):'—')}</td></tr>`).join('')}
+      <div style="padding:10px">${loteRows.length?`<table style="width:100%;font-size:12px"><thead><tr><th>Lote</th><th>Cantidad actual</th><th>Cad.</th><th>Proveedor</th><th>Último mov.</th><th>Modificar</th></tr></thead><tbody>
+        ${loteRows.map(l=>`<tr><td><span class="lot-code">${esc(l.lote)}</span>${l.ajustado?'<br><small style="color:#b45309;font-weight:800">ajustado manualmente</small>':''}</td><td><strong>${esc(Math.round(l.cantidad*1000)/1000)} ${esc(l.unidad||'')}</strong><br><small style="color:#64748b">recibido: ${esc(Math.round((l.base||0)*1000)/1000)}</small></td><td>${esc(l.cad||'—')}</td><td>${esc(l.proveedor||'—')}</td><td>${esc(l.ultimo?fmtDate(l.ultimo):'—')}</td><td><button class="btn btn-sm btn-outline" onclick="openEditStockLot('${esc(p.id)}','${esc(l.lote)}',${Number(l.cantidad)||0},'${esc(l.unidad||p.unidad||'')}')">Ajustar</button> <button class="btn btn-sm btn-red" onclick="openEditStockLot('${esc(p.id)}','${esc(l.lote)}',0,'${esc(l.unidad||p.unidad||'')}')">Vaciar</button></td></tr>`).join('')}
       </tbody></table>`:'<div style="padding:12px;color:#92400e;background:#fff7ed;border-radius:10px">No hay lotes de recepción guardados para este producto. Si existe físicamente, regístralo desde Recepción con pistola.</div>'}</div>
     </div>
     <div class="card" style="margin:0"><div class="card-head"><h3>🧾 Últimos movimientos</h3></div>
       <div style="padding:10px">${movs.length?movs.slice(0,12).map(m=>`<div style="padding:7px 0;border-bottom:1px solid #e5e7eb;font-size:12px"><strong>${esc(m.tipo||'movimiento')}</strong> · ${esc(m.cantidad||0)} ${esc(m.unidad||'')} ${m.lote?'· lote <span class="lot-code">'+esc(m.lote)+'</span>':''}<br><span style="color:#64748b">${esc(m.fecha?fmtDT(m.fecha):'')}</span></div>`).join(''):'<div style="padding:12px;color:#64748b">Sin movimientos registrados.</div>'}</div>
     </div>`, 'xl');
+}
+function _stockLotesBase(productId){
+  const p=(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return{};
+  const norm=_normNombreCatalogo(p.nombre);
+  const lotes={};
+  (ld(K.recep)||[]).forEach(r=>{
+    const rn=_normNombreCatalogo(r.producto||r.nombre||'');
+    if(!((r.producto_id&&String(r.producto_id)===String(p.id))||(norm&&rn&&(rn===norm||rn.includes(norm)||norm.includes(rn)))))return;
+    const lote=String(r.lote||'SIN LOTE').trim().toUpperCase();
+    if(!lotes[lote])lotes[lote]={lote,cantidad:0,unidad:r.unidad||p.unidad||'',cad:r.caducidad||r.dlc||'',proveedor:r.proveedor||'',ultimo:r.ts||r.date||'',base:0,ajustado:false};
+    lotes[lote].cantidad+=parseFloat(r.cantidad)||0;
+    lotes[lote].base+=parseFloat(r.cantidad)||0;
+    if(r.caducidad||r.dlc)lotes[lote].cad=r.caducidad||r.dlc;
+    if(r.proveedor)lotes[lote].proveedor=r.proveedor;
+    if(String(r.ts||r.date||'')>String(lotes[lote].ultimo||''))lotes[lote].ultimo=r.ts||r.date||'';
+  });
+  _applyStockLotAdjustments(productId,lotes);
+  return lotes;
+}
+function _applyStockLotAdjustments(productId,lotes){
+  const ajustes=(DB.lotes_stock_ajustes||[]).filter(a=>String(a.producto_id||'')===String(productId||''))
+    .sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||'')));
+  ajustes.forEach(a=>{
+    const lote=String(a.lote||'SIN LOTE').trim().toUpperCase();
+    if(!lotes[lote])lotes[lote]={lote,cantidad:0,unidad:a.unidad||'',cad:'',proveedor:'',ultimo:a.fecha||'',base:0,ajustado:false};
+    lotes[lote].cantidad=Math.max(0,parseFloat(a.cantidad)||0);
+    lotes[lote].unidad=a.unidad||lotes[lote].unidad||'';
+    lotes[lote].ultimo=a.fecha||lotes[lote].ultimo||'';
+    lotes[lote].ajustado=true;
+    lotes[lote].motivo=a.motivo||'';
+  });
+}
+function _recalcularStockProductoDesdeLotes(productId){
+  const p=(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return null;
+  const lotes=_stockLotesBase(productId);
+  const total=Object.values(lotes).reduce((sum,l)=>sum+(parseFloat(l.cantidad)||0),0);
+  p.stock_actual=Math.round(total*1000)/1000;
+  p.stock_actualizado_en=new Date().toISOString();
+  p.actualizado_en=p.stock_actualizado_en;
+  return p;
+}
+function openEditStockLot(productId,lote,cantidad,unidad){
+  const p=(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return;
+  window._editStockLot={productId,lote:String(lote||'SIN LOTE').toUpperCase(),cantidad:parseFloat(cantidad)||0,unidad:unidad||p.unidad||''};
+  openModal(`<div class="mh"><h2>✏️ Ajustar lote</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;font-size:13px;color:#1e3a8a;margin-bottom:12px">
+      Producto: <strong>${esc(p.nombre||'')}</strong><br>
+      Lote que vas a modificar: <span class="lot-code">${esc(lote||'SIN LOTE')}</span>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Cantidad real que queda *</label><input class="fc" id="edit-lote-cantidad" type="number" min="0" step="0.01" value="${esc(cantidad)}"></div>
+      <div class="fg"><label class="fl">Unidad</label><input class="fc" id="edit-lote-unidad" value="${esc(unidad||p.unidad||'')}"></div>
+    </div>
+    <div class="fg"><label class="fl">Motivo del cambio *</label><select class="fc" id="edit-lote-motivo">
+      <option>Conteo real / inventario</option><option>Merma / rotura</option><option>Caducado o retirado</option><option>Usado en elaboración</option><option>Corrección de recepción</option><option>Otro</option>
+    </select></div>
+    <div class="fg"><label class="fl">Detalle</label><textarea class="fc" id="edit-lote-detalle" rows="2" placeholder="Ej: quedaban 2 bolsas, se tiró 1, error de lote..."></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-light" onclick="showPistolStockLots('${esc(productId)}',{lot:'${esc(lote)}'})">Cancelar</button>
+      <button class="btn btn-green" onclick="saveEditStockLot()">✓ Guardar ajuste</button>
+    </div>`, 'lg');
+}
+function saveEditStockLot(){
+  const e=window._editStockLot||{};
+  const p=(DB.productos||[]).find(x=>String(x.id||'')===String(e.productId||''));if(!p)return;
+  const cantidad=Math.max(0,parseFloat(document.getElementById('edit-lote-cantidad')?.value||'')||0);
+  const unidad=(document.getElementById('edit-lote-unidad')?.value||e.unidad||p.unidad||'').trim();
+  const motivo=(document.getElementById('edit-lote-motivo')?.value||'').trim();
+  const detalle=(document.getElementById('edit-lote-detalle')?.value||'').trim();
+  if(!motivo){document.getElementById('edit-lote-motivo').style.borderColor='#e74c3c';return;}
+  if(!DB.lotes_stock_ajustes)DB.lotes_stock_ajustes=[];
+  DB.lotes_stock_ajustes.push({id:uid(),producto_id:p.id,producto:p.nombre,lote:e.lote||'SIN LOTE',cantidad,unidad,motivo,detalle,fecha:new Date().toISOString(),emp:_etqCurrentWorker()});
+  DB.lotes_stock_ajustes=DB.lotes_stock_ajustes.slice(-2000);
+  registrarMovimientoStockGestion({productoId:p.id,tipo:'ajuste_lote',cantidad,unidad,lote:e.lote||'',origen:'consulta_lotes',nota:motivo+(detalle?': '+detalle:'')});
+  if(cantidad===0)registrarIncidenciaStockAPPCC({producto:p.nombre,cantidad:e.cantidad,unidad,lote:e.lote,motivo,detalle,accion:'Lote puesto a cero desde consulta de stock.'});
+  _recalcularStockProductoDesdeLotes(p.id);
+  marcarPedidosParaRecalcular('Stock/lote ajustado: '+p.nombre,r=>!r.totales||Boolean(r.totales[p.id]));
+  saveDB();
+  refreshStockViews();
+  showPistolStockLots(p.id,{lot:e.lote});
 }
 function _pistolAskMissingRecep(productId,parsed,prod,opts={}){
   parsed=_pistolNormalizeLot(parsed||{},parsed?.raw||'');
@@ -6805,6 +6889,90 @@ function informe_fichasProducto(){
   if(!DB.productos.length){doc.setFont('helvetica','italic');doc.setFontSize(10);doc.text('Sin productos añadidos',14,40)}
   doc.save('fichas_producto_albaraba.pdf');
 }
+function _productoTieneFichaTecnica(p){
+  const n=_normNombreCatalogo(p?.nombre||p?.producto||'');
+  if(!n)return false;
+  const fichas=(DB.fichasProveedor||[]).concat(DB.fichas||[]);
+  return fichas.some(f=>{
+    const fn=_normNombreCatalogo(f.producto||f.nombre||f.titulo||'');
+    return fn&&(fn===n||fn.includes(n)||n.includes(fn));
+  });
+}
+function _ultimoMovimientoProducto(productId,nombre){
+  const norm=_normNombreCatalogo(nombre||'');
+  let latest='';
+  (ld(K.recep)||[]).forEach(r=>{
+    if((productId&&String(r.producto_id||'')===String(productId))||(_normNombreCatalogo(r.producto||'')===norm)){
+      const f=String(r.ts||r.date||'');if(f>latest)latest=f;
+    }
+  });
+  (DB.movimientos_stock||[]).forEach(m=>{
+    if((productId&&String(m.producto_id||'')===String(productId))||(_normNombreCatalogo(m.producto||'')===norm)){
+      const f=String(m.fecha||'');if(f>latest)latest=f;
+    }
+  });
+  return latest;
+}
+function _productosSinFichaPorProveedor(){
+  const seen=new Set(),rows=[];
+  const add=(p,extra={})=>{
+    const nombre=String(p?.nombre||p?.producto||extra.producto||'').trim();if(!nombre)return;
+    const pid=p?.id||extra.producto_id||'';
+    const proveedor=p?.proveedor||extra.proveedor||provNombre(p?.proveedor_id||extra.proveedor_id)||'Sin proveedor asignado';
+    const key=_normNombreCatalogo(nombre)+'|'+_normNombreCatalogo(proveedor);
+    if(seen.has(key))return;seen.add(key);
+    const stock=parseFloat(p?.stock_actual)||0;
+    rows.push({
+      proveedor,nombre,
+      stock:Math.round(stock*1000)/1000,
+      unidad:p?.unidad||extra.unidad||'',
+      lote:p?.ultimo_lote||extra.lote||'',
+      ultimo:_ultimoMovimientoProducto(pid,nombre)||extra.ultimo||'',
+      origen:stock>0?'En stock':'Pasó por almacén',
+      accion:'Solicitar/subir ficha técnica de proveedor'
+    });
+  };
+  (DB.productos||[]).forEach(p=>{
+    const stock=parseFloat(p.stock_actual)||0;
+    const paso=(ld(K.recep)||[]).some(r=>(r.producto_id&&String(r.producto_id)===String(p.id))||_normNombreCatalogo(r.producto)===_normNombreCatalogo(p.nombre));
+    const mov=(DB.movimientos_stock||[]).some(m=>String(m.producto_id||'')===String(p.id));
+    if((stock>0||paso||mov||p.ultimo_lote)&&!_productoTieneFichaTecnica(p))add(p);
+  });
+  (ld(K.recep)||[]).forEach(r=>{
+    const p=buscarProductoCatalogo(r.producto)||{};
+    const candidate=Object.assign({},p,{nombre:p.nombre||r.producto,proveedor:p.proveedor||r.proveedor,unidad:p.unidad||r.unidad,ultimo_lote:p.ultimo_lote||r.lote,stock_actual:p.stock_actual||0});
+    if(!_productoTieneFichaTecnica(candidate))add(candidate,{proveedor:r.proveedor,unidad:r.unidad,lote:r.lote,ultimo:r.ts||r.date});
+  });
+  rows.sort((a,b)=>(a.proveedor||'').localeCompare(b.proveedor||'')||(a.nombre||'').localeCompare(b.nombre||''));
+  return rows;
+}
+function informe_productosSinFichaProveedor(){
+  const rows=_productosSinFichaPorProveedor();
+  const {jsPDF}=window.jspdf;const doc=new jsPDF('landscape');
+  doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text('ALBARABA SL - PRODUCTOS SIN FICHA TÉCNICA DE PROVEEDOR',14,16);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('Incluye productos en stock o que han pasado por almacén. Generado: '+new Date().toLocaleDateString('es-ES'),14,23);
+  let y=33,lastProv='';
+  if(!rows.length){doc.setFontSize(10);doc.text('No hay productos pendientes detectados.',14,38);}
+  rows.forEach(r=>{
+    if(y>190){doc.addPage('landscape');y=18;lastProv='';}
+    if(r.proveedor!==lastProv){
+      doc.setFillColor(234,244,255);doc.rect(12,y-5,270,8,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(r.proveedor||'Sin proveedor',14,y);
+      y+=8;lastProv=r.proveedor;
+      doc.setFont('helvetica','bold');doc.setFontSize(7);
+      doc.text('Producto',14,y);doc.text('Stock',100,y);doc.text('Lote/último lote',128,y);doc.text('Último paso almacén',168,y);doc.text('Estado',208,y);doc.text('Acción',235,y);y+=4;
+    }
+    doc.setFont('helvetica','normal');doc.setFontSize(7);
+    doc.text(String(r.nombre||'').slice(0,44),14,y);
+    doc.text(String((r.stock||0)+' '+(r.unidad||'')),100,y);
+    doc.text(String(r.lote||'—').slice(0,24),128,y);
+    doc.text(r.ultimo?fmtDate(r.ultimo):'—',168,y);
+    doc.text(String(r.origen||''),208,y);
+    doc.text('Pedir/subir ficha',235,y);
+    y+=5;
+  });
+  doc.save('productos_sin_ficha_por_proveedor_albaraba.pdf');
+}
 function informe_elaboraciones(){
   const {jsPDF}=window.jspdf;const doc=new jsPDF();
   doc.setFont('helvetica','bold');doc.setFontSize(14);doc.text('ALBARABA SL - FICHAS DE ELABORACIÓN',14,20);
@@ -6948,6 +7116,16 @@ function exportarStockExcel(){
   const resumen=[['Resumen Stock — '+new Date().toLocaleDateString('es-ES')],[''],['Total productos',DB.productos.length],['✅ OK',ok],['⚠ Bajo mínimo',bajo],['❌ Sin stock',sinStock]];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(resumen),'Resumen');
   XLSX.writeFile(wb,'stock_albaraba_'+new Date().toISOString().slice(0,10)+'.xlsx');
+}
+function exportarProductosSinFichaExcel(){
+  if(!window.XLSX){alert('Cargando librería Excel, espera un momento e inténtalo de nuevo.');return;}
+  const rows=[['Proveedor','Producto','Stock actual','Unidad','Último lote','Último paso por almacén','Estado','Acción']];
+  _productosSinFichaPorProveedor().forEach(r=>rows.push([r.proveedor,r.nombre,r.stock,r.unidad,r.lote,r.ultimo||'',r.origen,r.accion]));
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:28},{wch:34},{wch:12},{wch:9},{wch:18},{wch:22},{wch:18},{wch:32}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Sin ficha proveedor');
+  XLSX.writeFile(wb,'productos_sin_ficha_por_proveedor_'+new Date().toISOString().slice(0,10)+'.xlsx');
 }
 
 // ═══════════════════════════════════════════════════
@@ -19205,6 +19383,13 @@ function _etqAutoLot(producto=''){
   localStorage.setItem('_albaraba_lote_seq_'+date,String(seq));
   return lote;
 }
+function _etqPreferredLot(r){
+  if(r&&r.lote)return String(r.lote).trim().toUpperCase();
+  const p=(r&&r.producto_id)?(DB.productos||[]).find(x=>String(x.id||'')===String(r.producto_id)):buscarProductoCatalogo(r?.producto||'');
+  const hist=p?_productLotHistory(p.id,1):[];
+  if(hist[0]?.lote)return hist[0].lote;
+  return _etqAutoLot(r?.producto||'');
+}
 function _etqFindEventoForElab(r){
   const sid=String(r.evento_id||r.hoja_id||r.hojaId||r.eva_evento_id||'');
   let h=sid&&typeof findHojaByAnyId==='function'?findHojaByAnyId(sid):null;
@@ -19249,7 +19434,14 @@ function _buildEtiquetaProductRows(){
       if(usedLots.has(key))return;usedLots.add(key);
       rows.push({id:'prod-'+rows.length,producto:p.nombre||r.producto||'Producto',producto_id:p.id||'',lote:r.lote||'',dlc:r.caducidad||r.dlc||_etqDefaultDlc(),caducidad:r.caducidad||r.dlc||_etqDefaultDlc(),proveedor:r.proveedor||p.proveedor||'',destino:'nevera',ts:new Date().toISOString(),origen:'catálogo + lote',etqEmp:_etqCurrentWorker()});
     });
-    if(!lots.length)rows.push({id:'prod-'+rows.length,producto:p.nombre||'Producto',producto_id:p.id||'',lote:'',dlc:_etqDefaultDlc(),caducidad:_etqDefaultDlc(),proveedor:p.proveedor||'',destino:'nevera',ts:new Date().toISOString(),origen:'catálogo · lote automático al imprimir',etqEmp:_etqCurrentWorker()});
+    if(!lots.length){
+      const hist=_productLotHistory(p.id,3);
+      if(hist.length){
+        hist.forEach(h=>rows.push({id:'prod-'+rows.length,producto:p.nombre||'Producto',producto_id:p.id||'',lote:h.lote||'',dlc:_etqDefaultDlc(),caducidad:_etqDefaultDlc(),proveedor:p.proveedor||'',destino:'nevera',ts:new Date().toISOString(),origen:'catálogo + lote original',etqEmp:_etqCurrentWorker()}));
+      }else{
+        rows.push({id:'prod-'+rows.length,producto:p.nombre||'Producto',producto_id:p.id||'',lote:'',dlc:_etqDefaultDlc(),caducidad:_etqDefaultDlc(),proveedor:p.proveedor||'',destino:'nevera',ts:new Date().toISOString(),origen:'sin lote real · automático solo al imprimir',etqEmp:_etqCurrentWorker()});
+      }
+    }
   });
   window._etqProductRows=rows;
   return rows;
@@ -19437,7 +19629,7 @@ function _printManual(){
   const prod=(document.getElementById('etq-man-prod')||{}).value||'';
   if(!prod){alert('Introduce el nombre del producto');return;}
   const cad=(document.getElementById('etq-man-cad')||{}).value||_etqDefaultDlc();
-  const lote=(document.getElementById('etq-man-lote')||{}).value||_etqAutoLot(prod);
+  const lote=(document.getElementById('etq-man-lote')||{}).value||_etqPreferredLot({producto:prod});
   const destino=(document.getElementById('etq-man-dest')||{}).value||'nevera';
   const cop=parseInt((document.getElementById('cop-etq-man')||{}).textContent)||1;
   _batchPrint([{r:{producto:prod,lote,dlc:cad,caducidad:cad,destino,ts:new Date().toISOString(),etqEmp:_etqCurrentWorker(),proceso:[]},cop,tipo:'manual'}]);
@@ -19479,7 +19671,7 @@ async function _printSelected(tipo){
       const destEl=document.getElementById('dest-'+t+'-'+r.id);
       const destino=destEl?destEl.value:(r.destino||'nevera');
       const cad=r.dlc||r.caducidad||_etqDefaultDlc();
-      const lote=r.lote||_etqAutoLot(r.producto||'');
+      const lote=_etqPreferredLot(r);
       items.push({r:Object.assign({},r,{destino,lote,dlc:cad,caducidad:cad,ts:new Date().toISOString(),etqEmp:_etqCurrentWorker()}),cop,tipo:t});
     });
   });
