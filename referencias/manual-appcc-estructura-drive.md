@@ -56,6 +56,11 @@ Revisión inicial realizada desde `Manual APPCC.zip` recibido el 29/07/2026.
 
 ## 2. Estructura recomendada en Drive
 
+Carpetas creadas en Drive:
+
+- Sanidad / APPCC: <https://drive.google.com/drive/folders/19n5f182RWGNtqmb1aIPDSwmZ_j0m5Sfn>
+- Empresa / Gestión: <https://drive.google.com/drive/folders/1zZvaOPOMO3ySMmGWulwWNjWWHV6Y739R>
+
 ```text
 ALBARABA_APPCC_SANIDAD
 ├── 00_Indice_y_Manual
@@ -89,6 +94,30 @@ ALBARABA_APPCC_SANIDAD
 │   └── PA09_No_Conformidades
 ├── 09_Cierres_Mensuales
 └── 99_Obsoletos
+```
+
+Estructura empresa creada:
+
+```text
+ALBARABA_EMPRESA_GESTION
+├── Eventos
+│   └── 2026
+├── Facturas_Billin
+├── Presupuestos
+├── Hojas_Servicio_EVA
+├── Proveedores
+├── Compras_y_Albaranes
+├── Stock_y_Movimientos
+├── Cuentas
+│   ├── Gastos_por_Evento
+│   ├── Gastos_por_Proveedor
+│   ├── Facturacion_Cobros
+│   ├── Graficos_Mensuales
+│   └── Cierres_Economicos_Mensuales
+└── Informes_EVA
+    ├── Entrada_EVA_a_APP
+    ├── Salida_APP_a_EVA
+    └── Errores_Revision_Humana
 ```
 
 ## 3. Nombres normalizados de archivos
@@ -140,4 +169,3 @@ AAAA-MM-DD_Trazabilidad_Lotes_Cliente_Evento.pdf
 - Si faltan lote, temperatura, fecha, proveedor, cliente o responsable, EVA debe marcarlo como `pendiente_revision_humana`.
 - Las carpetas de eventos deben recibir copias de los documentos APPCC que afecten al evento, pero el original sanitario mensual debe quedar en `ALBARABA_APPCC_SANIDAD`.
 - Los documentos obsoletos del ZIP deben ir a `99_Obsoletos`, no mezclados con documentos vigentes.
-

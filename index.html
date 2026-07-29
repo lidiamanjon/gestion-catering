@@ -792,6 +792,7 @@ html,body{height:100%;color-scheme:light!important}
       <div class="rep-card" onclick="informe_proveedores()"><div class="ic">🏭</div><div><h4>Listado de proveedores</h4><p>Contactos y productos suministrados</p></div></div>
       <div class="rep-card" onclick="informe_productosSinFichaProveedor()"><div class="ic">📄</div><div><h4>Stock sin ficha técnica</h4><p>Por proveedor · stock e histórico de almacén</p></div></div>
       <div class="rep-card" onclick="informe_movimientosEmpresa()"><div class="ic">📘</div><div><h4>Libro de movimientos</h4><p>Recepciones, stock, lotes, nevera, congelador y trazabilidad</p></div></div>
+      <div class="rep-card" onclick="descargarMapaDriveEVA()"><div class="ic">🗂</div><div><h4>Mapa Drive / EVA</h4><p>Carpetas reales para archivar informes</p></div></div>
     </div>
   </div>
   <div id="tab-pedidos-hist" style="display:none">
@@ -5602,6 +5603,55 @@ function marcarPedidosParaRecalcular(motivo,filtro=()=>true){
     }
   });
 }
+const DRIVE_FOLDERS_ALBARABA={
+  sanidad_root:{id:'19n5f182RWGNtqmb1aIPDSwmZ_j0m5Sfn',url:'https://drive.google.com/drive/folders/19n5f182RWGNtqmb1aIPDSwmZ_j0m5Sfn',path:'ALBARABA_APPCC_SANIDAD'},
+  empresa_root:{id:'1zZvaOPOMO3ySMmGWulwWNjWWHV6Y739R',url:'https://drive.google.com/drive/folders/1zZvaOPOMO3ySMmGWulwWNjWWHV6Y739R',path:'ALBARABA_EMPRESA_GESTION'},
+  manual_indice:{id:'1HCJKIsX74lCujp-CepSzcDwSQD-opuRD',url:'https://drive.google.com/drive/folders/1HCJKIsX74lCujp-CepSzcDwSQD-opuRD',path:'ALBARABA_APPCC_SANIDAD/00_Indice_y_Manual'},
+  producto_recetas:{id:'1uwAutsMAquERjU1nQj-oSohzRGNXx62E',url:'https://drive.google.com/drive/folders/1uwAutsMAquERjU1nQj-oSohzRGNXx62E',path:'ALBARABA_APPCC_SANIDAD/03_Producto_Recetas_Fichas'},
+  fichas_materias_primas:{id:'1MF8k6Te18Uj8DdvW0C5tCziTJn-MVe2U',url:'https://drive.google.com/drive/folders/1MF8k6Te18Uj8DdvW0C5tCziTJn-MVe2U',path:'ALBARABA_APPCC_SANIDAD/03_Producto_Recetas_Fichas/Fichas_materias_primas_proveedores'},
+  produccion:{id:'1rBTtLcPn0R_Rdfiuo3-c4RHggWPmWhqy',url:'https://drive.google.com/drive/folders/1rBTtLcPn0R_Rdfiuo3-c4RHggWPmWhqy',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/F1_Registro_Produccion'},
+  recepcion:{id:'1SvaY4kb0A2eQFolAeT2C4NuZk9iWJHjw',url:'https://drive.google.com/drive/folders/1SvaY4kb0A2eQFolAeT2C4NuZk9iWJHjw',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/F2_Recepcion_Materias_Primas'},
+  temperaturas:{id:'17GjyXhiFtAW0fDLkBA7jSFVGFTZMUTQL',url:'https://drive.google.com/drive/folders/17GjyXhiFtAW0fDLkBA7jSFVGFTZMUTQL',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/F3_Temperatura_Camaras'},
+  distribucion:{id:'1O1ONI208hAB_KDxGj3uaJjBtFTo0GxCu',url:'https://drive.google.com/drive/folders/1O1ONI208hAB_KDxGj3uaJjBtFTo0GxCu',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/F4_Distribucion'},
+  congelacion:{id:'1mz0PPYZCjD7DgJK3V9fJx-zpo9vbH9ld',url:'https://drive.google.com/drive/folders/1mz0PPYZCjD7DgJK3V9fJx-zpo9vbH9ld',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/F5_Congelacion_Descongelacion'},
+  aceite:{id:'1ZJ6L7R_VoYMCHoKSrSb0cX0lMcPmeXD6',url:'https://drive.google.com/drive/folders/1ZJ6L7R_VoYMCHoKSrSb0cX0lMcPmeXD6',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/Control_Aceite'},
+  trazabilidad:{id:'1v8knqcH16E1bX5UbIDJAC5G9DAQnjvwX',url:'https://drive.google.com/drive/folders/1v8knqcH16E1bX5UbIDJAC5G9DAQnjvwX',path:'ALBARABA_APPCC_SANIDAD/06_Registros_APPCC/Trazabilidad_Lotes'},
+  verificacion:{id:'13FFx519gNQfpfZCW5S_kPJsHUTCtHaKm',url:'https://drive.google.com/drive/folders/13FFx519gNQfpfZCW5S_kPJsHUTCtHaKm',path:'ALBARABA_APPCC_SANIDAD/07_Verificacion_Auditorias'},
+  limpieza:{id:'1Oe6v6kXCjI4ppNn-XA6aw7ZIoPttsNiv',url:'https://drive.google.com/drive/folders/1Oe6v6kXCjI4ppNn-XA6aw7ZIoPttsNiv',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA02_Limpieza_Desinfeccion/F1_PA02_Registro_Limpieza_Desinfeccion'},
+  proveedores_sanidad:{id:'1kTsIBt_hEQuwsi7zrhgJ9BuTkwWpo-uK',url:'https://drive.google.com/drive/folders/1kTsIBt_hEQuwsi7zrhgJ9BuTkwWpo-uK',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA05_Proveedores'},
+  mantenimiento:{id:'1_XP6ovWC40_UUpiSlsF0gjl5s5-WDcOg',url:'https://drive.google.com/drive/folders/1_XP6ovWC40_UUpiSlsF0gjl5s5-WDcOg',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA06_Mantenimiento_Equipos'},
+  agua:{id:'1UYvj4lJHnHx8EuudPz633gg7KJ9ZABLD',url:'https://drive.google.com/drive/folders/1UYvj4lJHnHx8EuudPz633gg7KJ9ZABLD',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA07_Control_Agua'},
+  no_conformidades:{id:'1hFDRXcYQ_Wp6Gpvq4dSvXgF_URpNTNkb',url:'https://drive.google.com/drive/folders/1hFDRXcYQ_Wp6Gpvq4dSvXgF_URpNTNkb',path:'ALBARABA_APPCC_SANIDAD/08_Planes_Apoyo/PA09_No_Conformidades_Acciones_Correctivas'},
+  cierres_appcc:{id:'16cfLhIXaFgDzNjcv0nkK4QWWlOlLP8iH',url:'https://drive.google.com/drive/folders/16cfLhIXaFgDzNjcv0nkK4QWWlOlLP8iH',path:'ALBARABA_APPCC_SANIDAD/09_Cierres_Mensuales'},
+  eventos:{id:'1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',url:'https://drive.google.com/drive/folders/1AGUv2Xft8ed-VoV9Gbjfu9YwaIOl89IC',path:'ALBARABA_EMPRESA_GESTION/Eventos/2026'},
+  facturas:{id:'15d-lRDuDzoyARrzHT0Akg3L5u6EZFJ8N',url:'https://drive.google.com/drive/folders/15d-lRDuDzoyARrzHT0Akg3L5u6EZFJ8N',path:'ALBARABA_EMPRESA_GESTION/Facturas_Billin'},
+  presupuestos:{id:'1aHAQ7-N87eVoHV996JrIE_PAyabG8ZNn',url:'https://drive.google.com/drive/folders/1aHAQ7-N87eVoHV996JrIE_PAyabG8ZNn',path:'ALBARABA_EMPRESA_GESTION/Presupuestos'},
+  hojas_servicio:{id:'1fAnOHH3-v0pc23cVLuw8jNtQIM7hflzM',url:'https://drive.google.com/drive/folders/1fAnOHH3-v0pc23cVLuw8jNtQIM7hflzM',path:'ALBARABA_EMPRESA_GESTION/Hojas_Servicio_EVA'},
+  compras:{id:'1TvK1BqUM6zcQ3iSVisqeIzYCbD7f1slv',url:'https://drive.google.com/drive/folders/1TvK1BqUM6zcQ3iSVisqeIzYCbD7f1slv',path:'ALBARABA_EMPRESA_GESTION/Compras_y_Albaranes'},
+  stock_movimientos:{id:'1L6z4qJpmek_5aumuRe8xdL8-uiVM6SGR',url:'https://drive.google.com/drive/folders/1L6z4qJpmek_5aumuRe8xdL8-uiVM6SGR',path:'ALBARABA_EMPRESA_GESTION/Stock_y_Movimientos'},
+  cuentas:{id:'1r4EP3tzo_Yi5hABKSKgDgZxTDP0b3IUw',url:'https://drive.google.com/drive/folders/1r4EP3tzo_Yi5hABKSKgDgZxTDP0b3IUw',path:'ALBARABA_EMPRESA_GESTION/Cuentas'},
+  informes_eva:{id:'1cvItTERllNr1DAnNGwHeDnlCUPguz8WZ',url:'https://drive.google.com/drive/folders/1cvItTERllNr1DAnNGwHeDnlCUPguz8WZ',path:'ALBARABA_EMPRESA_GESTION/Informes_EVA'}
+};
+function driveFolderAlbaraba(tipo){
+  return DRIVE_FOLDERS_ALBARABA[tipo]||DRIVE_FOLDERS_ALBARABA.informes_eva;
+}
+function driveFolderForMovimiento(ev={}){
+  const text=[ev.modulo,ev.tipo,ev.accion,ev.detalle].join(' ').toLowerCase();
+  if(ev.carpeta_drive_url)return {url:ev.carpeta_drive_url,path:'Carpeta evento/cliente'};
+  if(ev.evento_id||ev.cliente)return driveFolderAlbaraba('eventos');
+  if(/recepci[oó]n|materia|mercanc/.test(text))return driveFolderAlbaraba('recepcion');
+  if(/producci[oó]n|elaboraci[oó]n/.test(text))return driveFolderAlbaraba('produccion');
+  if(/temperatura|c[aá]mara/.test(text))return driveFolderAlbaraba('temperaturas');
+  if(/distribuci[oó]n|entrega|cliente/.test(text))return driveFolderAlbaraba('distribucion');
+  if(/congel|descongel|nevera/.test(text))return driveFolderAlbaraba('congelacion');
+  if(/aceite|polar/.test(text))return driveFolderAlbaraba('aceite');
+  if(/trazabilidad|lote/.test(text))return driveFolderAlbaraba('trazabilidad');
+  if(/limpieza|desinfecci/.test(text))return driveFolderAlbaraba('limpieza');
+  if(/no conform|incidencia|correctiva/.test(text))return driveFolderAlbaraba('no_conformidades');
+  if(/factur|cobro|cuenta|gasto|coste|margen/.test(text))return driveFolderAlbaraba('cuentas');
+  if(/stock|movimiento/.test(text))return driveFolderAlbaraba('stock_movimientos');
+  return driveFolderAlbaraba('informes_eva');
+}
 function _auditMovimientoId(){
   try{return typeof uid==='function'?uid():'mov_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
   catch(e){return 'mov_'+Date.now();}
@@ -5615,6 +5665,7 @@ function registrarMovimientoEmpresa(ev={}){
     if(!Array.isArray(DB.movimientos_empresa))DB.movimientos_empresa=[];
     const now=new Date().toISOString();
     const ts=ev.ts||ev.fecha||now;
+    const folder=driveFolderForMovimiento(ev);
     const rec={
       id:ev.id||_auditMovimientoId(),
       ts,
@@ -5633,8 +5684,9 @@ function registrarMovimientoEmpresa(ev={}){
       detalle:ev.detalle||ev.nota||ev.obs||'',
       usuario:ev.usuario||_auditUsuario(),
       ref:ev.ref||'',
-      carpeta_drive_url:ev.carpeta_drive_url||ev.drive_url||'',
-      drive_destino:ev.drive_destino||_driveDestinoMovimiento(ev),
+      carpeta_drive_url:ev.carpeta_drive_url||ev.drive_url||folder.url||'',
+      drive_folder_id:ev.drive_folder_id||folder.id||'',
+      drive_destino:ev.drive_destino||folder.path||_driveDestinoMovimiento(ev),
       estado_drive:ev.estado_drive||'pendiente_eva'
     };
     DB.movimientos_empresa.push(rec);
@@ -5645,9 +5697,8 @@ function registrarMovimientoEmpresa(ev={}){
 function _driveDestinoMovimiento(ev={}){
   const ymd=String(ev.ts||ev.fecha||new Date().toISOString()).slice(0,10);
   const ym=ymd.slice(0,7);
-  if(ev.evento_id||ev.cliente)return 'Drive/EVA/Eventos/'+(ev.cliente||ev.evento_id||'sin_cliente')+'/'+ymd;
-  if(String(ev.modulo||'').toLowerCase().includes('appcc'))return 'Drive/EVA/APPCC/'+ym;
-  return 'Drive/EVA/Movimientos empresa/'+ym;
+  const folder=driveFolderForMovimiento(ev);
+  return (folder.path||'Drive/EVA')+'/'+ym;
 }
 function registrarEntradaStockGestion({producto,cantidad,unidad,lote,recepcionId}){
   const p=buscarProductoCatalogo(producto);
@@ -7231,6 +7282,8 @@ function _movimientosEmpresaRows(){
       usuario:r.usuario||r.emp||r.eliminado_por||'',
       detalle:r.detalle||r.nota||r.obs||'',
       drive_destino:r.drive_destino||_driveDestinoMovimiento(r),
+      drive_folder_id:r.drive_folder_id||driveFolderForMovimiento(r).id||'',
+      carpeta_drive_url:r.carpeta_drive_url||driveFolderForMovimiento(r).url||'',
       estado_drive:r.estado_drive||'pendiente_eva'
     });
   };
@@ -7252,10 +7305,11 @@ function informe_movimientosEmpresa(){
   const rows=_movimientosEmpresaRows();
   if(!rows.length){alert('Todavía no hay movimientos registrados.');return;}
   const hoy=_hoy();
-  const header=['Fecha','Módulo','Tipo','Acción','Producto/elaboración','Lote','Cantidad','Unidad','Proveedor','Cliente','Evento','Usuario','Detalle','Destino Drive/EVA','Estado Drive'];
+  const header=['Fecha','Módulo','Tipo','Acción','Producto/elaboración','Lote','Cantidad','Unidad','Proveedor','Cliente','Evento','Usuario','Detalle','Destino Drive/EVA','ID carpeta Drive','URL carpeta Drive','Estado Drive'];
   const csv=[_csvLine(header)];
-  rows.forEach(r=>csv.push(_csvLine([r.fecha,r.modulo,r.tipo,r.accion,r.producto,r.lote,r.cantidad,r.unidad,r.proveedor,r.cliente,r.evento_id,r.usuario,r.detalle,r.drive_destino,r.estado_drive])));
-  const payload={empresa:'ALBARABA SL',generado_en:new Date().toISOString(),generado_por:_auditUsuario(),destino_sugerido:'Drive/EVA/Informes empresa/Movimientos/'+hoy.slice(0,7),total:rows.length,movimientos:rows};
+  rows.forEach(r=>csv.push(_csvLine([r.fecha,r.modulo,r.tipo,r.accion,r.producto,r.lote,r.cantidad,r.unidad,r.proveedor,r.cliente,r.evento_id,r.usuario,r.detalle,r.drive_destino,r.drive_folder_id,r.carpeta_drive_url,r.estado_drive])));
+  const folder=driveFolderAlbaraba('stock_movimientos');
+  const payload={empresa:'ALBARABA SL',generado_en:new Date().toISOString(),generado_por:_auditUsuario(),destino_sugerido:folder.path+'/'+hoy.slice(0,7),drive_folder_id:folder.id,drive_folder_url:folder.url,total:rows.length,movimientos:rows};
   if(!Array.isArray(DB.drive_report_queue))DB.drive_report_queue=[];
   DB.drive_report_queue.unshift({id:_auditMovimientoId(),tipo:'movimientos_empresa',nombre:'Libro movimientos empresa '+hoy,fecha:new Date().toISOString(),estado:'pendiente_eva_drive',destino:payload.destino_sugerido,total:rows.length,payload});
   DB.drive_report_queue=DB.drive_report_queue.slice(0,200);
@@ -7263,6 +7317,40 @@ function informe_movimientosEmpresa(){
   _downloadCSV(csv,'ALBARABA_libro_movimientos_'+hoy+'.csv');
   _downloadJSON(payload,'ALBARABA_libro_movimientos_'+hoy+'.json');
   alert('✅ Informe generado y dejado en cola para EVA/Drive. Se descargan CSV y JSON para respaldo.');
+}
+function descargarMapaDriveEVA(){
+  const payload={
+    empresa:'ALBARABA SL',
+    generado_en:new Date().toISOString(),
+    uso:'Mapa oficial de carpetas Drive para que EVA y la app archiven informes APPCC, empresa, eventos, cuentas y movimientos sin mezclar documentos.',
+    reglas:{
+      sanidad:'Los registros APPCC oficiales se archivan en ALBARABA_APPCC_SANIDAD. No inventar registros: solo documentos reales generados por app/EVA.',
+      empresa:'Presupuestos, facturas, cuentas, compras, stock y eventos se archivan en ALBARABA_EMPRESA_GESTION.',
+      eventos:'Cada evento debe tener carpeta propia dentro de ALBARABA_EMPRESA_GESTION/Eventos/2026 con presupuesto, hoja EVA, pedido, APPCC evento, factura y cobro/cierre.',
+      errores:'Si falta lote, fecha, proveedor, temperatura, cliente o responsable, enviar a Informes_EVA/Errores_Revision_Humana.'
+    },
+    carpetas:DRIVE_FOLDERS_ALBARABA,
+    equivalencias_manual_appcc:{
+      'F1 MA4 Registro de producción':'produccion',
+      'F2 MA05 Recepción materias primas':'recepcion',
+      'F3 MA4 Temperatura cámaras':'temperaturas',
+      'F4 MA4 Distribución':'distribucion',
+      'F5 MA4 Congelación/descongelación':'congelacion',
+      'F2 MA4 Control aceite':'aceite',
+      'PA02 Limpieza/desinfección':'limpieza',
+      'PA05 Proveedores':'proveedores_sanidad',
+      'PA06 Mantenimiento/equipos':'mantenimiento',
+      'PA07 Agua':'agua',
+      'PA09 No conformidades':'no_conformidades',
+      'Cierres mensuales APPCC':'cierres_appcc'
+    }
+  };
+  if(!Array.isArray(DB.drive_report_queue))DB.drive_report_queue=[];
+  DB.drive_report_queue.unshift({id:_auditMovimientoId(),tipo:'mapa_drive_eva',nombre:'Mapa Drive EVA',fecha:new Date().toISOString(),estado:'vigente',destino:driveFolderAlbaraba('informes_eva').path,payload});
+  DB.drive_report_queue=DB.drive_report_queue.slice(0,200);
+  saveDB();
+  _downloadJSON(payload,'ALBARABA_mapa_drive_eva_'+_hoy()+'.json');
+  alert('✅ Mapa Drive/EVA descargado y guardado en la cola de informes para EVA.');
 }
 function informe_elaboraciones(){
   const {jsPDF}=window.jspdf;const doc=new jsPDF();
