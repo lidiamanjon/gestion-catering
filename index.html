@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-sync-empresa4 -->
+<!-- VERSION: v20260729-pistola1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-sync-empresa4'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -641,7 +641,7 @@ html,body{height:100%;color-scheme:light!important}
 <div class="section" id="section-productos">
   <div class="topbar">
     <div><div class="pg-title">Productos</div><div class="pg-sub">Ingredientes y materias primas</div></div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="descargarProductos()" title="Descargar CSV">📥 Descargar</button><button class="btn btn-gold" onclick="openProdModal()">+ Añadir producto</button></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-outline" onclick="openPistolMode('producto')">🔫 Pistola</button><button class="btn btn-outline" onclick="descargarProductos()" title="Descargar CSV">📥 Descargar</button><button class="btn btn-gold" onclick="openProdModal()">+ Añadir producto</button></div>
   </div>
   <div class="card">
     <div class="card-head">
@@ -723,6 +723,7 @@ html,body{height:100%;color-scheme:light!important}
 <div class="section" id="section-stock">
   <div class="topbar">
     <div><div class="pg-title">Control de Stock</div><div class="pg-sub">Inventario actual</div></div>
+    <button class="btn btn-outline" onclick="openPistolMode('stock')">🔫 Pistola</button>
     <button class="btn btn-outline" onclick="descargarStock()">📥 Descargar</button>
     <button class="btn btn-gold" onclick="exportarStockExcel()">📊 Exportar Excel</button>
   </div>
@@ -1217,7 +1218,10 @@ html,body{height:100%;color-scheme:light!important}
       <div id="rend-calc-preview" style="margin-top:10px;font-size:12px;color:#166534;min-height:20px"></div>
     </div>
   </div>
-  <div class="fg"><label class="fl">Referencia / código proveedor</label><input class="fc" id="prod-ref" placeholder="REF-001"></div>
+  <div class="frow">
+    <div class="fg"><label class="fl">Referencia / código proveedor</label><input class="fc" id="prod-ref" placeholder="REF-001"></div>
+    <div class="fg"><label class="fl">Código barras EAN / GTIN</label><input class="fc" id="prod-gtin" inputmode="numeric" placeholder="8412345678901" style="font-family:monospace"></div>
+  </div>
   <div class="fg">
     <label class="fl">Foto del producto</label>
     <div class="photo-box" onclick="document.getElementById('prod-foto-input').click()">
@@ -3763,7 +3767,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-sync-empresa4');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3898,7 +3902,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-sync-empresa4';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5276,12 +5280,15 @@ function deleteProveedor(id){
 // ═══════════════════════════════════════════════════
 function renderProdTable(q='',cat=''){
   let list=DB.productos;
-  if(q)list=list.filter(p=>p.nombre.toLowerCase().includes(q.toLowerCase()));
+  if(q){
+    const qq=String(q||'').toLowerCase();
+    list=list.filter(p=>[p.nombre,p.referencia,p.ref,p.gtin,p.ean,p.barcode,p.ultimo_lote].filter(Boolean).some(v=>String(v).toLowerCase().includes(qq)));
+  }
   if(cat)list=list.filter(p=>p.categoria===cat);
   document.getElementById('prod-tbody').innerHTML=list.length?list.map(p=>`
     <tr>
       <td><div class="tbl-photo">${p.foto?`<img src="${p.foto}" style="width:36px;height:36px;border-radius:6px;object-fit:cover">`:'📦'}</div></td>
-      <td><strong>${esc(p.nombre)}</strong>${p.referencia?`<div style="font-size:11px;color:var(--muted)">${esc(p.referencia)}</div>`:''}</td>
+      <td><strong>${esc(p.nombre)}</strong>${p.referencia?`<div style="font-size:11px;color:var(--muted)">${esc(p.referencia)}</div>`:''}${p.gtin?`<div style="font-size:10px;color:#1a4fa8;font-family:monospace">EAN ${esc(p.gtin)}</div>`:''}</td>
       <td><span class="badge b-cat">${esc(p.categoria||'')}</span></td>
       <td>${esc(provNombre(p.proveedor_id))}</td>
       <td>${esc(p.unidad||'')}</td>
@@ -5319,7 +5326,7 @@ function updateRendCalc(){
 
 function openProdModal(){
   document.getElementById('prod-id').value='';
-  ['nombre','ref','precio','stock','stock-min','notas','rendimiento','rendimiento-desc'].forEach(f=>document.getElementById('prod-'+f).value='');
+  ['nombre','ref','gtin','precio','stock','stock-min','notas','rendimiento','rendimiento-desc'].forEach(f=>{const el=document.getElementById('prod-'+f);if(el)el.value='';});
   updateRendCalc();
   document.getElementById('prod-cat').value='Carnes';
   document.getElementById('prod-unidad').value='kg';
@@ -5336,6 +5343,7 @@ function editProducto(id){
   document.getElementById('prod-nombre').value=p.nombre||'';
   document.getElementById('prod-cat').value=p.categoria||'Carnes';
   document.getElementById('prod-ref').value=p.referencia||'';
+  const gtinEl=document.getElementById('prod-gtin');if(gtinEl)gtinEl.value=p.gtin||p.ean||p.barcode||'';
   document.getElementById('prod-precio').value=p.precio||'';
   document.getElementById('prod-stock').value=p.stock_actual!==undefined?p.stock_actual:'';
   document.getElementById('prod-stock-min').value=p.stock_min||'';
@@ -5357,7 +5365,8 @@ function saveProducto(){
   const id=document.getElementById('prod-id').value||uid();
   const rendVal=parseInt(document.getElementById('prod-rendimiento').value)||0;
   const now=new Date().toISOString();
-  const obj={id,nombre,categoria:document.getElementById('prod-cat').value,proveedor_id:document.getElementById('prod-prov').value,unidad:document.getElementById('prod-unidad').value,precio:document.getElementById('prod-precio').value,stock_actual:parseFloat(document.getElementById('prod-stock').value)||0,stock_min:parseFloat(document.getElementById('prod-stock-min').value)||0,referencia:document.getElementById('prod-ref').value,notas:document.getElementById('prod-notas').value,foto:document.getElementById('prod-foto-data').value,alergenos:getCheckedAlergenos('al-grid-prod'),rendimiento:rendVal,rendimiento_desc:document.getElementById('prod-rendimiento-desc').value,actualizado_en:now,stock_actualizado_en:now};
+  const gtin=(document.getElementById('prod-gtin')?.value||'').trim();
+  const obj={id,nombre,categoria:document.getElementById('prod-cat').value,proveedor_id:document.getElementById('prod-prov').value,unidad:document.getElementById('prod-unidad').value,precio:document.getElementById('prod-precio').value,stock_actual:parseFloat(document.getElementById('prod-stock').value)||0,stock_min:parseFloat(document.getElementById('prod-stock-min').value)||0,referencia:document.getElementById('prod-ref').value,gtin,ean:gtin,barcode:gtin,notas:document.getElementById('prod-notas').value,foto:document.getElementById('prod-foto-data').value,alergenos:getCheckedAlergenos('al-grid-prod'),rendimiento:rendVal,rendimiento_desc:document.getElementById('prod-rendimiento-desc').value,actualizado_en:now,stock_actualizado_en:now};
   const idx=DB.productos.findIndex(x=>x.id===id);
   if(idx>=0)DB.productos[idx]={...DB.productos[idx],...obj};else DB.productos.push(obj);
   marcarPedidosParaRecalcular('Producto o stock modificado: '+nombre,p=>!p.totales||Boolean(p.totales[id]));
@@ -6060,6 +6069,149 @@ function actualizarStock(id){
     marcarPedidosParaRecalcular('Stock actualizado: '+DB.productos[idx].nombre,p=>!p.totales||Boolean(p.totales[id]));
     saveDB();renderStockTable();
   }
+}
+
+// ═══════════════════════════════════════════════════
+// PISTOLA LECTORA DE CÓDIGOS — modo teclado/HID
+// ═══════════════════════════════════════════════════
+function _pistolNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');}
+function _pistolParse(raw){
+  const clean=String(raw||'').trim();
+  if(!clean)return{raw:''};
+  try{if(typeof parseScan==='function')return parseScan(clean)||{raw:clean};}catch(e){}
+  return{raw:clean,gtin:/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(clean)?clean:'',lot:''};
+}
+function _pistolFindProduct(parsedOrRaw){
+  const parsed=typeof parsedOrRaw==='string'?_pistolParse(parsedOrRaw):(parsedOrRaw||{});
+  const raw=String(parsed.raw||'').trim();
+  const gtin=String(parsed.gtin||'').trim();
+  const lot=String(parsed.lot||'').trim();
+  const candidates=[gtin,raw,lot].filter(Boolean).map(_pistolNorm);
+  if(!candidates.length)return null;
+  return (DB.productos||[]).find(p=>{
+    const fields=[p.gtin,p.ean,p.barcode,p.codigo,p.cod,p.referencia,p.ref,p.ultimo_lote].filter(Boolean).map(_pistolNorm);
+    return candidates.some(c=>fields.some(f=>f===c));
+  }) || null;
+}
+function _pistolAssociateCode(productId,parsed){
+  const p=(DB.productos||[]).find(x=>x.id===productId);
+  const gtin=String(parsed?.gtin||parsed?.raw||'').trim();
+  if(!p||!gtin)return null;
+  p.gtin=gtin;p.ean=gtin;p.barcode=gtin;
+  if(!p.referencia)p.referencia=gtin;
+  p.actualizado_en=new Date().toISOString();
+  saveDB();
+  try{if(typeof registerGTIN==='function')registerGTIN(gtin,{nombre:p.nombre,proveedor:provNombre(p.proveedor_id)||p.proveedor||''});}catch(e){}
+  return p;
+}
+function _pistolProductOptions(){
+  return (DB.productos||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||'','es'))
+    .map(p=>`<option value="${esc(p.id)}">${esc(p.nombre||'Producto')}${p.gtin?' · '+esc(p.gtin):''}</option>`).join('');
+}
+function openPistolMode(context='recepcion'){
+  const titles={recepcion:'Recepción con pistola',recepcion_appcc:'Recepción APPCC con pistola',stock:'Actualizar stock con pistola',producto:'Asociar código a producto'};
+  openModal(`<div class="mh"><h2>🔫 ${titles[context]||'Pistola lectora'}</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div style="padding:4px 2px 12px;color:#475569;font-size:13px;line-height:1.45">
+      La pistola debe estar en modo <strong>teclado/HID</strong> y enviar <strong>Enter</strong> al final. Enchufar, pinchar en el campo y escanear.
+    </div>
+    <div style="background:#fff8e1;border:1.5px solid #f59e0b;border-radius:12px;padding:12px;margin-bottom:12px">
+      <label class="fl">Campo de escaneo</label>
+      <input class="fc" id="pistol-input" inputmode="none" autocomplete="off" placeholder="Escanea aquí..." style="font-family:monospace;font-size:20px;font-weight:900;text-align:center;letter-spacing:1px"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();submitPistolScan('${context}')}">
+      <div id="pistol-status" style="font-size:12px;color:#92400e;margin-top:8px">Esperando lectura…</div>
+    </div>
+    ${context==='producto'?`<div class="fg"><label class="fl">Si el código no existe, asociarlo a producto</label><select class="fc" id="pistol-product-select"><option value="">Elegir después / crear nuevo</option>${_pistolProductOptions()}</select></div>`:''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-light" onclick="closeModal('modal-universal')">Cerrar</button>
+      <button class="btn btn-gold" onclick="submitPistolScan('${context}')">Procesar</button>
+    </div>`, 'lg');
+  setTimeout(()=>document.getElementById('pistol-input')?.focus(),120);
+}
+function submitPistolScan(context){
+  const inp=document.getElementById('pistol-input');
+  const raw=(inp?.value||'').trim();
+  const st=document.getElementById('pistol-status');
+  if(!raw){if(inp)inp.style.borderColor='#e74c3c';return;}
+  const parsed=_pistolParse(raw);
+  const prod=_pistolFindProduct(parsed);
+  if(prod){
+    if(parsed.gtin&&!prod.gtin)_pistolAssociateCode(prod.id,parsed);
+    if(st)st.innerHTML='✅ Encontrado: <strong>'+esc(prod.nombre||'')+'</strong>';
+    if(context==='stock')return openPistolStockAdjust(prod.id,parsed);
+    if(context==='producto'){closeModal('modal-universal');editProducto(prod.id);return;}
+    closeModal('modal-universal');
+    return applyScanToRecep(parsed,prod.nombre||'',provNombre(prod.proveedor_id)||prod.proveedor||'');
+  }
+  if(context==='producto'){
+    const chosen=document.getElementById('pistol-product-select')?.value||'';
+    if(chosen){
+      const p=_pistolAssociateCode(chosen,parsed);
+      closeModal('modal-universal');
+      if(p){alert('✅ Código asociado a '+p.nombre);renderProdTable();}
+      return;
+    }
+  }
+  openPistolUnknownProduct(parsed,context);
+}
+function openPistolUnknownProduct(parsed,context){
+  const gtin=String(parsed?.gtin||parsed?.raw||'').trim();
+  closeModal('modal-universal');
+  window._pistolUnknownParsed=parsed;
+  window._pistolUnknownContext=context;
+  openModal(`<div class="mh"><h2>📦 Producto no reconocido</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div style="background:#fff3cd;border:1px solid #f59e0b;border-radius:10px;padding:10px 12px;font-size:13px;color:#78350f;margin-bottom:12px">
+      Código leído: <code>${esc(gtin||parsed.raw||'')}</code>${parsed.lot?` · lote <code>${esc(parsed.lot)}</code>`:''}
+    </div>
+    <div class="fg"><label class="fl">Producto del catálogo o nombre nuevo *</label><input class="fc" id="pistol-new-name" list="pistol-prod-list" placeholder="Empieza a escribir producto..." autocomplete="off"><datalist id="pistol-prod-list">${(DB.productos||[]).map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist></div>
+    <div class="fg"><label class="fl">Proveedor habitual</label><select class="fc" id="pistol-new-prov"><option value="">Sin proveedor</option>${(DB.proveedores||[]).map(p=>`<option value="${esc(p.id)}">${esc(p.nombre||'')}</option>`).join('')}</select></div>
+    <div class="frow"><div class="fg"><label class="fl">Categoría</label><select class="fc" id="pistol-new-cat"><option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option><option>Lácteos y huevos</option><option>Conservas</option><option>Salsas y condimentos</option><option>Otros</option></select></div><div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-new-unit"><option>kg</option><option>ud</option><option>caja</option><option>bolsa</option><option>l</option><option>pack</option></select></div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-gold" onclick="savePistolUnknownProduct()">Guardar y continuar</button></div>`, 'lg');
+  setTimeout(()=>document.getElementById('pistol-new-name')?.focus(),120);
+}
+function savePistolUnknownProduct(context=window._pistolUnknownContext,parsed=window._pistolUnknownParsed){
+  const name=(document.getElementById('pistol-new-name')?.value||'').trim();
+  if(!name){document.getElementById('pistol-new-name').style.borderColor='#e74c3c';return;}
+  const existing=(DB.productos||[]).find(p=>(p.nombre||'').toLowerCase().trim()===name.toLowerCase());
+  const gtin=String(parsed?.gtin||parsed?.raw||'').trim();
+  const now=new Date().toISOString();
+  let prod=existing;
+  if(prod){
+    if(gtin){prod.gtin=gtin;prod.ean=gtin;prod.barcode=gtin;if(!prod.referencia)prod.referencia=gtin;}
+    prod.actualizado_en=now;
+  }else{
+    prod={id:uid(),nombre:name,categoria:document.getElementById('pistol-new-cat')?.value||'Otros',proveedor_id:document.getElementById('pistol-new-prov')?.value||'',unidad:document.getElementById('pistol-new-unit')?.value||'kg',precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:gtin,gtin,ean:gtin,barcode:gtin,notas:'Añadido desde pistola lectora. Pendiente revisar ficha técnica/alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
+    DB.productos.push(prod);
+  }
+  saveDB();
+  try{if(gtin&&typeof registerGTIN==='function')registerGTIN(gtin,{nombre:prod.nombre,proveedor:provNombre(prod.proveedor_id)||''});}catch(e){}
+  closeModal('modal-universal');
+  if(context==='stock')openPistolStockAdjust(prod.id,parsed);
+  else if(context==='producto'){renderProdTable();alert('✅ Producto/código preparado.');}
+  else applyScanToRecep(parsed,prod.nombre||'',provNombre(prod.proveedor_id)||'');
+}
+function openPistolStockAdjust(productId,parsed){
+  const p=(DB.productos||[]).find(x=>x.id===productId);if(!p)return;
+  openModal(`<div class="mh"><h2>📦 Stock por pistola</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div style="font-size:15px;font-weight:900;margin-bottom:4px">${esc(p.nombre||'')}</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:12px">Stock actual: <strong>${esc(p.stock_actual||0)} ${esc(p.unidad||'')}</strong>${parsed?.lot?' · lote '+esc(parsed.lot):''}</div>
+    <div class="frow"><div class="fg"><label class="fl">Acción</label><select class="fc" id="pistol-stock-action"><option value="add">Sumar entrada</option><option value="set">Fijar stock total</option><option value="sub">Restar salida/merma</option></select></div><div class="fg"><label class="fl">Cantidad</label><input class="fc" id="pistol-stock-qty" type="number" step="0.01" value="1"></div></div>
+    <div class="fg"><label class="fl">Lote</label><input class="fc" id="pistol-stock-lote" value="${esc(parsed?.lot||p.ultimo_lote||'')}" style="font-family:monospace"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-green" onclick="savePistolStockAdjust('${productId}')">Guardar stock</button></div>`, 'lg');
+  setTimeout(()=>document.getElementById('pistol-stock-qty')?.select(),120);
+}
+function savePistolStockAdjust(productId){
+  const p=(DB.productos||[]).find(x=>x.id===productId);if(!p)return;
+  const qty=parseFloat(document.getElementById('pistol-stock-qty')?.value||'');
+  if(isNaN(qty)){alert('Cantidad no válida');return;}
+  const action=document.getElementById('pistol-stock-action')?.value||'add';
+  const current=parseFloat(p.stock_actual)||0;
+  p.stock_actual=action==='set'?qty:action==='sub'?Math.max(0,current-qty):current+qty;
+  const lote=(document.getElementById('pistol-stock-lote')?.value||'').trim().toUpperCase();
+  if(lote)p.ultimo_lote=lote;
+  p.stock_actualizado_en=new Date().toISOString();
+  p.actualizado_en=p.stock_actualizado_en;
+  marcarPedidosParaRecalcular('Stock actualizado con pistola: '+p.nombre,r=>!r.totales||Boolean(r.totales[productId]));
+  saveDB();closeModal('modal-universal');renderStockTable();renderProdTable();
 }
 
 // ═══════════════════════════════════════════════════
@@ -13277,6 +13429,9 @@ function renderRecep(){
         <span style="font-size:24px">📷</span> Escanear caja / etiqueta
         <span style="font-size:11px;opacity:.8;font-weight:400;margin-left:4px">GS1-128 · EAN · QR</span>
       </button>
+      <button onclick="openPistolMode('recepcion_appcc')" style="width:100%;background:linear-gradient(135deg,#111827,#374151);color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px">
+        🔫 Pistola lectora USB/Bluetooth
+      </button>
       <button onclick="abrirFotoLoteBolsa('recep')" style="width:100%;background:#f39c12;color:#fff;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px">
         📸 Fotografiar número de lote
       </button>
@@ -18945,6 +19100,7 @@ async function _batchPrint(items, orient){
 </script>
 </body>
 </html>
+
 
 
 
