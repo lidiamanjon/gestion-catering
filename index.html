@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-lote-auto1 -->
+<!-- VERSION: v20260729-pistola-elab-lotes1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-lote-auto1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-elab-lotes1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -731,6 +731,7 @@ html,body{height:100%;color-scheme:light!important}
 <div class="section" id="section-stock">
   <div class="topbar">
     <div><div class="pg-title">Control de Stock</div><div class="pg-sub">Inventario actual</div></div>
+    <button class="btn btn-outline" onclick="openPistolMode('stock_lookup')">🔎 Consultar lotes</button>
     <button class="btn btn-outline" onclick="openPistolMode('stock')">🔫 Pistola</button>
     <button class="btn btn-outline" onclick="descargarStock()">📥 Descargar</button>
     <button class="btn btn-gold" onclick="exportarStockExcel()">📊 Exportar Excel</button>
@@ -3784,7 +3785,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-lote-auto1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-elab-lotes1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3919,7 +3920,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-lote-auto1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-elab-lotes1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5456,11 +5457,46 @@ function addIngRow(ing=null){
       <option value="total_receta"${!ing||ing.modo_cantidad!=='por_racion'?' selected':''}>Total receta</option>
       <option value="por_racion"${ing&&ing.modo_cantidad==='por_racion'?' selected':''}>Por ración</option>
     </select>
+    <button class="btn btn-sm btn-outline" type="button" onclick="openPistolIngredientScan('${rowId}')" title="Escanear producto/lote con pistola">🔫</button>
     <button class="ing-del" onclick="this.closest('.ing-row').remove()">✕</button>`;
   list.appendChild(div);
   div.insertAdjacentHTML('beforeend',`<input type="hidden" class="fifo-lote" value="${esc(ing?.lote_sugerido_fifo||ing?.lote||'')}"><div class="ing-fifo" id="fifo-${rowId}">Selecciona un producto para ver foto, stock y lote FIFO.</div>`);
   // Show hint for pre-loaded ingredient
   if(ing&&ing.producto_id) actualizarHintIng(rowId,ing.producto_id);
+}
+function openPistolIngredientScan(rowId){
+  openModal(`<div class="mh"><h2>🔫 Ingrediente con pistola</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div style="font-size:13px;color:#475569;line-height:1.45;margin-bottom:10px">
+      Escanea el producto que vas a usar. Si el código trae lote, se guardará como lote usado/sugerido para esa línea.
+    </div>
+    <input class="fc" id="pistol-ing-input" inputmode="none" autocomplete="off" placeholder="Escanea aquí..." style="font-family:monospace;font-size:20px;font-weight:900;text-align:center"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();applyPistolIngredientScan('${rowId}')}">
+    <div id="pistol-ing-status" style="font-size:12px;color:#92400e;margin-top:8px">Esperando lectura…</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button>
+      <button class="btn btn-gold" onclick="applyPistolIngredientScan('${rowId}')">Usar producto</button>
+    </div>`, 'md');
+  setTimeout(()=>document.getElementById('pistol-ing-input')?.focus(),100);
+}
+function applyPistolIngredientScan(rowId){
+  const raw=(document.getElementById('pistol-ing-input')?.value||'').trim();
+  const st=document.getElementById('pistol-ing-status');
+  if(!raw){const i=document.getElementById('pistol-ing-input');if(i)i.style.borderColor='#e74c3c';return;}
+  const parsed=_pistolNoCaducidad(_pistolParse(raw));
+  const prod=_pistolFindProduct(parsed);
+  const row=document.getElementById(rowId);
+  if(!row)return;
+  if(!prod){
+    if(st)st.innerHTML='⚠️ Producto no reconocido. Primero regístralo/asócialo desde Recepción con pistola.';
+    return;
+  }
+  const sel=row.querySelector('select');
+  if(sel){sel.value=prod.id;actualizarHintIng(rowId,prod.id);}
+  const fifoInput=row.querySelector('.fifo-lote');
+  if(fifoInput&&parsed.lot)fifoInput.value=parsed.lot;
+  const fifo=document.getElementById('fifo-'+rowId);
+  if(fifo&&parsed.lot)fifo.innerHTML=`Lote escaneado usado: <strong>${esc(parsed.lot)}</strong> · producto: <strong>${esc(prod.nombre||'')}</strong><br><span style="color:#166534">Este lote queda guardado en la ficha de la elaboración para APPCC/trazabilidad.</span>`;
+  closeModal('modal-universal');
 }
 function actualizarHintIng(rowId,prodId){
   const hint=document.getElementById('hint-'+rowId);
@@ -6210,7 +6246,7 @@ function _pistolCtx(context){
 }
 function openPistolMode(context='recepcion'){
   context=_pistolCtx(context);
-  const titles={recepcion:'Recepción con pistola',stock:'Actualizar stock con pistola',producto:'Asociar código a producto'};
+  const titles={recepcion:'Recepción con pistola',stock:'Actualizar stock con pistola',stock_lookup:'Consultar stock/lotes',producto:'Asociar código a producto'};
   openModal(`<div class="mh"><h2>🔫 ${titles[context]||'Pistola lectora'}</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
     <div style="padding:4px 2px 12px;color:#475569;font-size:13px;line-height:1.45">
       La pistola debe estar en modo <strong>teclado/HID</strong> y enviar <strong>Enter</strong> al final. Enchufar, pinchar en el campo y escanear.
@@ -6222,6 +6258,9 @@ function openPistolMode(context='recepcion'){
         onkeydown="if(event.key==='Enter'){event.preventDefault();submitPistolScan('${context}',true)}">
       <div id="pistol-status" style="font-size:12px;color:#92400e;margin-top:8px">Esperando lectura…</div>
     </div>
+    ${context==='stock_lookup'?`<div style="background:#eef4ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px;color:#1e3a8a;line-height:1.45">
+      Escanea un producto para ver <strong>stock actual, recepciones y lotes registrados</strong>. Útil si hay que retirar un lote/producto del mercado.
+    </div>`:''}
     ${context==='stock'?`<div style="background:#eefaf0;border:1.5px solid #86efac;border-radius:12px;padding:12px;margin-bottom:12px">
       <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;font-weight:800;color:#166534">
         <input type="checkbox" id="pistol-stock-quick" checked style="width:20px;height:20px;margin-top:0">
@@ -6289,6 +6328,9 @@ function submitPistolScan(context,manual=false){
       if(quick)return quickPistolStockAdd(prod.id,parsed);
       return openPistolStockAdjust(prod.id,parsed);
     }
+    if(context==='stock_lookup'){
+      return showPistolStockLots(prod.id,parsed);
+    }
     if(context==='producto'){closeModal('modal-universal');editProducto(prod.id);return;}
     if(context==='recepcion'&&document.getElementById('pistol-recep-quick')?.checked!==false){
       return quickPistolRecepAdd(prod.id,parsed,prod);
@@ -6305,7 +6347,43 @@ function submitPistolScan(context,manual=false){
       return;
     }
   }
+  if(context==='stock_lookup'){
+    if(st)st.innerHTML='⚠️ Producto no reconocido. Para consultarlo primero hay que asociarlo desde Recepción con pistola.';
+    return;
+  }
   openPistolUnknownProduct(parsed,context);
+}
+function showPistolStockLots(productId,parsed={}){
+  const p=(DB.productos||[]).find(x=>String(x.id||'')===String(productId||''));if(!p)return;
+  const norm=_normNombreCatalogo(p.nombre);
+  const receps=(typeof ld==='function'&&typeof K!=='undefined'?ld(K.recep):[]).filter(r=>{
+    const rn=_normNombreCatalogo(r.producto||r.nombre||'');
+    return (r.producto_id&&String(r.producto_id)===String(p.id))||(norm&&rn&&(rn===norm||rn.includes(norm)||norm.includes(rn)))||(parsed.lot&&String(r.lote||'').toUpperCase()===String(parsed.lot).toUpperCase());
+  }).sort((a,b)=>String(b.ts||b.date||'').localeCompare(String(a.ts||a.date||'')));
+  const movs=(DB.movimientos_stock||[]).filter(m=>String(m.producto_id||'')===String(p.id)||(parsed.lot&&String(m.lote||'').toUpperCase()===String(parsed.lot).toUpperCase()))
+    .sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  const lotes={};
+  receps.forEach(r=>{
+    const lote=String(r.lote||'SIN LOTE').toUpperCase();
+    if(!lotes[lote])lotes[lote]={lote,cantidad:0,unidad:r.unidad||p.unidad||'',cad:r.caducidad||r.dlc||'',proveedor:r.proveedor||'',ultimo:r.ts||r.date||''};
+    lotes[lote].cantidad+=parseFloat(r.cantidad)||0;
+    if(r.caducidad||r.dlc)lotes[lote].cad=r.caducidad||r.dlc;
+    if(r.proveedor)lotes[lote].proveedor=r.proveedor;
+    if(String(r.ts||r.date||'')>String(lotes[lote].ultimo||''))lotes[lote].ultimo=r.ts||r.date||'';
+  });
+  const loteRows=Object.values(lotes).sort((a,b)=>String(a.cad||a.ultimo||'9999').localeCompare(String(b.cad||b.ultimo||'9999')));
+  closeModal('modal-universal');
+  openModal(`<div class="mh"><h2>🔎 Stock y lotes</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div style="font-size:18px;font-weight:900;color:#111827">${esc(p.nombre||'Producto')}</div>
+    <div style="font-size:13px;color:#475569;margin:4px 0 12px">Stock actual: <strong>${esc(p.stock_actual||0)} ${esc(p.unidad||'')}</strong>${parsed.lot?' · lote escaneado <strong>'+esc(parsed.lot)+'</strong>':''}</div>
+    <div class="card" style="margin:0 0 12px"><div class="card-head"><h3>📦 Lotes encontrados</h3></div>
+      <div style="padding:10px">${loteRows.length?`<table style="width:100%;font-size:12px"><thead><tr><th>Lote</th><th>Cantidad recibida</th><th>Cad.</th><th>Proveedor</th><th>Último mov.</th></tr></thead><tbody>
+        ${loteRows.map(l=>`<tr><td><span class="lot-code">${esc(l.lote)}</span></td><td>${esc(Math.round(l.cantidad*1000)/1000)} ${esc(l.unidad||'')}</td><td>${esc(l.cad||'—')}</td><td>${esc(l.proveedor||'—')}</td><td>${esc(l.ultimo?fmtDate(l.ultimo):'—')}</td></tr>`).join('')}
+      </tbody></table>`:'<div style="padding:12px;color:#92400e;background:#fff7ed;border-radius:10px">No hay lotes de recepción guardados para este producto. Si existe físicamente, regístralo desde Recepción con pistola.</div>'}</div>
+    </div>
+    <div class="card" style="margin:0"><div class="card-head"><h3>🧾 Últimos movimientos</h3></div>
+      <div style="padding:10px">${movs.length?movs.slice(0,12).map(m=>`<div style="padding:7px 0;border-bottom:1px solid #e5e7eb;font-size:12px"><strong>${esc(m.tipo||'movimiento')}</strong> · ${esc(m.cantidad||0)} ${esc(m.unidad||'')} ${m.lote?'· lote <span class="lot-code">'+esc(m.lote)+'</span>':''}<br><span style="color:#64748b">${esc(m.fecha?fmtDT(m.fecha):'')}</span></div>`).join(''):'<div style="padding:12px;color:#64748b">Sin movimientos registrados.</div>'}</div>
+    </div>`, 'xl');
 }
 function _pistolAskMissingRecep(productId,parsed,prod,opts={}){
   parsed=_pistolNormalizeLot(parsed||{},parsed?.raw||'');
