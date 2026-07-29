@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260729-reset-elaboraciones1';
+const CACHE_NAME = 'albaraba-appcc-v20260729-reset-elaboraciones-sinboton1';
 const APP_SHELL = [
   './',
   './index.html',
