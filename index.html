@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-qr-pistola-local1 -->
+<!-- VERSION: v20260729-reset-elaboraciones1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-qr-pistola-local1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-reset-elaboraciones1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3793,7 +3793,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-qr-pistola-local1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-reset-elaboraciones1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3929,7 +3929,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-qr-pistola-local1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-reset-elaboraciones1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -18584,6 +18584,65 @@ function clearAll(){
   Object.values(K).forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
   location.reload();
 }
+function _resetEvaMenuToPending(hojas){
+  return (Array.isArray(hojas)?hojas:[]).map(h=>{
+    const copy={...h};
+    copy.realizado=false;
+    delete copy.fecha_realizado;
+    delete copy.cierre_con_avisos;
+    delete copy.appcc_pendientes_al_cierre;
+    copy.menu=(copy.menu||[]).map(m=>{
+      const item={...m};
+      Object.keys(item).forEach(k=>{ if(k.startsWith('appcc_')) delete item[k]; });
+      item.appcc_estado='pendiente';
+      return item;
+    });
+    return copy;
+  });
+}
+async function resetElaboracionesRealesSolo(){
+  const keys=[K.elab,K.congel,K.descongel,K.regen,K.tserv,K.abat];
+  const counts=Object.fromEntries(keys.map(k=>[k,(ld(k)||[]).length]));
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const msg='Esto borrará SOLO elaboraciones reales/procesos de cocina ficticios:\\n\\n'+
+    '• Elaboraciones ya iniciadas/hechas APPCC\\n'+
+    '• Stock de elaboraciones en nevera y congelador\\n'+
+    '• Descongelación, regeneración, servicio y abatidor asociados\\n\\n'+
+    'NO toca productos, proveedores, stock de productos, recetas ni eventos EVA.\\n\\n'+
+    'Registros a limpiar: '+total+'\\n\\n¿Continuar?';
+  if(!confirm(msg))return;
+  const ok=prompt('Para confirmar escribe exactamente: BORRAR ELABORACIONES');
+  if(ok!=='BORRAR ELABORACIONES'){alert('Cancelado. No se ha borrado nada.');return;}
+  const backup={
+    fecha:new Date().toISOString(),
+    motivo:'reset_elaboraciones_reales_no_cocinadas',
+    appcc:Object.fromEntries(keys.map(k=>[k,ld(k)])),
+    hojas:DB.hojas||[]
+  };
+  const backupKey='_backup_reset_elaboraciones_'+Date.now();
+  localStorage.setItem(backupKey,JSON.stringify(backup));
+  keys.forEach(k=>sv(k,[]));
+  DB.hojas=_resetEvaMenuToPending(DB.hojas||[]);
+  saveDB();
+  try{
+    if(fbDB&&fbAuth&&fbAuth.currentUser){
+      const stamp=new Date().toISOString().slice(0,10)+'_'+Date.now();
+      await fbDB.ref('appcc_backups/reset_elaboraciones_'+stamp).set(backup);
+      await Promise.all(keys.map(k=>fbDB.ref('appcc_v1/'+k).set([])));
+      await fbDB.ref('albaraba_v2/hojas').transaction(current=>_resetEvaMenuToPending(current||DB.hojas||[]));
+      setSyncStatus('ok');
+    }else{
+      setSyncStatus('local');
+    }
+  }catch(e){
+    console.error('Reset elaboraciones cloud:',e);
+    setSyncStatus('error');
+    alert('Se limpió en este dispositivo, pero falló la subida a nube. Copia local de seguridad: '+backupKey+'\\n\\nError: '+(e&&e.message?e.message:e));
+    return;
+  }
+  try{renderCongeladorStock();renderNeveraElabStock();if(currentSection)nav(currentSection,{preserveScroll:true});}catch(e){}
+  alert('✅ Limpieza hecha.\\n\\nLas elaboraciones de eventos EVA vuelven a estar PENDIENTES.\\nNevera/congelador de elaboraciones quedan vacíos.\\nProductos y stock de productos NO se han tocado.\\n\\nCopia de seguridad local: '+backupKey);
+}
 function renderCfg(){
   const emps=ld(K.emp);const zonas=ld(K.zonas);const provs=ld(K.provs);
   const sessions=ld(K.workerLog).slice(-20).reverse();
@@ -18673,6 +18732,7 @@ function renderCfg(){
         <button class="btn btn-outline btn-block" onclick="exportDataAPPCC()">📤 Exportar backup (JSON)</button>
         <button class="btn btn-outline btn-block" onclick="document.getElementById('imp-file').click()">📥 Importar backup</button>
         <input type="file" id="imp-file" accept=".json" style="display:none" onchange="importDataAPPCC(event)">
+        <button class="btn btn-outline btn-block admin-only" style="border-color:#f59e0b;color:#92400e;background:#fffbeb" onclick="resetElaboracionesRealesSolo()">🧹 Reset elaboraciones reales ficticias</button>
         <button class="btn btn-red btn-block" onclick="if(confirm('¿Borrar TODOS los datos?')){clearAll()}">🗑 Borrar todos los datos</button>
       </div>
     </div>`;
@@ -20675,7 +20735,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-qr-pistola-local1'
+        source_version:'v20260729-reset-elaboraciones1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
