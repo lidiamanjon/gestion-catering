@@ -169,3 +169,33 @@ AAAA-MM-DD_Trazabilidad_Lotes_Cliente_Evento.pdf
 - Si faltan lote, temperatura, fecha, proveedor, cliente o responsable, EVA debe marcarlo como `pendiente_revision_humana`.
 - Las carpetas de eventos deben recibir copias de los documentos APPCC que afecten al evento, pero el original sanitario mensual debe quedar en `ALBARABA_APPCC_SANIDAD`.
 - Los documentos obsoletos del ZIP deben ir a `99_Obsoletos`, no mezclados con documentos vigentes.
+
+## 6. Cola automática Drive / EVA
+
+La app mantiene una lista `drive_report_queue`. Esta cola no sustituye a Drive: prepara paquetes estructurados para que EVA o el conector de Drive los archive sin mezclar documentos.
+
+Funcionamiento:
+
+- Cada guardado importante prepara o actualiza paquetes pendientes.
+- Al arrancar la app se prepara una tanda automática.
+- Cada hora se vuelve a preparar la cola si la app está abierta.
+- Los archivos quedan con `nombre_archivo`, `drive_folder_id`, `drive_folder_url`, `destino`, `estado` y `payload`.
+
+Paquetes automáticos actuales:
+
+- `movimientos_empresa`: libro completo de movimientos, stock, lotes, recepción, nevera, congelador y trazabilidad.
+- `recepcion_materias_primas`: recepciones y entradas de mercancía.
+- `stock_lotes`: stock actual de productos y elaboraciones con lotes.
+- `trazabilidad_lotes`: movimientos con lote o impacto de trazabilidad.
+- `cuentas_mensuales`: eventos, cobros, facturación, gastos y presupuestos.
+- `mapa_drive_eva`: mapa oficial de carpetas para EVA.
+
+Regla para EVA:
+
+1. Leer `drive_report_queue`.
+2. Para cada elemento con `estado = pendiente_eva_drive`, crear o actualizar el archivo `nombre_archivo` dentro de `drive_folder_id`.
+3. No dar por oficial ningún registro APPCC si faltan datos reales.
+4. Si falta información crítica, mover o duplicar aviso en `Informes_EVA/Errores_Revision_Humana`.
+5. Al archivar correctamente, devolver a la app el estado `archivado_drive`, la URL del archivo y la fecha.
+
+En la app se revisa desde `Informes → Cola Drive / EVA`.

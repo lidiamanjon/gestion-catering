@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'albaraba-appcc-v20260728-appcc-evento-fix1';
+const CACHE_NAME = 'albaraba-appcc-v20260729-drive-auto1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -32,7 +32,7 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-        fetch(request, { cache: 'no-store' })
+      fetch(request, { cache: 'no-store' })
         .then((response) => {
           if (response.ok) {
             const copy = response.clone();

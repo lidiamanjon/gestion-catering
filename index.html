@@ -793,6 +793,7 @@ html,body{height:100%;color-scheme:light!important}
       <div class="rep-card" onclick="informe_productosSinFichaProveedor()"><div class="ic">📄</div><div><h4>Stock sin ficha técnica</h4><p>Por proveedor · stock e histórico de almacén</p></div></div>
       <div class="rep-card" onclick="informe_movimientosEmpresa()"><div class="ic">📘</div><div><h4>Libro de movimientos</h4><p>Recepciones, stock, lotes, nevera, congelador y trazabilidad</p></div></div>
       <div class="rep-card" onclick="descargarMapaDriveEVA()"><div class="ic">🗂</div><div><h4>Mapa Drive / EVA</h4><p>Carpetas reales para archivar informes</p></div></div>
+      <div class="rep-card" onclick="verColaDriveEVA()"><div class="ic">📁</div><div><h4>Cola Drive / EVA</h4><p>Paquetes automáticos pendientes de archivar</p></div></div>
     </div>
   </div>
   <div id="tab-pedidos-hist" style="display:none">
@@ -3805,6 +3806,7 @@ function saveDB(){
   _saveLocalRecoveryPoint(previous,'antes de guardar');
   _markLocalWriteWindow();
   DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),dispositivo:navigator.userAgent.slice(0,80)};
+  try{if(typeof autoPrepararPaquetesDrive==='function')autoPrepararPaquetesDrive('guardar',false);}catch(e){console.warn('Auto Drive/EVA no disponible:',e);}
   const payload=_protectLocalSaveAgainstLoss(JSON.parse(JSON.stringify(DB)),previous);
   DB=payload;
   localStorage.setItem('albaraba_v2',JSON.stringify(payload));
@@ -5635,6 +5637,126 @@ const DRIVE_FOLDERS_ALBARABA={
 function driveFolderAlbaraba(tipo){
   return DRIVE_FOLDERS_ALBARABA[tipo]||DRIVE_FOLDERS_ALBARABA.informes_eva;
 }
+function _sanitizeFilePart(v){
+  return String(v||'')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9._-]+/g,'_')
+    .replace(/^_+|_+$/g,'')
+    .slice(0,90)||'sin_nombre';
+}
+function _driveReportPeriodo(tipo,fecha=new Date()){
+  const iso=fecha instanceof Date?fecha.toISOString():new Date(fecha||Date.now()).toISOString();
+  if(/mensual|cuentas|cierre|temperaturas|fichas/.test(String(tipo||'')))return iso.slice(0,7);
+  return iso.slice(0,10);
+}
+function _driveFolderTypeForReport(tipo){
+  const t=String(tipo||'').toLowerCase();
+  if(/recepcion|materias/.test(t))return 'recepcion';
+  if(/temperatura|camara/.test(t))return 'temperaturas';
+  if(/trazabilidad|lote/.test(t))return 'trazabilidad';
+  if(/produccion|elaboracion/.test(t))return 'produccion';
+  if(/congel|descongel|nevera/.test(t))return 'congelacion';
+  if(/cuenta|factur|gasto|cobro|econom/.test(t))return 'cuentas';
+  if(/evento|hoja_servicio|servicio/.test(t))return 'eventos';
+  if(/mapa|eva|error/.test(t))return 'informes_eva';
+  return 'stock_movimientos';
+}
+function driveReportFileName(tipo,fecha=new Date(),extra='',ext='json'){
+  const periodo=_driveReportPeriodo(tipo,fecha);
+  const names={
+    movimientos_empresa:'ALBARABA_libro_movimientos_empresa',
+    recepcion_materias_primas:'F2_MA05_recepcion_materias_primas',
+    stock_lotes:'ALBARABA_stock_lotes_productos_elaboraciones',
+    trazabilidad_lotes:'ALBARABA_trazabilidad_lotes',
+    cuentas_mensuales:'ALBARABA_cuentas_facturacion_gastos',
+    mapa_drive_eva:'ALBARABA_mapa_drive_eva',
+    cierre_appcc_mensual:'ALBARABA_cierre_appcc_mensual'
+  };
+  const base=names[tipo]||('ALBARABA_'+_sanitizeFilePart(tipo));
+  const suf=extra?'_'+_sanitizeFilePart(extra):'';
+  return `${periodo}_${base}${suf}.${ext||'json'}`;
+}
+function queueDriveReport(tipo,payload={},opts={}){
+  if(!Array.isArray(DB.drive_report_queue))DB.drive_report_queue=[];
+  const now=new Date();
+  const folder=driveFolderAlbaraba(opts.folderType||_driveFolderTypeForReport(tipo));
+  const periodo=opts.periodo||_driveReportPeriodo(tipo,now);
+  const nombreArchivo=opts.nombre_archivo||driveReportFileName(tipo,now,opts.extra||'',opts.ext||'json');
+  const key=[tipo,periodo,folder.id,nombreArchivo].join('|');
+  DB.drive_report_queue=DB.drive_report_queue.filter(x=>x.queue_key!==key);
+  const item={
+    id:opts.id||_auditMovimientoId(),
+    queue_key:key,
+    tipo,
+    nombre:opts.nombre||nombreArchivo.replace(/\.[^.]+$/,''),
+    nombre_archivo:nombreArchivo,
+    extension:(opts.ext||'json').toLowerCase(),
+    fecha:now.toISOString(),
+    periodo,
+    periodicidad:opts.periodicidad||'automatica',
+    estado:opts.estado||'pendiente_eva_drive',
+    destino:folder.path,
+    drive_folder_id:folder.id,
+    drive_folder_url:folder.url,
+    instrucciones_eva:opts.instrucciones_eva||'Crear o actualizar este archivo en la carpeta indicada. No inventar datos; si falta algo, mantenerlo como pendiente de revisión.',
+    payload
+  };
+  DB.drive_report_queue.unshift(item);
+  DB.drive_report_queue=DB.drive_report_queue.slice(0,300);
+  return item;
+}
+function _snapshotStockLotes(){
+  const productos=(DB.productos||[]).map(p=>({
+    id:p.id,nombre:p.nombre,proveedor:provNombre(p.proveedor_id)||p.proveedor||'',
+    unidad:p.unidad||'',stock_actual:parseFloat(p.stock_actual)||0,
+    lote_actual:p.ultimo_lote||'',lotes:_productLotHistory(p.id,30),
+    actualizado_en:p.stock_actualizado_en||p.actualizado_en||''
+  }));
+  const elaboraciones=(ld((typeof K!=='undefined'&&K.elab)||'')||[]).map(e=>({
+    id:e.id,producto:e.producto||e.nombre||'',destino:e.destino||'',estado:e.estado||'',
+    cantidad:e.cantidad||'',unidad:e.unidad||'',lote:e.lote||'',evento_id:e.evento_id||'',
+    cliente:e.evento_cliente||e.cliente||'',fecha:e.fecha||e.ts||''
+  }));
+  return {productos,elaboraciones,total_productos:productos.length,total_elaboraciones:elaboraciones.length};
+}
+function autoPrepararPaquetesDrive(motivo='auto',marcarPersistencia=true){
+  const now=Date.now();
+  const last=parseInt(localStorage.getItem('_albaraba_auto_drive_queue_last')||'0',10)||0;
+  const minGap=motivo==='intervalo'?45*60*1000:20*60*1000;
+  if(now-last<minGap)return false;
+  const generado_en=new Date().toISOString();
+  const usuario=_auditUsuario();
+  const hoy=_hoy();
+  const rows=typeof _movimientosEmpresaRows==='function'?_movimientosEmpresaRows():[];
+  queueDriveReport('movimientos_empresa',{
+    empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,total:rows.length,
+    movimientos:rows
+  },{folderType:'stock_movimientos',periodicidad:'cada 45-60 minutos',periodo:hoy});
+  const recepciones=(ld((typeof K!=='undefined'&&K.recep)||'')||[]);
+  queueDriveReport('recepcion_materias_primas',{
+    empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,total:recepciones.length,
+    recepciones:recepciones.slice(-1000)
+  },{folderType:'recepcion',periodicidad:'diaria/automatica',periodo:hoy});
+  queueDriveReport('stock_lotes',{
+    empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,
+    stock:_snapshotStockLotes()
+  },{folderType:'stock_movimientos',periodicidad:'cada 45-60 minutos',periodo:hoy});
+  queueDriveReport('trazabilidad_lotes',{
+    empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,
+    movimientos:rows.filter(r=>String(r.lote||'').trim()||/trazabilidad|lote|recepci[oó]n|elaboraci[oó]n|salida/i.test([r.modulo,r.tipo,r.accion].join(' ')))
+  },{folderType:'trazabilidad',periodicidad:'diaria/automatica',periodo:hoy});
+  queueDriveReport('cuentas_mensuales',{
+    empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,
+    eventos:(DB.hojas||[]).map(h=>({id:h.id,cliente:h.cliente||h.titulo||'',fecha:h.fecha||h.fecha_evento||'',marca:h.marca||'',pax:h.pax||'',estado:h.estado||'',facturado:h.facturado||false,cobrado:h.cobrado||false,total:h.total||h.importe||''})),
+    gastos:DB.gastos||[],facturas:DB.facturas||[],presupuestos:DB.presupuestos||[]
+  },{folderType:'cuentas',periodicidad:'mensual/automatica',periodo:hoy.slice(0,7)});
+  queueDriveReport('mapa_drive_eva',{
+    empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,
+    carpetas:DRIVE_FOLDERS_ALBARABA
+  },{folderType:'informes_eva',periodicidad:'cuando cambie la estructura',periodo:'vigente'});
+  if(marcarPersistencia)localStorage.setItem('_albaraba_auto_drive_queue_last',String(now));
+  return true;
+}
 function driveFolderForMovimiento(ev={}){
   const text=[ev.modulo,ev.tipo,ev.accion,ev.detalle].join(' ').toLowerCase();
   if(ev.carpeta_drive_url)return {url:ev.carpeta_drive_url,path:'Carpeta evento/cliente'};
@@ -7112,6 +7234,36 @@ function renderInformes(){
   }).join(''):'<div class="notice info">ℹ Aún no has generado pedidos.</div>';
 }
 
+function verColaDriveEVA(){
+  const q=(DB.drive_report_queue||[]).slice(0,80);
+  const pendientes=q.filter(x=>String(x.estado||'').includes('pendiente')).length;
+  const html=`
+    <div class="modal-head"><h3>📁 Cola automática Drive / EVA</h3><button class="modal-close" onclick="closeModal('modal-universal')">×</button></div>
+    <div class="modal-body">
+      <div class="notice info" style="margin-bottom:12px">
+        La app prepara estos paquetes con nombre y carpeta destino. EVA/Drive debe recogerlos y guardarlos en la carpeta indicada.
+        <br><strong>Pendientes:</strong> ${pendientes} · <strong>Total en cola:</strong> ${q.length}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-gold" onclick="autoPrepararPaquetesDrive('manual',true);saveDB();verColaDriveEVA()">🔄 Preparar ahora</button>
+        <button class="btn btn-outline" onclick="descargarMapaDriveEVA()">🗺 Descargar mapa Drive</button>
+      </div>
+      ${q.length?q.map(it=>`
+        <div class="card" style="padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:start">
+            <div>
+              <strong>${it.nombre_archivo||it.nombre||it.tipo}</strong>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px">${it.tipo||''} · ${fmtDate(it.fecha)||it.fecha||''} · ${it.estado||''}</div>
+              <div style="font-size:12px;margin-top:4px">📂 ${it.destino||''}</div>
+            </div>
+            ${it.drive_folder_url?`<a class="btn btn-sm btn-outline" target="_blank" href="${it.drive_folder_url}">Abrir carpeta</a>`:''}
+          </div>
+        </div>
+      `).join(''):'<div class="notice warn">No hay paquetes todavía. Pulsa “Preparar ahora”.</div>'}
+    </div>`;
+  openModal(html);
+}
+
 // ═══════════════════════════════════════════════════
 // EXPORTS - PDF
 // ═══════════════════════════════════════════════════
@@ -7310,9 +7462,7 @@ function informe_movimientosEmpresa(){
   rows.forEach(r=>csv.push(_csvLine([r.fecha,r.modulo,r.tipo,r.accion,r.producto,r.lote,r.cantidad,r.unidad,r.proveedor,r.cliente,r.evento_id,r.usuario,r.detalle,r.drive_destino,r.drive_folder_id,r.carpeta_drive_url,r.estado_drive])));
   const folder=driveFolderAlbaraba('stock_movimientos');
   const payload={empresa:'ALBARABA SL',generado_en:new Date().toISOString(),generado_por:_auditUsuario(),destino_sugerido:folder.path+'/'+hoy.slice(0,7),drive_folder_id:folder.id,drive_folder_url:folder.url,total:rows.length,movimientos:rows};
-  if(!Array.isArray(DB.drive_report_queue))DB.drive_report_queue=[];
-  DB.drive_report_queue.unshift({id:_auditMovimientoId(),tipo:'movimientos_empresa',nombre:'Libro movimientos empresa '+hoy,fecha:new Date().toISOString(),estado:'pendiente_eva_drive',destino:payload.destino_sugerido,total:rows.length,payload});
-  DB.drive_report_queue=DB.drive_report_queue.slice(0,200);
+  queueDriveReport('movimientos_empresa',payload,{folderType:'stock_movimientos',periodo:hoy,periodicidad:'manual'});
   saveDB();
   _downloadCSV(csv,'ALBARABA_libro_movimientos_'+hoy+'.csv');
   _downloadJSON(payload,'ALBARABA_libro_movimientos_'+hoy+'.json');
@@ -7345,9 +7495,7 @@ function descargarMapaDriveEVA(){
       'Cierres mensuales APPCC':'cierres_appcc'
     }
   };
-  if(!Array.isArray(DB.drive_report_queue))DB.drive_report_queue=[];
-  DB.drive_report_queue.unshift({id:_auditMovimientoId(),tipo:'mapa_drive_eva',nombre:'Mapa Drive EVA',fecha:new Date().toISOString(),estado:'vigente',destino:driveFolderAlbaraba('informes_eva').path,payload});
-  DB.drive_report_queue=DB.drive_report_queue.slice(0,200);
+  queueDriveReport('mapa_drive_eva',payload,{folderType:'informes_eva',periodo:'vigente',periodicidad:'manual',estado:'vigente'});
   saveDB();
   _downloadJSON(payload,'ALBARABA_mapa_drive_eva_'+_hoy()+'.json');
   alert('✅ Mapa Drive/EVA descargado y guardado en la cola de informes para EVA.');
@@ -12554,6 +12702,8 @@ function abrirPresupuesto(preloadData){
 function cerrarHojaOverlay(){}
 
 window.addEventListener('DOMContentLoaded',()=>{
+  setTimeout(()=>{try{if(autoPrepararPaquetesDrive('arranque',true))saveDB();}catch(e){console.warn('No se pudo preparar cola Drive/EVA al arrancar',e);}},6000);
+  setInterval(()=>{try{if(autoPrepararPaquetesDrive('intervalo',true))saveDB();}catch(e){console.warn('No se pudo preparar cola Drive/EVA automática',e);}},60*60*1000);
   if(FB_READY&&fbAuth){
     // Con Firebase: esperar a que el estado de auth esté listo
     fbAuth.onAuthStateChanged(user=>{
