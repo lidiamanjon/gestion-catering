@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-lotes1 -->
+<!-- VERSION: v20260729-elab-qr-stock1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-lotes1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-elab-qr-stock1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -754,6 +754,7 @@ html,body{height:100%;color-scheme:light!important}
     <div><div class="pg-title">🧊 Stock Congelador</div><div class="pg-sub">Elaboraciones en congelador · unidades disponibles</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-outline" onclick="renderCongeladorStock()">🔄 Actualizar</button>
+      <button class="btn btn-outline" onclick="openElabStockPistol('congelador')">🔫 Pistola / QR</button>
       <button class="btn btn-gold" onclick="openElabStockManual('congelador')">+ Añadir elaboración</button>
     </div>
   </div>
@@ -766,6 +767,7 @@ html,body{height:100%;color-scheme:light!important}
     <div><div class="pg-title">❄️ Stock Nevera</div><div class="pg-sub">Elaboraciones terminadas en nevera · separado de productos recibidos</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <button class="btn btn-outline" onclick="renderNeveraElabStock()">🔄 Actualizar</button>
+      <button class="btn btn-outline" onclick="openElabStockPistol('nevera')">🔫 Pistola / QR</button>
       <button class="btn btn-gold" onclick="openElabStockManual('nevera')">+ Añadir elaboración</button>
     </div>
   </div>
@@ -789,6 +791,7 @@ html,body{height:100%;color-scheme:light!important}
       <div class="rep-card" onclick="informe_alergenos()"><div class="ic">⚠️</div><div><h4>Tabla de alergenos</h4><p>Por elaboración y categoría</p></div></div>
       <div class="rep-card" onclick="informe_proveedores()"><div class="ic">🏭</div><div><h4>Listado de proveedores</h4><p>Contactos y productos suministrados</p></div></div>
       <div class="rep-card" onclick="informe_productosSinFichaProveedor()"><div class="ic">📄</div><div><h4>Stock sin ficha técnica</h4><p>Por proveedor · stock e histórico de almacén</p></div></div>
+      <div class="rep-card" onclick="informe_movimientosEmpresa()"><div class="ic">📘</div><div><h4>Libro de movimientos</h4><p>Recepciones, stock, lotes, nevera, congelador y trazabilidad</p></div></div>
     </div>
   </div>
   <div id="tab-pedidos-hist" style="display:none">
@@ -3787,7 +3790,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-lotes1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-elab-qr-stock1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3922,7 +3925,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-lotes1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-elab-qr-stock1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5599,6 +5602,53 @@ function marcarPedidosParaRecalcular(motivo,filtro=()=>true){
     }
   });
 }
+function _auditMovimientoId(){
+  try{return typeof uid==='function'?uid():'mov_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);}
+  catch(e){return 'mov_'+Date.now();}
+}
+function _auditUsuario(){
+  const key=(typeof K!=='undefined'&&K&&K.wActive)?K.wActive:'';
+  return currentUserEmail||currentUserName||(key?localStorage.getItem(key):'')||'sin usuario';
+}
+function registrarMovimientoEmpresa(ev={}){
+  try{
+    if(!Array.isArray(DB.movimientos_empresa))DB.movimientos_empresa=[];
+    const now=new Date().toISOString();
+    const ts=ev.ts||ev.fecha||now;
+    const rec={
+      id:ev.id||_auditMovimientoId(),
+      ts,
+      fecha:String(ts||now).slice(0,10),
+      modulo:ev.modulo||ev.origen||'General',
+      tipo:ev.tipo||'movimiento',
+      accion:ev.accion||ev.tipo||'movimiento',
+      producto:ev.producto||'',
+      producto_id:ev.producto_id||'',
+      lote:ev.lote||'',
+      cantidad:ev.cantidad??'',
+      unidad:ev.unidad||'',
+      proveedor:ev.proveedor||'',
+      cliente:ev.cliente||'',
+      evento_id:ev.evento_id||'',
+      detalle:ev.detalle||ev.nota||ev.obs||'',
+      usuario:ev.usuario||_auditUsuario(),
+      ref:ev.ref||'',
+      carpeta_drive_url:ev.carpeta_drive_url||ev.drive_url||'',
+      drive_destino:ev.drive_destino||_driveDestinoMovimiento(ev),
+      estado_drive:ev.estado_drive||'pendiente_eva'
+    };
+    DB.movimientos_empresa.push(rec);
+    DB.movimientos_empresa=DB.movimientos_empresa.slice(-10000);
+    return rec;
+  }catch(e){console.warn('No se pudo registrar movimiento empresa',e);return null;}
+}
+function _driveDestinoMovimiento(ev={}){
+  const ymd=String(ev.ts||ev.fecha||new Date().toISOString()).slice(0,10);
+  const ym=ymd.slice(0,7);
+  if(ev.evento_id||ev.cliente)return 'Drive/EVA/Eventos/'+(ev.cliente||ev.evento_id||'sin_cliente')+'/'+ymd;
+  if(String(ev.modulo||'').toLowerCase().includes('appcc'))return 'Drive/EVA/APPCC/'+ym;
+  return 'Drive/EVA/Movimientos empresa/'+ym;
+}
 function registrarEntradaStockGestion({producto,cantidad,unidad,lote,recepcionId}){
   const p=buscarProductoCatalogo(producto);
   if(!p)return null;
@@ -5615,6 +5665,7 @@ function registrarEntradaStockGestion({producto,cantidad,unidad,lote,recepcionId
     recepcion_id:recepcionId||'',fecha:p.stock_actualizado_en
   });
   DB.movimientos_stock=DB.movimientos_stock.slice(-2000);
+  registrarMovimientoEmpresa({modulo:'Recepción / Stock',tipo:'entrada_recepcion',accion:'Entrada de mercancía',producto:p.nombre,producto_id:p.id,cantidad:entrada,unidad:unidad||p.unidad||'',lote:lote||'',ref:recepcionId||'',proveedor:provNombre(p.proveedor_id)||p.proveedor||''});
   marcarPedidosParaRecalcular('Mercancía recibida: '+p.nombre,ped=>!ped.totales||Boolean(ped.totales[p.id]));
   return p;
 }
@@ -5687,6 +5738,7 @@ function registrarMovimientoStockGestion({productoId,tipo,cantidad,unidad,lote,o
     cantidad:qty,unidad:unidad||p.unidad||'',lote:lote||'',origen:origen||'',nota:nota||'',fecha:now
   });
   DB.movimientos_stock=DB.movimientos_stock.slice(-2000);
+  registrarMovimientoEmpresa({modulo:'Stock productos',tipo:tipo||'ajuste_stock',accion:tipo||'Ajuste stock',producto:p.nombre,producto_id:p.id,cantidad:qty,unidad:unidad||p.unidad||'',lote:lote||'',detalle:nota||'',ref:origen||'',proveedor:provNombre(p.proveedor_id)||p.proveedor||''});
   return p;
 }
 function openElabModal(){
@@ -6046,7 +6098,7 @@ function renderElabStorageStock(destino){
   if(!body)return;
   const list=_buildElabStorageList(destino);
   if(!list.length){
-    body.innerHTML=`<div class="card"><div style="padding:20px;text-align:center;color:#aaa">${cfg.icon} ${cfg.empty}<br><button class="btn btn-sm btn-gold" style="margin-top:12px" onclick="openElabStockManual('${destino}')">+ Añadir elaboración manualmente</button></div></div>`;
+    body.innerHTML=`<div class="card"><div style="padding:20px;text-align:center;color:#aaa">${cfg.icon} ${cfg.empty}<br><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px"><button class="btn btn-sm btn-outline" onclick="openElabStockPistol('${destino}')">🔫 Pistola / QR</button><button class="btn btn-sm btn-gold" onclick="openElabStockManual('${destino}')">+ Añadir elaboración manualmente</button></div></div></div>`;
     return;
   }
   const totalItems=list.length,totalUnits=list.reduce((s,x)=>s+Math.max(0,x.cantTotal-x.regenTotal),0);
@@ -6056,7 +6108,7 @@ function renderElabStorageStock(destino){
       <div class="card"><div class="card-body" style="text-align:center"><div style="font-size:28px;font-weight:700;color:${cfg.color}">${Math.round(totalUnits)}</div><div style="font-size:12px;color:#888">Raciones / unidades disponibles</div></div></div>
     </div>
     <div class="card">
-      <div class="card-head"><h3>${cfg.icon} ${cfg.title}</h3><button class="btn btn-sm btn-gold" onclick="openElabStockManual('${destino}')">+ Añadir manual</button></div>
+      <div class="card-head"><h3>${cfg.icon} ${cfg.title}</h3><div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn btn-sm btn-outline" onclick="openElabStockPistol('${destino}')">🔫 Pistola / QR</button><button class="btn btn-sm btn-gold" onclick="openElabStockManual('${destino}')">+ Añadir manual</button></div></div>
       <div class="tbl-wrap"><table>
         <thead><tr><th>Elaboración</th><th>Lote</th><th>Entrada</th><th>Usado</th><th style="color:${cfg.color};font-weight:700">Disponible</th><th>DLC</th><th>Última entrada</th><th></th></tr></thead>
         <tbody>${list.map(x=>{
@@ -6081,6 +6133,127 @@ function renderElabStorageStock(destino){
 }
 function renderCongeladorStock(){renderElabStorageStock('congelador');}
 function renderNeveraElabStock(){renderElabStorageStock('nevera');}
+function _findElabStockByScan(raw,destino=''){
+  const parsed=typeof raw==='string'?_pistolParse(raw):(raw||{});
+  const recs=(ld(K.elab)||[]).filter(r=>!_elabArchivada(r)&&r.estado!=='servido'&&r.estado!=='regenerado'&&r.estado!=='eliminado');
+  const id=String(parsed.traceId||parsed.id||'').trim();
+  if(id){
+    const byId=recs.find(r=>String(r.id||'')===id);
+    if(byId)return byId;
+  }
+  const lot=String(parsed.lot||parsed.lote||'').trim().toUpperCase();
+  const prod=_etqNorm(parsed.producto||'');
+  let list=recs;
+  if(destino)list=list.filter(r=>(r.destino||'nevera')===destino);
+  if(lot&&prod){
+    const exact=list.find(r=>String(r.lote||'').trim().toUpperCase()===lot&&_etqNorm(r.producto||r.nombre||'')===prod);
+    if(exact)return exact;
+  }
+  if(lot){
+    const byLot=list.filter(r=>String(r.lote||'').trim().toUpperCase()===lot);
+    if(byLot.length===1)return byLot[0];
+    if(byLot.length>1)return byLot.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')))[0];
+  }
+  if(prod){
+    const byProd=list.filter(r=>_etqNorm(r.producto||r.nombre||'')===prod);
+    if(byProd.length)return byProd.sort((a,b)=>String(b.ts||'').localeCompare(String(a.ts||'')))[0];
+  }
+  return null;
+}
+function openElabStockPistol(destino='nevera'){
+  const cfg=_storageDestLabel(destino);
+  openModal(`<div class="mh"><h2>${cfg.icon} Pistola / QR — ${destino==='congelador'?'Congelador':'Nevera'}</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div style="background:#eef4ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:12px;color:#1e3a8a;font-size:13px;line-height:1.45">
+      Escanea el <strong>QR de la etiqueta de elaboración</strong>. La app buscará el lote en este stock y podrás descontar, mover o ajustar.
+    </div>
+    <div class="fg"><label class="fl">Escaneo QR / lote</label><input class="fc" id="elab-stock-scan-input" inputmode="none" autocomplete="off" placeholder="Escanea aquí..." style="font-family:monospace;font-size:18px;font-weight:900;text-align:center" onkeydown="if(event.key==='Enter'){event.preventDefault();submitElabStockScan('${destino}')}"></div>
+    <div id="elab-stock-scan-status" style="font-size:12px;color:#64748b;margin-top:8px">Esperando lectura…</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cerrar</button><button class="btn btn-gold" onclick="submitElabStockScan('${destino}')">Procesar</button></div>`, 'lg');
+  setTimeout(()=>document.getElementById('elab-stock-scan-input')?.focus(),120);
+}
+function submitElabStockScan(destino='nevera'){
+  const input=document.getElementById('elab-stock-scan-input');
+  const raw=(input?.value||'').trim();
+  const st=document.getElementById('elab-stock-scan-status');
+  if(!raw){if(input)input.style.borderColor='#e74c3c';return;}
+  const found=_findElabStockByScan(raw,destino);
+  if(!found){
+    if(st)st.innerHTML='⚠️ No encuentro esa elaboración en '+(destino==='congelador'?'congelador':'nevera')+'. Prueba en el otro stock o revisa el lote.';
+    return;
+  }
+  openElabStockScanAction(found.id,destino,raw);
+}
+function openElabStockScanAction(id,destino='',raw=''){
+  const recs=ld(K.elab)||[];
+  const r=recs.find(x=>String(x.id||'')===String(id||''));if(!r)return;
+  const disp=Math.max(0,parseFloat(r.cantidad)||0);
+  const cfg=_storageDestLabel(r.destino||destino||'nevera');
+  const eventos=(DB.hojas||[]).slice().sort((a,b)=>String(a.fecha||'').localeCompare(String(b.fecha||''))).slice(0,80);
+  openModal(`<div class="mh"><h2>${cfg.icon} Elaboración escaneada</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:12px">
+      <div style="font-size:17px;font-weight:900;color:#111827">${esc(r.producto||'Elaboración')}</div>
+      <div style="font-size:12px;color:#475569;margin-top:4px">Lote <span class="lot-code">${esc(r.lote||'—')}</span> · Disponible <strong>${esc(disp)} ${esc(r.unidad||'')}</strong> · ${r.destino==='congelador'?'Congelador':'Nevera'} · DLC ${esc(r.dlc||'—')}</div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Acción</label><select class="fc" id="elab-stock-scan-action" onchange="toggleElabStockScanEvent()">
+        <option value="usar">Entregar/usar para cliente</option>
+        ${r.destino==='congelador'?'<option value="mover_nevera">Mover a nevera / descongelar</option>':''}
+        <option value="ajustar">Ajustar cantidad real</option>
+      </select></div>
+      <div class="fg"><label class="fl">Cantidad</label><input class="fc" id="elab-stock-scan-qty" type="number" step="0.01" min="0" value="1"></div>
+    </div>
+    <div id="elab-stock-scan-event-box" class="fg"><label class="fl">Evento / cliente si aplica</label><select class="fc" id="elab-stock-scan-event"><option value="">Sin evento / venta directa</option>${eventos.map(h=>`<option value="${esc(h.id)}">${esc([h.fecha,h.hora,h.cliente,h.lugar].filter(Boolean).join(' · '))}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Observación</label><input class="fc" id="elab-stock-scan-obs" placeholder="Ej: entregado a cliente, usado en evento, conteo real..."></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn btn-light" onclick="openElabStockPistol('${esc(destino||r.destino||'nevera')}')">Escanear otro</button><button class="btn btn-green" onclick="saveElabStockScanAction('${esc(r.id)}')">✓ Guardar</button></div>`, 'lg');
+}
+function toggleElabStockScanEvent(){
+  const act=document.getElementById('elab-stock-scan-action')?.value||'usar';
+  const box=document.getElementById('elab-stock-scan-event-box');
+  if(box)box.style.display=act==='usar'?'block':'none';
+}
+function saveElabStockScanAction(id){
+  const recs=ld(K.elab)||[];const i=recs.findIndex(x=>String(x.id||'')===String(id||''));if(i<0)return;
+  const r=recs[i];
+  const action=document.getElementById('elab-stock-scan-action')?.value||'usar';
+  const qty=Math.max(0,parseFloat(document.getElementById('elab-stock-scan-qty')?.value||'')||0);
+  const obs=(document.getElementById('elab-stock-scan-obs')?.value||'').trim();
+  const eventId=document.getElementById('elab-stock-scan-event')?.value||'';
+  const ev=eventId?(DB.hojas||[]).find(h=>String(h.id||'')===String(eventId)):null;
+  const curr=parseFloat(r.cantidad)||0;
+  if(action==='ajustar'){
+    r.cantidad=Math.max(0,Math.round(qty*1000)/1000);
+    if(!r.cantidad_inicial)r.cantidad_inicial=Math.max(curr,r.cantidad);
+    r.proceso=[...(r.proceso||[]),`🔫 Ajuste con pistola · ${new Date().toLocaleString('es-ES')} · ${curr} -> ${r.cantidad} ${r.unidad||''}${obs?' · '+obs:''}`];
+    if(r.cantidad<=0)r.estado='servido'; else r.estado='en_stock';
+    registrarMovimientoEmpresa({modulo:'Stock elaboraciones '+(r.destino||''),tipo:'ajuste_elaboracion_pistola',accion:'Ajuste con pistola/QR',producto:r.producto||'',lote:r.lote||'',cantidad:r.cantidad,unidad:r.unidad||'',detalle:`Antes ${curr}. ${obs||''}`});
+  }else if(action==='mover_nevera'){
+    const useQty=qty>0?Math.min(curr,qty):curr;
+    const remain=Math.max(0,Math.round((curr-useQty)*1000)/1000);
+    r.cantidad=remain;
+    if(remain<=0)r.estado='movido_nevera'; else r.estado='en_stock';
+    const copy=Object.assign({},r,{id:genId(),cantidad:useQty,cantidad_inicial:useQty,destino:'nevera',estado:'en_stock',dlc:addDays(today(),ELAB_DLC_NEVERA||4),ts:new Date().toISOString(),origen_elab_id:r.id,proceso:[...(r.proceso||[]),`🔫 Movido desde congelador a nevera · ${new Date().toLocaleString('es-ES')} · ${useQty} ${r.unidad||''}${obs?' · '+obs:''}`]});
+    recs.push(copy);
+    r.proceso=[...(r.proceso||[]),`🔫 Salida congelador hacia nevera · ${new Date().toLocaleString('es-ES')} · ${useQty} ${r.unidad||''} · quedan ${remain}`];
+    registrarMovimientoEmpresa({modulo:'Stock congelador/nevera',tipo:'mover_congelador_nevera',accion:'Mover elaboración de congelador a nevera',producto:r.producto||'',lote:r.lote||'',cantidad:useQty,unidad:r.unidad||'',detalle:`Quedan congelador ${remain}. ${obs||''}`});
+  }else{
+    const useQty=qty>0?Math.min(curr,qty):curr;
+    const remain=Math.max(0,Math.round((curr-useQty)*1000)/1000);
+    r.cantidad=remain;
+    if(ev){
+      r.evento_id=ev.id;r.evento_cliente=ev.cliente||'';r.evento_fecha=ev.fecha||'';r.evento_hora=ev.hora||'';
+    }
+    r.proceso=[...(r.proceso||[]),`🔫 Entregado/usado con pistola · ${new Date().toLocaleString('es-ES')} · ${useQty} ${r.unidad||''} · quedan ${remain}${ev?' · Evento: '+(ev.cliente||ev.id):''}${obs?' · '+obs:''}`];
+    if(!r.salidas)r.salidas=[];
+    r.salidas.push({ts:new Date().toISOString(),cantidad:useQty,unidad:r.unidad||'',evento_id:eventId,cliente:ev?.cliente||'',obs,emp:_etqCurrentWorker()});
+    if(remain<=0)r.estado='servido'; else r.estado='en_stock';
+    registrarMovimientoEmpresa({modulo:'Stock elaboraciones '+(r.destino||''),tipo:'salida_elaboracion',accion:'Entregar/usar elaboración',producto:r.producto||'',lote:r.lote||'',cantidad:useQty,unidad:r.unidad||'',evento_id:eventId,cliente:ev?.cliente||'',detalle:`Quedan ${remain}. ${obs||''}`,carpeta_drive_url:ev?.drive_url||ev?.carpeta_url||''});
+  }
+  recs[i]=r;
+  sv(K.elab,recs);saveDB();
+  closeModal('modal-universal');
+  try{renderCongeladorStock();renderNeveraElabStock();renderElab();renderRegen();}catch(e){}
+  if(typeof toast==='function')toast('Stock de elaboración actualizado.');
+}
 function openElabStockManual(destino,producto='',lote=''){
   const cfg=_storageDestLabel(destino);
   const defaultDlc=destino==='congelador'?addDays(today(),ELAB_DLC_CONGELADOR||365):addDays(today(),ELAB_DLC_NEVERA||4);
@@ -6116,7 +6289,9 @@ function saveElabStockManual(destino){
   const obs=(document.getElementById('elab-stock-obs')||{}).value?.trim()||'Entrada manual de stock de elaboración';
   const recs=ld(K.elab);
   recs.push({id:genId(),producto,cantidad,cantidad_inicial:cantidad,unidad,lote,dlc,emp,obs,destino,estado:'en_stock',ts:fecha?new Date(fecha).toISOString():new Date().toISOString(),manual:true,proceso:[`${destino==='congelador'?'🧊':'❄️'} Entrada manual en ${destino} · ${new Date().toLocaleDateString('es-ES')}`]});
+  registrarMovimientoEmpresa({modulo:'Stock elaboraciones '+destino,tipo:'entrada_manual_elaboracion',accion:'Entrada manual de elaboración',producto,lote,cantidad,unidad,detalle:obs,usuario:emp});
   sv(K.elab,recs);
+  saveDB();
   closeModal('modal-universal');
   if(destino==='congelador')renderCongeladorStock();else renderNeveraElabStock();
   alert('✅ Elaboración añadida al stock de '+(destino==='congelador'?'congelador':'nevera'));
@@ -6156,21 +6331,24 @@ function saveEditElabStockItem(id){
   recs[i].ajustes=[...(recs[i].ajustes||[]),{ts:new Date().toISOString(),emp:currentUserEmail||'',antes:prev.cantidad,despues:cantidad,motivo:(document.getElementById('edit-elab-obs')||{}).value||'Ajuste manual'}].slice(-20);
   recs[i].proceso=[...(recs[i].proceso||[]),'Ajuste manual stock - '+new Date().toLocaleString('es-ES')+' - '+prev.cantidad+' -> '+cantidad+' '+(recs[i].unidad||'')];
   if(cantidad<=0)recs[i].estado='servido';
-  sv(K.elab,recs);closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
+  registrarMovimientoEmpresa({modulo:'Stock elaboraciones '+(recs[i].destino||''),tipo:'ajuste_manual_elaboracion',accion:'Ajuste manual de lote elaborado',producto:recs[i].producto||'',lote:recs[i].lote||'',cantidad,unidad:recs[i].unidad||'',detalle:`Antes ${prev.cantidad}. ${(document.getElementById('edit-elab-obs')||{}).value||''}`});
+  sv(K.elab,recs);saveDB();closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
 }
 function deleteElabStockItem(id){
   if(!confirm('Eliminar este lote del stock? Solo hazlo si es un ajuste real.'))return;
   const recs=ld(K.elab)||[];const i=recs.findIndex(x=>x.id===id);if(i<0)return;
   recs[i].estado='eliminado';recs[i].eliminado_en=new Date().toISOString();recs[i].eliminado_por=currentUserEmail||'';
   recs[i].proceso=[...(recs[i].proceso||[]),'Eliminado manualmente de stock - '+new Date().toLocaleString('es-ES')];
-  sv(K.elab,recs);closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
+  registrarMovimientoEmpresa({modulo:'Stock elaboraciones '+(recs[i].destino||''),tipo:'eliminar_lote_elaborado',accion:'Eliminar lote elaborado del stock',producto:recs[i].producto||'',lote:recs[i].lote||'',cantidad:recs[i].cantidad||0,unidad:recs[i].unidad||'',detalle:'Ajuste real de inventario'});
+  sv(K.elab,recs);saveDB();closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
 }
 function moveElabStockToNevera(id){
   const recs=ld(K.elab)||[];const i=recs.findIndex(x=>x.id===id);if(i<0)return;
   const dlc=prompt('DLC en nevera (AAAA-MM-DD):', addDays(today(),ELAB_DLC_NEVERA||4));
   recs[i].destino='nevera';recs[i].estado='en_stock';if(dlc)recs[i].dlc=dlc;
   recs[i].proceso=[...(recs[i].proceso||[]),'Movido de congelador a nevera - '+new Date().toLocaleString('es-ES')];
-  sv(K.elab,recs);closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
+  registrarMovimientoEmpresa({modulo:'Stock congelador/nevera',tipo:'mover_congelador_nevera',accion:'Mover elaboración de congelador a nevera',producto:recs[i].producto||'',lote:recs[i].lote||'',cantidad:recs[i].cantidad||0,unidad:recs[i].unidad||'',detalle:'Movimiento manual'});
+  sv(K.elab,recs);saveDB();closeModal('modal-universal');renderCongeladorStock();renderNeveraElabStock();
 }
 function consumeElabStock(elabId, qty, motivo){
   const recs=ld(K.elab)||[];const i=recs.findIndex(x=>x.id===elabId);if(i<0)return '';
@@ -6181,7 +6359,8 @@ function consumeElabStock(elabId, qty, motivo){
   recs[i].cantidad=next;
   recs[i].proceso=[...(recs[i].proceso||[]),(motivo||'Consumo')+' - '+new Date().toLocaleString('es-ES')+' - usado '+useQty+' '+(recs[i].unidad||'')+' - quedan '+next];
   if(next<=0)recs[i].estado='servido'; else recs[i].estado='en_stock';
-  sv(K.elab,recs);
+  registrarMovimientoEmpresa({modulo:'Stock elaboraciones '+(recs[i].destino||''),tipo:'consumo_elaboracion',accion:motivo||'Consumo de elaboración',producto:recs[i].producto||'',lote:recs[i].lote||'',cantidad:useQty,unidad:recs[i].unidad||'',detalle:'Quedan '+next});
+  sv(K.elab,recs);saveDB();
   return ' Stock elaboracion: quedan '+next+' '+(recs[i].unidad||'')+' de '+(recs[i].producto||'');
 }
 function actualizarStock(id){
@@ -7030,6 +7209,60 @@ function informe_productosSinFichaProveedor(){
     y+=5;
   });
   doc.save('productos_sin_ficha_por_proveedor_albaraba.pdf');
+}
+function _movimientosEmpresaRows(){
+  const rows=[];
+  const seen=new Set();
+  const add=(r,src='app')=>{
+    const id=String(r.id||r.ref||'')+'|'+src+'|'+String(r.ts||r.fecha||r.date||'')+'|'+String(r.producto||'')+'|'+String(r.lote||'');
+    if(seen.has(id))return;seen.add(id);
+    rows.push({
+      fecha:r.ts||r.fecha||r.date||'',
+      modulo:r.modulo||src,
+      tipo:r.tipo||r.accion||src,
+      accion:r.accion||r.tipo||'',
+      producto:r.producto||r.nombre||'',
+      lote:r.lote||'',
+      cantidad:r.cantidad??'',
+      unidad:r.unidad||'',
+      proveedor:r.proveedor||'',
+      cliente:r.cliente||r.evento_cliente||'',
+      evento_id:r.evento_id||'',
+      usuario:r.usuario||r.emp||r.eliminado_por||'',
+      detalle:r.detalle||r.nota||r.obs||'',
+      drive_destino:r.drive_destino||_driveDestinoMovimiento(r),
+      estado_drive:r.estado_drive||'pendiente_eva'
+    });
+  };
+  (DB.movimientos_empresa||[]).forEach(x=>add(x,'libro'));
+  (DB.movimientos_stock||[]).forEach(x=>add(Object.assign({modulo:'Stock productos',accion:x.tipo},x),'stock'));
+  (ld(K.recep)||[]).forEach(x=>add({modulo:'Recepción mercancías',tipo:'recepcion',accion:'Recepción de producto',producto:x.producto,cantidad:x.cantidad,unidad:x.unidad,lote:x.lote,proveedor:x.proveedor,ts:x.ts||x.date,usuario:x.emp||x.usuario,detalle:x.obs||x.notas||'',ref:x.id},'recepcion'));
+  (ld(K.elab)||[]).forEach(x=>{
+    add({modulo:'Stock elaboraciones '+(x.destino||''),tipo:'estado_elaboracion',accion:x.estado||'en_stock',producto:x.producto,cantidad:x.cantidad,unidad:x.unidad,lote:x.lote,cliente:x.evento_cliente||'',evento_id:x.evento_id||'',ts:x.ts||x.fecha,usuario:x.emp,detalle:x.obs||'',ref:x.id},'elaboracion');
+    (x.salidas||[]).forEach(s=>add({modulo:'Salida elaboraciones',tipo:'salida_elaboracion',accion:'Salida/uso de elaboración',producto:x.producto,cantidad:s.cantidad,unidad:s.unidad||x.unidad,lote:x.lote,cliente:s.cliente||'',evento_id:s.evento_id||'',ts:s.ts,usuario:s.emp,detalle:s.obs||'',ref:x.id},'salida_elab'));
+  });
+  ['congel','descongel','regen','noconf'].forEach(k=>{
+    const key=(typeof K!=='undefined'&&K&&K[k])?K[k]:null;if(!key)return;
+    (ld(key)||[]).forEach(x=>add({modulo:'APPCC '+k,tipo:k,accion:x.estado||k,producto:x.producto||x.nombre||x.elaboracion||'',cantidad:x.cantidad||'',unidad:x.unidad||'',lote:x.lote||'',cliente:x.cliente||x.evento_cliente||'',evento_id:x.evento_id||'',ts:x.ts||x.fecha||x.date,usuario:x.emp||x.usuario||'',detalle:x.obs||x.notas||'',ref:x.id},k));
+  });
+  rows.sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  return rows;
+}
+function informe_movimientosEmpresa(){
+  const rows=_movimientosEmpresaRows();
+  if(!rows.length){alert('Todavía no hay movimientos registrados.');return;}
+  const hoy=_hoy();
+  const header=['Fecha','Módulo','Tipo','Acción','Producto/elaboración','Lote','Cantidad','Unidad','Proveedor','Cliente','Evento','Usuario','Detalle','Destino Drive/EVA','Estado Drive'];
+  const csv=[_csvLine(header)];
+  rows.forEach(r=>csv.push(_csvLine([r.fecha,r.modulo,r.tipo,r.accion,r.producto,r.lote,r.cantidad,r.unidad,r.proveedor,r.cliente,r.evento_id,r.usuario,r.detalle,r.drive_destino,r.estado_drive])));
+  const payload={empresa:'ALBARABA SL',generado_en:new Date().toISOString(),generado_por:_auditUsuario(),destino_sugerido:'Drive/EVA/Informes empresa/Movimientos/'+hoy.slice(0,7),total:rows.length,movimientos:rows};
+  if(!Array.isArray(DB.drive_report_queue))DB.drive_report_queue=[];
+  DB.drive_report_queue.unshift({id:_auditMovimientoId(),tipo:'movimientos_empresa',nombre:'Libro movimientos empresa '+hoy,fecha:new Date().toISOString(),estado:'pendiente_eva_drive',destino:payload.destino_sugerido,total:rows.length,payload});
+  DB.drive_report_queue=DB.drive_report_queue.slice(0,200);
+  saveDB();
+  _downloadCSV(csv,'ALBARABA_libro_movimientos_'+hoy+'.csv');
+  _downloadJSON(payload,'ALBARABA_libro_movimientos_'+hoy+'.json');
+  alert('✅ Informe generado y dejado en cola para EVA/Drive. Se descargan CSV y JSON para respaldo.');
 }
 function informe_elaboraciones(){
   const {jsPDF}=window.jspdf;const doc=new jsPDF();

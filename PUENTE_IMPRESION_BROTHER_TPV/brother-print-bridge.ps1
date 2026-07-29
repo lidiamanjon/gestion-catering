@@ -160,16 +160,21 @@ function Clean-Text($s) {
 function Parse-LabelsFromHtml($html) {
   $labels = @()
   if(!$html){ return $labels }
-  $rx = [regex]::new('<div class="label"[\s\S]*?</div>\s*(?=<div class="label"|<div class="no-print">)', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
-  $matches = $rx.Matches([string]$html)
-  foreach($m in $matches){
-    $block = $m.Value
-    $producto = Clean-Text(([regex]::Match($block,'<div class="title">([\s\S]*?)</div>')).Groups[1].Value)
-    $destino = Clean-Text(([regex]::Match($block,'<div class="dest"[^>]*>([\s\S]*?)</div>')).Groups[1].Value)
-    $lote = Clean-Text(([regex]::Match($block,'LOTE:\s*([\s\S]*?)</div>')).Groups[1].Value)
-    $cad = Clean-Text(([regex]::Match($block,'<div class="cad">([\s\S]*?)</div>')).Groups[1].Value)
-    $creada = Clean-Text(([regex]::Match($block,'CREADA:\s*([^<]+)')).Groups[1].Value)
-    $hecha = Clean-Text(([regex]::Match($block,'HECHA POR:\s*([^<]+)')).Groups[1].Value)
+  $text = [string]$html
+  $parts = [regex]::Split($text,'<div class="label[^"]*"[^>]*>',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+  if($parts.Count -le 1){
+    $parts = [regex]::Split($text,'<div[^>]+class="[^"]*\blabel\b[^"]*"[^>]*>',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+  }
+  for($idx=1; $idx -lt $parts.Count; $idx++){
+    $block = $parts[$idx]
+    $next = [regex]::Match($block,'<div class="label|<div class="no-print"', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    if($next.Success){ $block = $block.Substring(0,$next.Index) }
+    $producto = Clean-Text(([regex]::Match($block,'<div[^>]+class="[^"]*\btitle\b[^"]*"[^>]*>([\s\S]*?)</div>',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
+    $destino = Clean-Text(([regex]::Match($block,'<div[^>]+class="[^"]*\bdest\b[^"]*"[^>]*>([\s\S]*?)</div>',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
+    $lote = Clean-Text(([regex]::Match($block,'LOTE:\s*([\s\S]*?)</div>',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
+    $cad = Clean-Text(([regex]::Match($block,'<div[^>]+class="[^"]*\bcad\b[^"]*"[^>]*>([\s\S]*?)</div>',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
+    $creada = Clean-Text(([regex]::Match($block,'CREADA:\s*([^<]+)',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
+    $hecha = Clean-Text(([regex]::Match($block,'HECHA POR:\s*([^<]+)',[System.Text.RegularExpressions.RegexOptions]::IgnoreCase)).Groups[1].Value)
     if(!$producto){ $producto='Etiqueta' }
     if(!$destino){ $destino='NEVERA' }
     if(!$cad){ $cad=(Get-Date).AddDays(5).ToString('dd/MM/yy') }
