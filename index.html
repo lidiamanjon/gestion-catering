@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-pistola-cantidad1 -->
+<!-- VERSION: v20260729-pistola-lote-auto1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-pistola-cantidad1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-pistola-lote-auto1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3784,7 +3784,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-cantidad1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-pistola-lote-auto1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3919,7 +3919,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-cantidad1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-pistola-lote-auto1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6108,8 +6108,24 @@ function _pistolNorm(s){return String(s||'').toLowerCase().normalize('NFD').repl
 function _pistolParse(raw){
   const clean=String(raw||'').trim();
   if(!clean)return{raw:''};
-  try{if(typeof parseScan==='function')return parseScan(clean)||{raw:clean};}catch(e){}
+  try{
+    if(typeof parseScan==='function'){
+      const parsed=parseScan(clean)||{raw:clean};
+      return _pistolNormalizeLot(parsed,clean);
+    }
+  }catch(e){}
   return{raw:clean,gtin:/^(?:\d{8}|\d{12}|\d{13}|\d{14})$/.test(clean)?clean:'',lot:''};
+}
+function _pistolNormalizeLot(parsed,raw=''){
+  const p={...(parsed||{}),raw:(parsed&&parsed.raw)||raw||''};
+  if(!p.lot&&p.lote)p.lot=p.lote;
+  if(!p.lot){
+    const text=String(raw||p.raw||'');
+    const named=text.match(/\b(?:LOT|LOTE|L)\s*[:#\-]?\s*([A-Z0-9][A-Z0-9._/-]{1,31})\b/i);
+    if(named)p.lot=named[1];
+  }
+  if(p.lot)p.lot=String(p.lot).replace(/[\x00-\x1F\x7F]/g,'').replace(/[^A-Z0-9._/-]/gi,'').trim().toUpperCase().slice(0,32);
+  return p;
 }
 function _pistolNoCaducidad(parsed){
   const p={...(parsed||{})};
@@ -6292,7 +6308,9 @@ function submitPistolScan(context,manual=false){
   openPistolUnknownProduct(parsed,context);
 }
 function _pistolAskMissingRecep(productId,parsed,prod,opts={}){
-  const needLote=!parsed?.lot;
+  parsed=_pistolNormalizeLot(parsed||{},parsed?.raw||'');
+  const loteDetectado=String(parsed?.lot||'').trim().toUpperCase();
+  const needLote=!loteDetectado;
   if(!needLote)return false;
   window._pistolPendingRecep={productId,parsed:parsed||{},prod:prod||null,opts:opts||{}};
   const qty=opts.qty||document.getElementById('pistol-recep-fast-qty')?.value||'1';
@@ -6303,7 +6321,7 @@ function _pistolAskMissingRecep(productId,parsed,prod,opts={}){
       Producto leído: <strong>${esc(prod?.nombre||parsed?.producto||'Producto')}</strong><br>
       Falta el <strong>lote</strong> para dejarlo trazado. Aquí puedes indicar también cuántas cajas/unidades entran de golpe.
     </div>
-    <div class="fg"><label class="fl">Número de lote *</label><input class="fc" id="pistol-recep-lote" style="font-family:monospace;font-weight:900" placeholder="Lote del proveedor"></div>
+    <div class="fg"><label class="fl">Número de lote *</label><input class="fc" id="pistol-recep-lote" value="${esc(loteDetectado)}" style="font-family:monospace;font-weight:900" placeholder="Lote del proveedor"></div>
     <div class="frow">
       <div class="fg"><label class="fl">Cantidad recibida *</label><input class="fc" id="pistol-recep-missing-qty" type="number" min="0" step="0.01" value="${esc(qty)}"></div>
       <div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-recep-missing-unit">
