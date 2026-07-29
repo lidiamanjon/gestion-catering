@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-elab-qr-stock1 -->
+<!-- VERSION: v20260729-etiqueta-50mm-qr1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-elab-qr-stock1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-etiqueta-50mm-qr1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3792,7 +3792,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-elab-qr-stock1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-etiqueta-50mm-qr1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3928,7 +3928,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-elab-qr-stock1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-etiqueta-50mm-qr1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -19964,7 +19964,7 @@ function savePlagas(){
 const LBL_SIZES={
   'QL-62x100mm':{label:'Brother QL grande 62×100mm',w:'62mm',h:'100mm',hPrint:'100mm',wpx:234,hpx:378,brother:true},
   'QL-29x90mm': {label:'Brother QL pequeña 29×90mm', w:'29mm',h:'90mm', hPrint:'90mm', wpx:110,hpx:340,brother:true,narrow:true},
-  'QL-62mm-cont':{label:'Brother QL rollo continuo 62×38mm compacto',w:'62mm',h:'auto',hPrint:'38mm',wpx:234,hpx:0,brother:true,cont:true},
+  'QL-62mm-cont':{label:'Brother QL rollo continuo 62×50mm compacto',w:'62mm',h:'auto',hPrint:'50mm',wpx:234,hpx:0,brother:true,cont:true},
   'QL-29mm-cont':{label:'Brother QL rollo continuo 29mm',w:'29mm',h:'auto',hPrint:'90mm',wpx:110,hpx:0,brother:true,cont:true,narrow:true},
   'QL-62x60mm': {label:'Brother QL 62×60mm', w:'62mm',h:'60mm', hPrint:'60mm', wpx:234,hpx:227,brother:true},
   'QL-62x29mm': {label:'Brother QL 62×29mm', w:'62mm',h:'29mm', hPrint:'29mm', wpx:234,hpx:110,brother:true},
@@ -20353,7 +20353,7 @@ async function _batchPrint(items, orient){
   const empresa = getCfgEmp().razon || 'ALBARABA SL';
   const lblSize = getLabelSize();
   const wMm = parseFloat(lblSize.w);
-  // Rollo Brother QL 62mm — siempre portrait 62×100mm
+  // Rollo Brother QL 62mm — tamaño fijo desde ajustes; la app nunca pregunta orientación/tamaño.
   orient = 'portrait';
   const isLand = lblSize.cont||parseFloat(lblSize.hPrint||'100')<=70;
   const PAGE_W = lblSize.w;
@@ -20464,13 +20464,13 @@ async function _batchPrint(items, orient){
     .col-right{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;flex-shrink:0}
     .emp{font-size:2mm;font-weight:700;color:#bbb;text-transform:uppercase;letter-spacing:.5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
     .title{font-size:${isLand?'6.5mm':'5mm'};font-weight:900;color:#111;line-height:1.03;word-break:break-word;max-height:${isLand?'14mm':'13mm'};overflow:hidden}
-    .label.basic .title{font-size:${isLand?'7.2mm':'5.4mm'};max-height:${isLand?'16mm':'14mm'}}
+    .label.basic .title{font-size:${isLand?'6.8mm':'5.4mm'};max-height:${isLand?'14mm':'14mm'}}
     .dest{font-size:${isLand?'4mm':'3.5mm'};font-weight:900;padding:1mm 2mm;border-radius:1.5mm;text-align:center;letter-spacing:.3px;flex-shrink:0}
     .lote{font-size:${isLand?'3.2mm':'2.5mm'};font-family:monospace;font-weight:900;color:#111;background:#f0f0f0;padding:.6mm 1.4mm;border-radius:1mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .small-lbl{font-size:${isLand?'2.5mm':'2mm'};color:#555;font-weight:700}
-    .cad-lbl{font-size:2mm;color:#888;text-transform:uppercase;letter-spacing:.3px}
-    .cad{font-size:${isLand?'6.3mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:1;letter-spacing:.5px}
-    .label.basic .cad{font-size:${isLand?'7.3mm':'8mm'}}
+    .small-lbl{font-size:${isLand?'2.35mm':'2mm'};color:#555;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cad-lbl{font-size:${isLand?'2.15mm':'2mm'};color:#888;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+    .cad{font-size:${isLand?'6.8mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:.98;letter-spacing:.15mm;white-space:nowrap;overflow:visible}
+    .label.basic .cad{font-size:${isLand?'7.2mm':'8mm'}}
     .sep{height:.3mm;background:#e8e8e8;flex-shrink:0;margin:0.5mm 0}
     .qr-row{display:flex;flex-direction:row;align-items:center;gap:2mm;flex-shrink:0;margin-top:auto}
     .proc{font-size:1.8mm;color:#888;line-height:1.4;white-space:pre-line;max-width:${isLand?'60mm':'28mm'}}
@@ -20518,7 +20518,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-print-bridge-all1'
+        source_version:'v20260729-etiqueta-50mm-qr1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
