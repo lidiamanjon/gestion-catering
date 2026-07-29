@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-informe-lotes1 -->
+<!-- VERSION: v20260729-print-bridge-all1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-informe-lotes1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260729-print-bridge-all1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3787,7 +3787,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-informe-lotes1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-print-bridge-all1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3922,7 +3922,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-informe-lotes1';};
+  const go=()=>{location.href=location.pathname+'?v=20260729-print-bridge-all1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -19712,9 +19712,12 @@ function _generateQRDataURL(text, sizePx){
 
 async function _batchPrint(items, orient){
   const useBridge=localStorage.getItem('a_print_bridge')!=='0'&&fbDB&&fbAuth&&fbAuth.currentUser;
-  // Si no hay puente/nube, mantenemos impresión normal del navegador.
-  const w = useBridge ? null : window.open('','_blank','width=600,height=800');
-  if(!useBridge&&!w){alert('⚠ Activa las ventanas emergentes en el navegador para imprimir');return false;}
+  // Las etiquetas Brother se imprimen SIEMPRE por cola cloud para que móvil/tablet no abran el selector de impresora.
+  if(!useBridge){
+    alert('No puedo mandar la etiqueta a la TPV porque este dispositivo no tiene sesión de nube activa.\n\nEntra en la app con usuario y contraseña y vuelve a pulsar Imprimir. No uses el diálogo de impresión de Android.');
+    return false;
+  }
+  const w = null;
 
   const empresa = getCfgEmp().razon || 'ALBARABA SL';
   const lblSize = getLabelSize();
@@ -19883,7 +19886,8 @@ async function _batchPrint(items, orient){
         printer:'Brother QL-820NWB',
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
-        device:navigator.userAgent.slice(0,120)
+        device:navigator.userAgent.slice(0,120),
+        source_version:'v20260729-print-bridge-all1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
@@ -19891,10 +19895,8 @@ async function _batchPrint(items, orient){
       return true;
     }catch(e){
       console.error('Print bridge queue error:',e);
-      alert('No se pudo enviar a la cola Brother. Se abrirá impresión normal.');
-      const wf=window.open('','_blank','width=600,height=800');
-      if(!wf)return false;
-      wf.document.write(finalHtml);wf.document.close();return false;
+      alert('No se pudo enviar a la cola Brother.\n\nNo abro impresión normal para no romper las medidas en Android. Revisa que este dispositivo tenga internet y que la TPV tenga abierto el puente Brother.');
+      return false;
     }
   }
 
