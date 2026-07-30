@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-sync-cuota3 -->
+<!-- VERSION: v20260730-sync-cuota2 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-sync-cuota3'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-sync-cuota2'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3711,32 +3711,19 @@ function _setMainDBLocal(data,reason){
     console.warn('LocalStorage lleno; limpiando copias de rescate para guardar DB principal:',reason,e);
     _purgeLocalRecoveryCopies();
     try{
-      localStorage.removeItem('albaraba_v2');
       localStorage.setItem('albaraba_v2',text);
       return true;
     }catch(e2){
       try{
         const compact=_compactDBForLocalStorage(typeof data==='string'?JSON.parse(data):data);
-        localStorage.removeItem('albaraba_v2');
         localStorage.setItem('albaraba_v2',JSON.stringify(compact));
         console.warn('DB local guardada compactada por cuota:',reason);
         return true;
       }catch(e3){
-        try{
-          const src=typeof data==='string'?JSON.parse(data):data||{};
-          localStorage.removeItem('albaraba_v2');
-          localStorage.setItem('_albaraba_v2_cloud_only',JSON.stringify({
-            en:new Date().toISOString(),
-            motivo:'base_local_supera_cuota',
-            reason:reason||'',
-            resumen:_mainDBSummaryForPanel(src)
-          }));
-          console.warn('DB demasiado grande para localStorage; este dispositivo queda en modo nube:',reason,e3);
-          return true;
-        }catch(e4){
-          console.error('No se pudo guardar ni la marca cloud-only:',e4);
-          return false;
-        }
+        console.error('No se pudo guardar DB principal ni compactada:',e3);
+        setSyncStatus('error');
+        alert('⚠️ El navegador no tiene espacio local suficiente para guardar toda la app en este dispositivo.\n\nLa nube puede estar bien, pero este ordenador/tablet necesita limpiar caché de la app. No sigas editando desde este dispositivo hasta que lo revisemos.\n\nDetalle: '+(e3&&e3.message?e3.message:e3));
+        return false;
       }
     }
   }
@@ -3866,7 +3853,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-sync-cuota3');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-sync-cuota2');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4044,7 +4031,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-sync-cuota3';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-sync-cuota2';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -20880,7 +20867,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-sync-cuota3'
+        source_version:'v20260730-sync-cuota2'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
