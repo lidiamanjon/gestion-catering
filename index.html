@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-sync-productos1 -->
+<!-- VERSION: v20260730-restore-plan1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-sync-productos1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-restore-plan1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-sync-productos1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-restore-plan1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -870,6 +870,7 @@ html,body{height:100%;color-scheme:light!important}
 <div class="section" id="section-hojas">
   <div class="topbar">
     <div><div class="pg-title">📅 Eventos a realizar · Planificación Eva</div><div class="pg-sub">Documentos, cobros, elaboraciones, compras, stock y trazabilidad en un único evento</div></div>
+    <button class="btn btn-outline" onclick="openEvaPlanRecovery()">🛟 Recuperar planificación</button>
     <button class="btn btn-outline" onclick="descargarHojas()">📥 Descargar</button>
     <button class="btn btn-gold" onclick="openHojaModal()">+ Añadir evento</button>
   </div>
@@ -3834,7 +3835,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-sync-productos1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-restore-plan1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4030,7 +4031,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-sync-productos1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-restore-plan1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4044,6 +4045,85 @@ function restoreLatestAutoBackup(){
     _saveLocalRecoveryPoint(localStorage.getItem('albaraba_v2'),'antes de recuperar',true);
     DB=copia.datos;applyMigrations();saveDB();nav('dashboard');alert('✅ Copia recuperada y enviada para sincronizar.');
   }catch(e){alert('No se pudo leer la copia automática.');}
+}
+
+function _evaPlanStatsFromDB(d){
+  const hojas=Array.isArray(d?.hojas)?d.hojas:[];
+  const menuTotal=hojas.reduce((s,h)=>s+(Array.isArray(h.menu)?h.menu.length:0),0);
+  const pendientes=hojas.filter(h=>!h.realizado).length;
+  const minFecha=hojas.map(h=>h.fecha).filter(Boolean).sort()[0]||'';
+  return {hojas:hojas.length,pendientes,menuTotal,minFecha};
+}
+async function _getEvaPlanRecoveryCandidates(){
+  const out=[],seen=new Set();
+  const add=(source,label,fecha,datos)=>{
+    if(!datos||!Array.isArray(datos.hojas))return;
+    const key=source+'|'+fecha+'|'+datos.hojas.length+'|'+JSON.stringify((datos.hojas||[]).map(h=>h.id||h.eva_id||h.id_evento).slice(0,20));
+    if(seen.has(key))return;seen.add(key);
+    out.push({source,label,fecha,datos,stats:_evaPlanStatsFromDB(datos)});
+  };
+  for(let i=1;i<=8;i++){
+    try{
+      const raw=localStorage.getItem('_albaraba_backup_'+i);
+      if(raw){const c=JSON.parse(raw);add('local_'+i,'Copia local '+i,c.fecha,c.datos);}
+    }catch(e){}
+  }
+  try{
+    if(fbDB&&fbAuth&&fbAuth.currentUser){
+      for(let d=0;d<5;d++){
+        const day=addDays(today(),-d);
+        const snap=await fbDB.ref('albaraba_backups/'+day).once('value');
+        const c=snap.val();
+        if(c&&c.datos)add('cloud_'+day,'Copia nube '+day,c.creada_en||day,c.datos);
+      }
+    }
+  }catch(e){console.warn('No se pudieron leer copias nube:',e);}
+  out.sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
+  return out;
+}
+async function openEvaPlanRecovery(){
+  const btn=document.querySelector('[onclick="openEvaPlanRecovery()"]');
+  if(btn){btn.disabled=true;btn.textContent='Buscando copias...';}
+  let candidates=[];
+  try{candidates=await _getEvaPlanRecoveryCandidates();}finally{if(btn){btn.disabled=false;btn.textContent='🛟 Recuperar planificación';}}
+  window._evaPlanRecoveryCandidates=candidates;
+  const actual=_evaPlanStatsFromDB(DB);
+  const rows=candidates.map((c,i)=>{
+    const ideal=(c.stats.menuTotal>=45&&c.stats.menuTotal<=75&&c.stats.hojas>=10&&c.stats.hojas<=18);
+    return `<div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #e5e7eb">
+      <div style="font-size:22px">${ideal?'⭐':'📦'}</div>
+      <div style="flex:1">
+        <div style="font-weight:800">${esc(c.label)} ${ideal?'<span class="badge b-ok">posible punto bueno</span>':''}</div>
+        <div style="font-size:12px;color:#64748b">${esc(c.fecha?new Date(c.fecha).toLocaleString('es-ES'):'sin fecha')} · ${c.stats.hojas} eventos · ${c.stats.menuTotal} elaboraciones previstas · ${c.stats.pendientes} pendientes${c.stats.minFecha?' · desde '+esc(c.stats.minFecha):''}</div>
+      </div>
+      <button class="btn btn-sm btn-gold" onclick="restoreEvaPlanFromCandidate(${i})">Restaurar solo Planificación</button>
+    </div>`;
+  }).join('');
+  openModal(`<div class="mh"><h2>🛟 Recuperar Planificación EVA</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div class="notice warn" style="margin-bottom:12px">Esto restaura <strong>solo eventos y elaboraciones previstas de Planificación EVA</strong>. No toca productos, stock, proveedores, recetas ni movimientos.</div>
+    <div style="font-size:13px;margin-bottom:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px">Estado actual: <strong>${actual.hojas} eventos</strong> · <strong>${actual.menuTotal} elaboraciones previstas</strong></div>
+    <div style="max-height:420px;overflow:auto">${rows||'<div style="padding:18px;color:#991b1b;background:#fef2f2;border-radius:10px">No encuentro copias automáticas en este dispositivo/nube. Si tienes un backup descargado, podemos importar solo Planificación desde ese archivo.</div>'}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn btn-outline" onclick="closeModal('modal-universal')">Cerrar</button></div>`,'lg');
+}
+function restoreEvaPlanFromCandidate(i){
+  const c=(window._evaPlanRecoveryCandidates||[])[i];if(!c||!c.datos)return;
+  const s=c.stats||_evaPlanStatsFromDB(c.datos);
+  if(!confirm('Restaurar SOLO Planificación EVA desde '+c.label+'\\n\\n'+s.hojas+' eventos · '+s.menuTotal+' elaboraciones previstas\\n\\nNo se tocarán productos, stock, proveedores ni recetas. ¿Continuar?'))return;
+  _saveLocalRecoveryPoint(localStorage.getItem('albaraba_v2'),'antes de restaurar planificación EVA',true);
+  const oldHojas=Array.isArray(DB.hojas)?JSON.parse(JSON.stringify(DB.hojas)):[];
+  const newHojas=JSON.parse(JSON.stringify(c.datos.hojas||[]));
+  oldHojas.forEach(oldH=>{
+    const nueva=newHojas.find(n=>sameId(n.id,oldH.id)||sameId(n.eva_id,oldH.eva_id)||sameId(n.id_evento,oldH.id_evento));
+    if(nueva)_syncAPPCCElabsForHojaChange(oldH,nueva);
+    else _syncAPPCCElabsForDeletedHoja(oldH,oldH.id);
+  });
+  DB.hojas=newHojas;
+  DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),planificacion_eva_restaurada:true,origen_restauracion:c.label,restaurada_por:(fbAuth&&fbAuth.currentUser&&fbAuth.currentUser.email)||(typeof currentUserEmail!=='undefined'?currentUserEmail:'')};
+  applyMigrations();
+  saveDB();
+  closeModal('modal-universal');
+  nav('hojas');
+  alert('✅ Planificación EVA restaurada.\\n\\nEventos: '+s.hojas+'\\nElaboraciones previstas: '+s.menuTotal+'\\n\\nProductos y stock no se han tocado.');
 }
 
 function setSyncStatus(s){
@@ -21101,7 +21181,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-sync-productos1'
+        source_version:'v20260730-restore-plan1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
