@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260730-receta-aprende1';
+const CACHE_NAME = 'albaraba-appcc-v20260730-evento-elab-sync1';
 const APP_SHELL = [
   './',
   './index.html',

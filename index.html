@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-receta-aprende1 -->
+<!-- VERSION: v20260730-evento-elab-sync1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-receta-aprende1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-evento-elab-sync1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-receta-aprende1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-evento-elab-sync1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3811,7 +3811,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-receta-aprende1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-evento-elab-sync1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4007,7 +4007,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-receta-aprende1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-evento-elab-sync1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -8159,6 +8159,7 @@ function saveHoja(){
     obj.actualizado_en=new Date().toISOString();
     obj.revisiones=[...(existente.revisiones||[]),{fecha:obj.actualizado_en,pax_anterior:existente.pax,pax_nuevo:pax,menu_anterior:anteriores.menu||[],resumen:{anadidas,eliminadas,recalculadas}}].slice(-20);
     DB.hojas[idx]={...existente,...obj};
+    _syncAPPCCElabsForHojaChange(existente,DB.hojas[idx]);
     (DB.pedidos||[]).forEach(p=>{if((p.eventos||[]).includes(id))p.desactualizado=true;});
   } else {obj.realizado=false;obj.creado_en=new Date().toISOString();DB.hojas.push(obj);}
   saveDB();closeModal('modal-hoja');
@@ -8167,9 +8168,86 @@ function saveHoja(){
   if(existente&&recalculadas)alert('✅ Evento actualizado. Se han recalculado '+recalculadas+' elementos y los pedidos anteriores quedan marcados para revisar.');
 }
 
+function _hojaLinkedIds(h,idExtra){
+  return [idExtra,h?.id,h?.eva_id,h?.id_evento].filter(v=>v!==undefined&&v!==null&&String(v).trim()).map(v=>String(v));
+}
+function _syncAPPCCElabsForDeletedHoja(hoja,idExtra){
+  const ids=_hojaLinkedIds(hoja,idExtra);
+  if(!ids.length)return 0;
+  const recs=ld(K.elab)||[];
+  let count=0,now=new Date().toISOString();
+  recs.forEach(r=>{
+    const rid=String(r.evento_id||r.id_evento||r.hoja_id||r.hojaId||'');
+    if(!ids.includes(rid))return;
+    r.estado='eliminado_evento';
+    r.archivada_en=now;
+    r.archivada_por=currentUserEmail||localStorage.getItem(K.wActive)||'';
+    r.archivo_destino='evento_eliminado';
+    r.evento_eliminado_en=now;
+    r.pendiente_drive=false;
+    r.proceso=[...(Array.isArray(r.proceso)?r.proceso:[]),'🗑 Evento eliminado · elaboración retirada de pantalla diaria · '+new Date().toLocaleString('es-ES')];
+    count++;
+  });
+  if(count)sv(K.elab,recs);
+  return count;
+}
+function _syncAPPCCElabsForHojaChange(oldHoja,newHoja){
+  const ids=_hojaLinkedIds(oldHoja).concat(_hojaLinkedIds(newHoja));
+  if(!ids.length)return 0;
+  const recs=ld(K.elab)||[];
+  let changed=0,now=new Date().toISOString();
+  recs.forEach(r=>{
+    const rid=String(r.evento_id||r.id_evento||r.hoja_id||r.hojaId||'');
+    if(!ids.includes(rid))return;
+    const rawIdx=r.evento_menu_index;
+    const idx=(rawIdx!==undefined&&rawIdx!==null&&String(rawIdx)!=='')?Number(rawIdx):-1;
+    const item=idx>=0?(newHoja.menu||[])[idx]:null;
+    if(!item){
+      r.estado='eliminado_evento';
+      r.archivada_en=r.archivada_en||now;
+      r.archivo_destino='elaboracion_eliminada_del_evento';
+      r.pendiente_drive=false;
+      r.proceso=[...(Array.isArray(r.proceso)?r.proceso:[]),'🗑 Elaboración eliminada/modificada en evento · retirada de pantalla diaria · '+new Date().toLocaleString('es-ES')];
+      changed++;
+      return;
+    }
+    r.evento_id=newHoja.id;
+    r.id_evento=newHoja.eva_id||newHoja.id_evento||newHoja.id;
+    r.evento_cliente=newHoja.cliente||'';
+    r.evento_empresa=newHoja.empresa||'';
+    r.evento_fecha=newHoja.fecha||'';
+    r.evento_hora=newHoja.hora||'';
+    r.evento_fecha_entrega=item.fecha_servicio||newHoja.fecha||'';
+    r.evento_hora_entrega=item.hora_servicio||newHoja.hora||'';
+    r.evento_lugar=newHoja.lugar||'';
+    r.evento_servicio=newHoja.servicio||'';
+    r.evento_pax=newHoja.pax||0;
+    r.evento_marca=newHoja.marca||newHoja.fuente||'';
+    if(item.nombre&&r.producto!==item.nombre)r.producto=item.nombre;
+    const nuevaCantidad=parseFloat(item.pax_override)||parseFloat(newHoja.pax)||parseFloat(r.cantidad)||0;
+    if(nuevaCantidad&&parseFloat(r.cantidad)!==nuevaCantidad){
+      r.cantidad=String(nuevaCantidad);
+      r.necesita_revision=true;
+      r.revision_motivo='Evento modificado: revisar cantidades/productos antes de cerrar APPCC';
+    }
+    r.evento_actualizado_en=now;
+    if(item.appcc_rec_id===r.id||!item.appcc_rec_id){
+      item.appcc_rec_id=r.id;
+      if(item.appcc_estado==='pendiente')item.appcc_estado='elaborada';
+      item.appcc_elaborada_en=item.appcc_elaborada_en||r.ts||now;
+    }
+    changed++;
+  });
+  if(changed)sv(K.elab,recs);
+  return changed;
+}
 function deleteHoja(id){
   if(!confirm('¿Eliminar esta hoja de servicio?'))return;
+  const borradas=(DB.hojas||[]).filter(x=>sameId(x.id,id)||sameId(x.eva_id,id)||sameId(x.id_evento,id));
+  let appccRetiradas=0;
+  borradas.forEach(h=>{appccRetiradas+=_syncAPPCCElabsForDeletedHoja(h,id);});
   DB.hojas=DB.hojas.filter(x=>!sameId(x.id,id)&&!sameId(x.eva_id,id)&&!sameId(x.id_evento,id));saveDB();renderHojasTable();
+  if(appccRetiradas&&typeof toast==='function')toast('Evento borrado: '+appccRetiradas+' elaboración/es APPCC retiradas de pantalla diaria.');
 }
 
 function generarPresupuesto_G(id){
@@ -15305,6 +15383,8 @@ function renderElab(){
         <span class="list-badge ${stCls}">${stLbl}</span>
         <div style="display:flex;gap:4px;margin-top:6px">
           <button class="btn-icon" onclick="_printElabLabel('${r.id}')" title="Imprimir etiqueta">🏷</button>
+          <button class="btn-icon" onclick="editDailyElab('${r.id}')" title="Modificar productos/lotes" style="color:#1a4fa8">✏️</button>
+          <button class="btn-icon" onclick="restartDailyElab('${r.id}')" title="Volver a empezar elaboración" style="color:#dc2626">↻</button>
           <button class="btn-icon" onclick="editElabDlc('${r.id}')" title="Editar caducidad" style="color:#e67e22">📅</button>
           <button class="btn-icon" onclick="viewTrazDetail('${r.id}')" title="Ver expediente completo" style="font-size:13px">📋</button>
           <button class="btn-icon" onclick="okArchiveElab('${r.id}')" title="OK · quitar de elaboración diaria" style="color:#16a34a">✅</button>
@@ -15345,7 +15425,7 @@ function renderElab(){
 function _elabArchivada(r){
   return Boolean(r&&(
     r.archivada_en||r.archivada||
-    r.estado==='archivado'||r.estado==='archivo_drive'||r.estado==='eliminado'
+    r.estado==='archivado'||r.estado==='archivo_drive'||r.estado==='eliminado'||r.estado==='eliminado_evento'||r.estado==='reiniciado'
   ));
 }
 function _elabSinEventoStock(r){
@@ -15384,6 +15464,93 @@ function viewArchivedElabs(){
       <div class="list-right"><button class="btn btn-sm btn-outline" onclick="viewTrazDetail('${esc(r.id)}')">Expediente</button></div>
     </div>`).join('')||'<div style="padding:16px;color:#aaa;text-align:center">Sin archivadas todavía</div>'}</div>
     <div class="modal-row"><button class="btn btn-outline" style="flex:1" onclick="closeModalAPPCC()">Cerrar</button></div>`);
+}
+
+function _attrAPPCC(v){return esc(v).replace(/"/g,'&quot;');}
+function _dailyIngEditRow(ing={}){
+  const id='dei_'+genId();
+  const unidad=ing.unidad||'kg';
+  return `<div class="daily-ing-row" id="${id}" style="display:grid;grid-template-columns:1.4fr .75fr .7fr .8fr 32px;gap:6px;align-items:center;margin-bottom:6px">
+    <input class="fc dei-prod" placeholder="Producto" value="${_attrAPPCC(ing.producto||ing.nombre||'')}">
+    <input class="fc dei-lote" placeholder="Lote" value="${_attrAPPCC(ing.lote||'')}">
+    <input class="fc dei-cant" type="number" step="0.001" placeholder="Cant." value="${_attrAPPCC(ing.cantidad||'')}">
+    <select class="fc dei-unit">${['kg','g','L','ml','uds','bolsas','bricks','latas','rac'].map(u=>`<option value="${u}" ${u===unidad?'selected':''}>${u}</option>`).join('')}</select>
+    <button class="btn-icon" onclick="document.getElementById('${id}')?.remove()" title="Quitar">🗑</button>
+  </div>`;
+}
+function editDailyElab(id){
+  const recs=ld(K.elab)||[];
+  const r=recs.find(x=>x.id===id);if(!r)return;
+  openModalAPPCC(`<div class="modal-title">✏️ Modificar elaboración diaria</div>
+    <div class="notice info" style="margin-bottom:10px">Puedes corregir productos, lotes o cantidades usadas. Si añades un ingrediente nuevo, también se aprenderá en la receta maestra.</div>
+    <div class="fc-row">
+      <div class="fc-group"><label class="fc-label">Elaboración</label><input class="fc" id="dei-producto" value="${_attrAPPCC(r.producto||'')}"></div>
+      <div class="fc-group"><label class="fc-label">Cantidad/raciones</label><input class="fc" id="dei-cantidad" type="number" step="0.001" value="${_attrAPPCC(r.cantidad||'')}"></div>
+    </div>
+    <div class="fc-row" style="margin-top:8px">
+      <div class="fc-group"><label class="fc-label">Unidad</label><input class="fc" id="dei-unidad" value="${_attrAPPCC(r.unidad||'raciones')}"></div>
+      <div class="fc-group"><label class="fc-label">Lote elaboración</label><input class="fc" id="dei-lote" value="${_attrAPPCC(r.lote||'')}"></div>
+    </div>
+    <div class="fc-group" style="margin-top:8px"><label class="fc-label">Caducidad</label><input class="fc" id="dei-dlc" type="date" value="${_attrAPPCC(r.dlc||'')}"></div>
+    <div style="font-size:12px;font-weight:800;color:#1a4fa8;margin:12px 0 6px">Ingredientes/lotes usados</div>
+    <div id="dei-ings">${(r.ingredientes||[]).map(_dailyIngEditRow).join('')||_dailyIngEditRow({})}</div>
+    <button class="btn btn-sm btn-outline" onclick="document.getElementById('dei-ings').insertAdjacentHTML('beforeend',_dailyIngEditRow({}))">+ Añadir ingrediente</button>
+    <div class="fc-group" style="margin-top:10px"><label class="fc-label">Observaciones</label><textarea class="fc" id="dei-obs" rows="3">${esc(r.obs||'')}</textarea></div>
+    <div class="modal-row" style="margin-top:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModalAPPCC()">Cancelar</button>
+      <button class="btn btn-green" style="flex:2" onclick="saveDailyElabEdit('${id}')">✓ Guardar cambios</button>
+    </div>`);
+}
+function saveDailyElabEdit(id){
+  const recs=ld(K.elab)||[];
+  const i=recs.findIndex(x=>x.id===id);if(i<0)return;
+  const r=recs[i];
+  const rows=[...document.querySelectorAll('#dei-ings .daily-ing-row')];
+  const ingredientes=rows.map(row=>({
+    producto:(row.querySelector('.dei-prod')?.value||'').trim(),
+    lote:(row.querySelector('.dei-lote')?.value||'').trim(),
+    cantidad:(row.querySelector('.dei-cant')?.value||'').trim(),
+    unidad:(row.querySelector('.dei-unit')?.value||'').trim()
+  })).filter(x=>x.producto);
+  r.producto=(document.getElementById('dei-producto')?.value||r.producto||'').trim();
+  r.cantidad=(document.getElementById('dei-cantidad')?.value||r.cantidad||'').trim();
+  r.unidad=(document.getElementById('dei-unidad')?.value||r.unidad||'').trim();
+  r.lote=(document.getElementById('dei-lote')?.value||r.lote||'').trim();
+  r.dlc=(document.getElementById('dei-dlc')?.value||r.dlc||'').trim();
+  r.obs=(document.getElementById('dei-obs')?.value||'').trim();
+  r.ingredientes=ingredientes;
+  r.editado_en=new Date().toISOString();
+  r.editado_por=currentUserEmail||localStorage.getItem(K.wActive)||'';
+  r.necesita_revision=false;
+  r.proceso=[...(Array.isArray(r.proceso)?r.proceso:[]),'✏️ Elaboración corregida · '+new Date().toLocaleString('es-ES')];
+  recs[i]=r;sv(K.elab,recs);
+  const masterChanged=_syncDailyElabIngredientsToMasterRecipe(r.producto,ingredientes,r.cantidad);
+  if(r.evento_id){
+    const h=(DB.hojas||[]).find(x=>sameId(x.id,r.evento_id)||sameId(x.eva_id,r.id_evento)||sameId(x.id_evento,r.id_evento));
+    const item=h?.menu?.[Number(r.evento_menu_index)];
+    if(item){item.nombre=r.producto;item.pax_override=parseFloat(r.cantidad)||item.pax_override;item.appcc_estado='elaborada';item.appcc_rec_id=r.id;item.appcc_elaborada_en=item.appcc_elaborada_en||r.ts||new Date().toISOString();}
+  }
+  if(masterChanged||r.evento_id)saveDB();
+  closeModalAPPCC();renderElab();renderHomeAlerts();
+  if(typeof toast==='function')toast('Elaboración actualizada y enlazada.');
+}
+function restartDailyElab(id){
+  const recs=ld(K.elab)||[];
+  const i=recs.findIndex(x=>x.id===id);if(i<0)return;
+  const r=recs[i];
+  if(!confirm('¿Volver a empezar esta elaboración?\n\nLa elaboración anterior se retirará de la pantalla diaria como “reiniciada” y se abrirá una nueva para el mismo evento. No se toca stock de productos automáticamente.'))return;
+  r.estado='reiniciado';
+  r.archivada_en=new Date().toISOString();
+  r.archivo_destino='elaboracion_reiniciada';
+  r.reiniciada_por=currentUserEmail||localStorage.getItem(K.wActive)||'';
+  r.proceso=[...(Array.isArray(r.proceso)?r.proceso:[]),'↻ Elaboración reiniciada · '+new Date().toLocaleString('es-ES')];
+  recs[i]=r;sv(K.elab,recs);
+  if(r.evento_id){
+    const h=(DB.hojas||[]).find(x=>sameId(x.id,r.evento_id)||sameId(x.eva_id,r.id_evento)||sameId(x.id_evento,r.id_evento));
+    const item=h?.menu?.[Number(r.evento_menu_index)];
+    if(item){item.appcc_estado='pendiente';delete item.appcc_rec_id;delete item.appcc_elaborada_en;delete item.appcc_completada_en;saveDB();iniciarEvaElab(h.id,Number(r.evento_menu_index));return;}
+  }
+  saveDB();closeModalAPPCC();openElabModalAPPCC();
 }
 
 function toggleAlerg(id){
@@ -16471,6 +16638,8 @@ function viewTrazDetail(id){
     ${!rs.length?`<div style="margin-top:10px">${e.destino==='congelador'&&!ds.length?`<button class="btn btn-block btn-gold" onclick="openDescongelFor('${e.id}')">🔄 Siguiente: registrar descongelación</button>`:ds.length?`<button class="btn btn-block btn-green" onclick="openRegenForDescongel('${ds[0].id}')">🍽 Siguiente: regeneración / entrega</button>`:`<button class="btn btn-block btn-green" onclick="openRegenFor('${e.id}')">🍽 Siguiente: regeneración / entrega</button>`}</div>`:''}
     <div style="margin-top:12px;display:flex;gap:8px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModalAPPCC()">Cerrar</button>
+      <button class="btn btn-outline" style="flex:1" onclick="editDailyElab('${e.id}')">✏️ Modificar</button>
+      <button class="btn btn-outline" style="flex:1;color:#dc2626;border-color:#fecaca" onclick="restartDailyElab('${e.id}')">↻ Reiniciar</button>
       <button class="btn" style="flex:2;background:#1a4fa8;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer" onclick="printExpedienteCompleto('${e.id}')">🖨 Imprimir expediente</button>
     </div>`);
 }
@@ -20909,7 +21078,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-receta-aprende1'
+        source_version:'v20260730-evento-elab-sync1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
