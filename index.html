@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-restore-plan1 -->
+<!-- VERSION: v20260730-reset-elab1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-restore-plan1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-reset-elab1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-restore-plan1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-reset-elab1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -592,6 +592,7 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni admin-only" onclick="showSyncDiagnostic()"><span class="ic">🔎</span> Diagnóstico sync</div>
     <div class="ni admin-only" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
     <div class="ni admin-only" onclick="restoreLatestAutoBackup()"><span class="ic">🛟</span> Recuperar copia automática</div>
+    <div class="ni admin-only" onclick="resetElaboracionesRealesSolo()"><span class="ic">🧹</span> Vaciar elaboraciones prueba</div>
     <div class="ni admin-only" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
@@ -3835,7 +3836,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-restore-plan1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-reset-elab1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3844,23 +3845,34 @@ function _backupCloudOnce(data){
   return fbDB.ref('albaraba_backups/'+day).transaction(current=>current||{creada_en:new Date().toISOString(),datos:data})
     .then(()=>localStorage.setItem(marker,'1')).catch(e=>console.warn('Copia cloud no disponible:',e));
 }
+function _cleanupLocalStoragePressure(){
+  try{
+    const killPrefixes=['_albaraba_backup_','_appcc_recovery_','_albaraba_cloud_backup_'];
+    const killExact=['_albaraba_backup_at','catering_presup_preload_v1'];
+    killExact.forEach(k=>localStorage.removeItem(k));
+    for(let i=localStorage.length-1;i>=0;i--){
+      const k=localStorage.key(i)||'';
+      if(killPrefixes.some(p=>k.startsWith(p)))localStorage.removeItem(k);
+    }
+  }catch(e){console.warn('No se pudo limpiar presión local:',e);}
+}
+function _safeLocalSetItem(k,v){
+  try{localStorage.setItem(k,v);return true;}
+  catch(e){
+    _cleanupLocalStoragePressure();
+    try{localStorage.setItem(k,v);return true;}
+    catch(e2){console.warn('No cabe en localStorage:',k,e2);return false;}
+  }
+}
 function _trySetMainLocalDB(data,reason){
   const text=typeof data==='string'?data:JSON.stringify(data||{});
+  if(_safeLocalSetItem('albaraba_v2',text))return true;
   try{
-    localStorage.setItem('albaraba_v2',text);
-    return true;
-  }catch(e){
-    try{
-      for(let i=1;i<=8;i++)localStorage.removeItem('_albaraba_backup_'+i);
-      localStorage.removeItem('_albaraba_backup_at');
-      localStorage.setItem('albaraba_v2',text);
-      return true;
-    }catch(e2){
-      console.warn('No cabe copia local; se continúa con Firebase:',reason,e2);
-      _markPendingMainSync();
-      return false;
-    }
+    console.warn('No cabe copia local; se continúa con Firebase:',reason);
+    _markPendingMainSync();
+    return false;
   }
+  catch(e){return false;}
 }
 function _sleepSync(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function _firebaseOpWithRetry(label,fn,tries=3){
@@ -4031,7 +4043,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-restore-plan1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-reset-elab1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -13432,14 +13444,14 @@ function _mergeAPPCCCloudValue(remote,local){
   return local===undefined?remote:local;
 }
 const sv=(k,v)=>{
-  localStorage.setItem(k,JSON.stringify(v));
+  const serialized=JSON.stringify(v);
+  _safeLocalSetItem(k,serialized);
   // Antes de que Firebase termine de cargar, los valores semilla de una
   // instalación nueva son solo una caché provisional. No deben marcarse como
   // trabajo pendiente ni sobrescribir la información real de otros equipos.
   if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&!_appccCloudApplying&&_appccCloudRef)localStorage.setItem('_appcc_pending_'+k,'1');
   if(_appccCloudRef&&!_appccCloudApplying&&!APPCC_DEVICE_LOCAL_KEYS.has(k)){
     clearTimeout(_appccCloudTimers[k]);setSyncStatus('saving');
-    const serialized=JSON.stringify(v);
     _appccCloudTimers[k]=setTimeout(()=>_appccCloudRef.child(k).set(v).then(()=>{if(localStorage.getItem(k)===serialized)localStorage.removeItem('_appcc_pending_'+k);setSyncStatus('ok');}).catch(e=>{console.error('APPCC cloud:',e);setSyncStatus('error');}),180);
   }
 };
@@ -13464,8 +13476,8 @@ function initAPPCCCloudSync(){
       Object.entries(remoto).forEach(([k,v])=>{
         if(APPCC_DEVICE_LOCAL_KEYS.has(k)||localStorage.getItem('_appcc_pending_'+k)==='1')return;
         const next=JSON.stringify(v),previous=localStorage.getItem(k);
-        if(previous&&previous!==next)try{localStorage.setItem('_appcc_recovery_'+k,previous);}catch(e){}
-        localStorage.setItem(k,next);
+        if(previous&&previous!==next)_safeLocalSetItem('_appcc_recovery_'+k,previous);
+        _safeLocalSetItem(k,next);
       });
       _appccCloudApplying=false;
       Object.values(K).forEach(k=>{
@@ -13475,7 +13487,7 @@ function initAPPCCCloudSync(){
           const value=JSON.parse(raw);
           _appccCloudRef.child(k).transaction(current=>_mergeAPPCCCloudValue(current,value)).then(result=>{
             const merged=result.snapshot.val();
-            if(merged!==null)localStorage.setItem(k,JSON.stringify(merged));
+            if(merged!==null)_safeLocalSetItem(k,JSON.stringify(merged));
             localStorage.removeItem('_appcc_pending_'+k);
           });
         }catch(e){}
@@ -13488,7 +13500,7 @@ function initAPPCCCloudSync(){
     setSyncStatus('ok');
     _appccCloudRef.on('value',cloudSnap=>{
       const data=cloudSnap.val()||{};_appccCloudApplying=true;
-      Object.entries(data).forEach(([k,v])=>{if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&localStorage.getItem('_appcc_pending_'+k)!=='1')localStorage.setItem(k,JSON.stringify(v));});
+      Object.entries(data).forEach(([k,v])=>{if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&localStorage.getItem('_appcc_pending_'+k)!=='1')_safeLocalSetItem(k,JSON.stringify(v));});
       _appccCloudApplying=false;
       if(typeof renderHomeAlerts==='function')renderHomeAlerts();
     });
@@ -19036,14 +19048,23 @@ async function resetElaboracionesRealesSolo(){
     hojas:DB.hojas||[]
   };
   const backupKey='_backup_reset_elaboraciones_'+Date.now();
-  localStorage.setItem(backupKey,JSON.stringify(backup));
+  const stamp=new Date().toISOString().slice(0,10)+'_'+Date.now();
+  let cloudBackupPath='';
+  if(fbDB&&fbAuth&&fbAuth.currentUser){
+    try{
+      cloudBackupPath='appcc_backups/reset_elaboraciones_'+stamp;
+      await fbDB.ref(cloudBackupPath).set(backup);
+    }catch(e){
+      alert('No borro nada todavía: no he podido guardar la copia de seguridad en nube.\\n\\nError: '+(e&&e.message?e.message:e));
+      return;
+    }
+  }
+  const localBackupOk=_safeLocalSetItem(backupKey,JSON.stringify(backup));
   keys.forEach(k=>sv(k,[]));
   DB.hojas=_resetEvaMenuToPending(DB.hojas||[]);
   saveDB();
   try{
     if(fbDB&&fbAuth&&fbAuth.currentUser){
-      const stamp=new Date().toISOString().slice(0,10)+'_'+Date.now();
-      await fbDB.ref('appcc_backups/reset_elaboraciones_'+stamp).set(backup);
       await Promise.all(keys.map(k=>fbDB.ref('appcc_v1/'+k).set([])));
       await fbDB.ref('albaraba_v2/hojas').transaction(current=>_resetEvaMenuToPending(current||DB.hojas||[]));
       setSyncStatus('ok');
@@ -19057,7 +19078,7 @@ async function resetElaboracionesRealesSolo(){
     return;
   }
   try{renderCongeladorStock();renderNeveraElabStock();if(currentSection)nav(currentSection,{preserveScroll:true});}catch(e){}
-  alert('✅ Limpieza hecha.\\n\\nLas elaboraciones de eventos EVA vuelven a estar PENDIENTES.\\nNevera/congelador de elaboraciones quedan vacíos.\\nProductos y stock de productos NO se han tocado.\\n\\nCopia de seguridad local: '+backupKey);
+  alert('✅ Limpieza hecha.\\n\\nLas elaboraciones de eventos EVA vuelven a estar PENDIENTES.\\nNevera/congelador de elaboraciones quedan vacíos.\\nProductos y stock de productos NO se han tocado.\\n\\nCopia nube: '+(cloudBackupPath||'no disponible')+'\\nCopia local: '+(localBackupOk?backupKey:'no cupo, pero hay copia nube si aparece arriba'));
 }
 function renderCfg(){
   const emps=ld(K.emp);const zonas=ld(K.zonas);const provs=ld(K.provs);
@@ -21181,7 +21202,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-restore-plan1'
+        source_version:'v20260730-reset-elab1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
