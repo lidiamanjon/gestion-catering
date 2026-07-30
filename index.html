@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-sync-guard1 -->
+<!-- VERSION: v20260730-eva-pending1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-sync-guard1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-eva-pending1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-sync-guard1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-eva-pending1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3927,7 +3927,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-sync-guard1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-eva-pending1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4143,7 +4143,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-sync-guard1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-eva-pending1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -10112,12 +10112,9 @@ function aplicarEventoEvaDirecto(msg,snap){
   snap.ref.update({estado:hoja.eva_campos_pendientes.length?'aplicado_con_avisos':'aplicado',aplicado_en:hoja.eva_auto_aplicado_en});
   if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
 }
-function initEvaBridgeSync(){
-  if(_evaBridgeRef||!fbDB||!fbAuth||!fbAuth.currentUser)return;
-  _evaBridgeRef=fbDB.ref('eva_bridge_v1/inbox');
-  _evaBridgeRef.on('child_added',snap=>{
+function _processEvaBridgeMessageSnap(snap){
     const msg=snap.val()||{};
-    if(msg.tipo==='actualizar_estado_evento_directo'&&msg.estado==='pendiente_aplicacion'){
+    if(msg.tipo==='actualizar_estado_evento_directo'&&['pendiente_aplicacion','pendiente_sincronizacion_app'].includes(msg.estado)){
       aplicarEstadoDirectoEva(msg,snap);return;
     }
     if(msg.tipo==='documento_proveedor'&&msg.estado==='pendiente_revision'&&msg.documento){
@@ -10145,7 +10142,16 @@ function initEvaBridgeSync(){
     saveDB();
     snap.ref.update({estado:hoja.eva_campos_pendientes.length?'pendiente_datos_revision_humana':'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});
     if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
+}
+function initEvaBridgeSync(){
+  if(_evaBridgeRef||!fbDB||!fbAuth||!fbAuth.currentUser)return;
+  _evaBridgeRef=fbDB.ref('eva_bridge_v1/inbox');
+  _evaBridgeRef.on('child_added',snap=>{
+    try{_processEvaBridgeMessageSnap(snap);}catch(e){console.error('Puente Eva child_added:',e);}
   },e=>console.error('Puente Eva:',e));
+  _evaBridgeRef.on('child_changed',snap=>{
+    try{_processEvaBridgeMessageSnap(snap);}catch(e){console.error('Puente Eva child_changed:',e);}
+  },e=>console.error('Puente Eva cambios:',e));
 }
 function aprobarPropuestaEva(id){
   const h=findHojaById(id);if(!h)return;
@@ -21411,7 +21417,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-sync-guard1'
+        source_version:'v20260730-eva-pending1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
