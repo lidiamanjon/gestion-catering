@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-plan-xlsx1 -->
+<!-- VERSION: v20260730-productos-otros1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-plan-xlsx1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-productos-otros1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-plan-xlsx1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-productos-otros1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -1220,10 +1220,10 @@ html,body{height:100%;color-scheme:light!important}
   <div class="frow">
     <div class="fg"><label class="fl">Categoría</label>
       <select class="fc" id="prod-cat">
-        <option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option>
+        <option>Otros</option><option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option>
         <option>Lácteos y huevos</option><option>Embutidos</option><option>Pastas y cereales</option>
         <option>Conservas</option><option>Salsas y condimentos</option><option>Bebidas</option>
-        <option>Productos de limpieza</option><option>Desechables/Envases</option><option>Otros</option>
+        <option>Productos de limpieza</option><option>Desechables/Envases</option>
       </select>
     </div>
     <div class="fg"><label class="fl">Proveedor</label>
@@ -3927,7 +3927,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-plan-xlsx1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-productos-otros1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4134,7 +4134,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-plan-xlsx1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-productos-otros1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5649,7 +5649,7 @@ function openProdModal(){
   document.getElementById('prod-id').value='';
   ['nombre','ref','gtin','precio','stock','stock-min','notas','rendimiento','rendimiento-desc'].forEach(f=>{const el=document.getElementById('prod-'+f);if(el)el.value='';});
   updateRendCalc();
-  document.getElementById('prod-cat').value='Carnes';
+  document.getElementById('prod-cat').value='Otros';
   document.getElementById('prod-unidad').value='kg';
   document.getElementById('prod-prov').innerHTML='<option value="">Sin asignar</option>'+DB.proveedores.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join('');
   document.getElementById('prod-foto-data').value='';
@@ -5662,7 +5662,7 @@ function editProducto(id){
   const p=DB.productos.find(x=>x.id===id);if(!p)return;
   document.getElementById('prod-id').value=p.id;
   document.getElementById('prod-nombre').value=p.nombre||'';
-  document.getElementById('prod-cat').value=p.categoria||'Carnes';
+  document.getElementById('prod-cat').value=p.categoria||'Otros';
   document.getElementById('prod-ref').value=p.referencia||'';
   const gtinEl=document.getElementById('prod-gtin');if(gtinEl)gtinEl.value=p.gtin||p.ean||p.barcode||'';
   document.getElementById('prod-precio').value=p.precio||'';
@@ -5687,7 +5687,7 @@ function saveProducto(){
   const rendVal=parseInt(document.getElementById('prod-rendimiento').value)||0;
   const now=new Date().toISOString();
   const gtin=(document.getElementById('prod-gtin')?.value||'').trim();
-  const obj={id,nombre,categoria:document.getElementById('prod-cat').value,proveedor_id:document.getElementById('prod-prov').value,unidad:document.getElementById('prod-unidad').value,precio:document.getElementById('prod-precio').value,stock_actual:parseFloat(document.getElementById('prod-stock').value)||0,stock_min:parseFloat(document.getElementById('prod-stock-min').value)||0,referencia:document.getElementById('prod-ref').value,gtin,ean:gtin,barcode:gtin,notas:document.getElementById('prod-notas').value,foto:document.getElementById('prod-foto-data').value,alergenos:getCheckedAlergenos('al-grid-prod'),rendimiento:rendVal,rendimiento_desc:document.getElementById('prod-rendimiento-desc').value,actualizado_en:now,stock_actualizado_en:now};
+  const obj={id,nombre,categoria:document.getElementById('prod-cat').value||'Otros',proveedor_id:document.getElementById('prod-prov').value,unidad:document.getElementById('prod-unidad').value,precio:document.getElementById('prod-precio').value,stock_actual:parseFloat(document.getElementById('prod-stock').value)||0,stock_min:parseFloat(document.getElementById('prod-stock-min').value)||0,referencia:document.getElementById('prod-ref').value,gtin,ean:gtin,barcode:gtin,notas:document.getElementById('prod-notas').value,foto:document.getElementById('prod-foto-data').value,alergenos:getCheckedAlergenos('al-grid-prod'),rendimiento:rendVal,rendimiento_desc:document.getElementById('prod-rendimiento-desc').value,actualizado_en:now,stock_actualizado_en:now};
   const idx=DB.productos.findIndex(x=>x.id===id);
   if(idx>=0)DB.productos[idx]={...DB.productos[idx],...obj};else DB.productos.push(obj);
   marcarPedidosParaRecalcular('Producto o stock modificado: '+nombre,p=>!p.totales||Boolean(p.totales[id]));
@@ -7552,7 +7552,7 @@ function openPistolUnknownProduct(parsed,context){
     </div>
     <div class="fg" style="position:relative"><label class="fl">Buscar producto existente o crear producto nuevo *</label><input class="fc" id="pistol-new-name" list="pistol-prod-list" placeholder="Ej: Alitas de pollo / Tomate triturado..." autocomplete="off" oninput="updatePistolProductSuggestions()" onfocus="updatePistolProductSuggestions()"><datalist id="pistol-prod-list">${(DB.productos||[]).map(p=>`<option value="${esc(p.nombre||'')}"></option>`).join('')}</datalist><div id="pistol-prod-suggestions" style="display:none;position:absolute;left:0;right:0;top:100%;z-index:30020;background:#fff;border:1px solid #bfdbfe;border-radius:0 0 12px 12px;box-shadow:0 12px 30px rgba(15,23,42,.18);max-height:260px;overflow-y:auto"></div></div>
     <div class="fg"><label class="fl">Proveedor habitual</label><select class="fc" id="pistol-new-prov"><option value="">Sin proveedor</option>${(DB.proveedores||[]).map(p=>`<option value="${esc(p.id)}">${esc(p.nombre||'')}</option>`).join('')}</select></div>
-    <div class="frow"><div class="fg"><label class="fl">Categoría</label><select class="fc" id="pistol-new-cat"><option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option><option>Lácteos y huevos</option><option>Conservas</option><option>Salsas y condimentos</option><option>Otros</option></select></div><div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-new-unit"><option>kg</option><option>ud</option><option>caja</option><option>bolsa</option><option>l</option><option>pack</option></select></div></div>
+    <div class="frow"><div class="fg"><label class="fl">Categoría</label><select class="fc" id="pistol-new-cat"><option>Otros</option><option>Carnes</option><option>Pescados y mariscos</option><option>Verduras y hortalizas</option><option>Lácteos y huevos</option><option>Conservas</option><option>Salsas y condimentos</option></select></div><div class="fg"><label class="fl">Unidad</label><select class="fc" id="pistol-new-unit"><option>kg</option><option>ud</option><option>caja</option><option>bolsa</option><option>l</option><option>pack</option></select></div></div>
     <div style="font-size:11px;color:#64748b;margin-top:8px">Si lo creas nuevo, después podrás completar precio, ficha técnica, alérgenos y stock mínimo desde Productos.</div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px"><button class="btn btn-light" onclick="closeModal('modal-universal')">Cancelar</button><button class="btn btn-gold" onclick="savePistolUnknownProduct()">✓ Asociar/crear y continuar</button></div>`, 'lg');
   setTimeout(()=>document.getElementById('pistol-new-name')?.focus(),120);
@@ -21363,7 +21363,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-plan-xlsx1'
+        source_version:'v20260730-productos-otros1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
