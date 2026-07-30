@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-sync-cuota2 -->
+<!-- VERSION: v20260730-sync-cuota1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-sync-cuota2'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-sync-cuota1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3671,33 +3671,6 @@ function _purgeLocalRecoveryCopies(){
     localStorage.removeItem('_albaraba_backup_at');
   }catch(e){}
 }
-function _compactDBForLocalStorage(data){
-  const seen=new WeakSet();
-  const walk=(v,key='')=>{
-    if(v===null||v===undefined)return v;
-    if(typeof v==='string'){
-      if(v.length>50000&&(v.startsWith('data:')||/base64/i.test(v)||['foto','imagen','dataUrl','fileData','archivo','pdf','contenido'].includes(key))){
-        return '';
-      }
-      return v;
-    }
-    if(Array.isArray(v))return v.map(x=>walk(x,key));
-    if(typeof v==='object'){
-      if(seen.has(v))return null;
-      seen.add(v);
-      const out={};
-      Object.keys(v).forEach(k=>{
-        if(['previewBase64','pdfBase64','imageBase64','ocrRaw','rawFile','fileBuffer'].includes(k))return;
-        out[k]=walk(v[k],k);
-      });
-      return out;
-    }
-    return v;
-  };
-  const compact=walk(data||{});
-  if(compact&&typeof compact==='object')compact._local_compactado={en:new Date().toISOString(),motivo:'evitar_cuota_navegador'};
-  return compact;
-}
 function _setMainDBLocal(data,reason){
   const text=typeof data==='string'?data:JSON.stringify(data||{});
   try{
@@ -3714,17 +3687,10 @@ function _setMainDBLocal(data,reason){
       localStorage.setItem('albaraba_v2',text);
       return true;
     }catch(e2){
-      try{
-        const compact=_compactDBForLocalStorage(typeof data==='string'?JSON.parse(data):data);
-        localStorage.setItem('albaraba_v2',JSON.stringify(compact));
-        console.warn('DB local guardada compactada por cuota:',reason);
-        return true;
-      }catch(e3){
-        console.error('No se pudo guardar DB principal ni compactada:',e3);
-        setSyncStatus('error');
-        alert('⚠️ El navegador no tiene espacio local suficiente para guardar toda la app en este dispositivo.\n\nLa nube puede estar bien, pero este ordenador/tablet necesita limpiar caché de la app. No sigas editando desde este dispositivo hasta que lo revisemos.\n\nDetalle: '+(e3&&e3.message?e3.message:e3));
-        return false;
-      }
+      console.error('No se pudo guardar DB principal ni tras limpiar copias:',e2);
+      setSyncStatus('error');
+      alert('⚠️ El navegador no tiene espacio local suficiente para guardar toda la app en este dispositivo.\n\nLa nube puede estar bien, pero este ordenador/tablet necesita limpiar caché de la app o usar “Actualizar app sin borrar datos”.\n\nDetalle: '+(e2&&e2.message?e2.message:e2));
+      return false;
     }
   }
 }
@@ -3734,7 +3700,7 @@ function _saveLocalRecoveryPoint(raw,reason,force=false){
   if(!force&&now-last<5*60*1000)return;
   try{
     _purgeLocalRecoveryCopies();
-    localStorage.setItem('_albaraba_backup_1',JSON.stringify({fecha:new Date().toISOString(),motivo:reason||'guardado',datos:_compactDBForLocalStorage(JSON.parse(raw))}));
+    localStorage.setItem('_albaraba_backup_1',JSON.stringify({fecha:new Date().toISOString(),motivo:reason||'guardado',datos:JSON.parse(raw)}));
     localStorage.setItem('_albaraba_backup_at',String(now));
   }catch(e){_purgeLocalRecoveryCopies();console.warn('No se pudo crear copia local:',e);}
 }
@@ -3853,7 +3819,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-sync-cuota2');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-sync-cuota1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4031,7 +3997,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-sync-cuota2';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-sync-cuota1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -20867,7 +20833,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-sync-cuota2'
+        source_version:'v20260730-sync-cuota1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');

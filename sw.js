@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260730-sync-cuota2';
+const CACHE_NAME = 'albaraba-appcc-v20260730-sync-cuota1';
 const APP_SHELL = [
   './',
   './index.html',
