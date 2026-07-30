@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-rescate3 -->
+<!-- VERSION: v20260730-guardado-nube1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-rescate3'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-guardado-nube1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-rescate3&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-guardado-nube1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3811,7 +3811,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-rescate3');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-guardado-nube1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3819,6 +3819,24 @@ function _backupCloudOnce(data){
   if(localStorage.getItem(marker))return Promise.resolve();
   return fbDB.ref('albaraba_backups/'+day).transaction(current=>current||{creada_en:new Date().toISOString(),datos:data})
     .then(()=>localStorage.setItem(marker,'1')).catch(e=>console.warn('Copia cloud no disponible:',e));
+}
+function _trySetMainLocalDB(data,reason){
+  const text=typeof data==='string'?data:JSON.stringify(data||{});
+  try{
+    localStorage.setItem('albaraba_v2',text);
+    return true;
+  }catch(e){
+    try{
+      for(let i=1;i<=8;i++)localStorage.removeItem('_albaraba_backup_'+i);
+      localStorage.removeItem('_albaraba_backup_at');
+      localStorage.setItem('albaraba_v2',text);
+      return true;
+    }catch(e2){
+      console.warn('No cabe copia local; se continúa con Firebase:',reason,e2);
+      try{localStorage.setItem('_albaraba_pending_sync','1');}catch(_){}
+      return false;
+    }
+  }
 }
 function _sleepSync(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function _firebaseOpWithRetry(label,fn,tries=3){
@@ -3869,8 +3887,8 @@ function saveDB(){
   try{if(typeof autoPrepararPaquetesDrive==='function')autoPrepararPaquetesDrive('guardar',false);}catch(e){console.warn('Auto Drive/EVA no disponible:',e);}
   const payload=_protectLocalSaveAgainstLoss(JSON.parse(JSON.stringify(DB)),previous);
   DB=payload;
-  localStorage.setItem('albaraba_v2',JSON.stringify(payload));
-  localStorage.setItem('_albaraba_pending_sync','1');
+  _trySetMainLocalDB(payload,'saveDB principal');
+  try{localStorage.setItem('_albaraba_pending_sync','1');}catch(e){}
   if(fbDB&&fbAuth&&fbAuth.currentUser){
     setSyncStatus('saving');clearTimeout(_cloudSaveTimer);
     _cloudSaveTimer=setTimeout(()=>{
@@ -3880,7 +3898,7 @@ function saveDB(){
         .then(server=>{
           if(server){
             DB=_mergeDBPreservingRecords(server,payload);
-            localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+            _trySetMainLocalDB(DB,'saveDB tras Firebase');
           }
           const actual=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');
           if(actual?._sync?.actualizado_en===token||server)localStorage.removeItem('_albaraba_pending_sync');
@@ -3919,7 +3937,7 @@ async function forceUploadLocalMainDBToCloud(){
     const server=await _mergeMainCloudBySections(local,{manual:true});
     DB=_mergeDBPreservingRecords(server||DB,local);
     applyMigrations();
-    localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+    _trySetMainLocalDB(DB,'sync local');
     localStorage.removeItem('_albaraba_pending_sync');
     setSyncStatus('ok');
     alert('✅ Datos subidos a la nube.\n\nAhora abre el móvil con el enlace nuevo y espera a que ponga Sincronizado.');
@@ -3989,7 +4007,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-rescate3';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-guardado-nube1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4060,10 +4078,10 @@ function initMainCloudRealtime(){
           applyMigrations();
           _installBidfoodFichas();
           _installAlbarabaRecetasBase();
-          localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+          _trySetMainLocalDB(DB,'sync local');
           setSyncStatus('saving');
           _repairCloudWithLocal(localNewer?'local mas reciente':'fusion segura');
-          if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
+          if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
           if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
         }finally{_mainCloudApplying=false;}
         return;
@@ -4075,7 +4093,7 @@ function initMainCloudRealtime(){
       try{
         DB=_mergeDBPreservingRecords(data,previousObj);
         applyMigrations();
-        localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+        _trySetMainLocalDB(DB,'sync local');
         setSyncStatus('saving');
         _mainCloudRef.transaction(current=>_mergeDBPreservingRecords(current,DB)).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
         if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
@@ -4089,9 +4107,9 @@ function initMainCloudRealtime(){
       applyMigrations();
       _installBidfoodFichas();
       _installAlbarabaRecetasBase();
-      localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+      _trySetMainLocalDB(DB,'sync local');
       setSyncStatus('ok');
-      if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
+      if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
       if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
     }finally{
       _mainCloudApplying=false;
@@ -4140,11 +4158,11 @@ function loadDB(){
           applyMigrations();
           _installBidfoodFichas();
       _installAlbarabaRecetasBase();
-          localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+          _trySetMainLocalDB(DB,'sync local');
           localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
           localStorage.removeItem('_albaraba_pending_sync');
           setSyncStatus('ok');
-          if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
+          if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
           if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
           return;
         }
@@ -4168,10 +4186,10 @@ function loadDB(){
         applyMigrations();
         _installBidfoodFichas();
       _installAlbarabaRecetasBase();
-        localStorage.setItem('albaraba_v2',JSON.stringify(DB));
+        _trySetMainLocalDB(DB,'sync local');
         localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
         if(mergedPending)saveDB();else setSyncStatus('ok');
-        if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);localStorage.setItem('albaraba_v2',JSON.stringify(DB));}
+        if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
         if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
       } else if(raw&&_dbRecordScore(DB)>0){
         // Firebase vacío pero tenemos datos locales reales → fusionarlos sin usar set destructivo
@@ -19204,7 +19222,7 @@ function registerGTIN(gtin, entry) {
         });
       }
       if(liveDB)saveDB();
-      else localStorage.setItem('albaraba_v2', JSON.stringify(gDB));
+      else _trySetMainLocalDB(gDB,'registrar GTIN desde esc?ner');
     }
   } catch(e) {}
 }
@@ -20825,7 +20843,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-rescate3'
+        source_version:'v20260730-guardado-nube1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
