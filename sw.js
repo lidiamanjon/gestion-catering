@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260730-reset-elab1';
+const CACHE_NAME = 'albaraba-appcc-v20260730-drive-archive1';
 const APP_SHELL = [
   './',
   './index.html',

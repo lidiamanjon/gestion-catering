@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-reset-elab1 -->
+<!-- VERSION: v20260730-drive-archive1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-reset-elab1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-drive-archive1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-reset-elab1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-drive-archive1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -592,7 +592,6 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni admin-only" onclick="showSyncDiagnostic()"><span class="ic">🔎</span> Diagnóstico sync</div>
     <div class="ni admin-only" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
     <div class="ni admin-only" onclick="restoreLatestAutoBackup()"><span class="ic">🛟</span> Recuperar copia automática</div>
-    <div class="ni admin-only" onclick="resetElaboracionesRealesSolo()"><span class="ic">🧹</span> Vaciar elaboraciones prueba</div>
     <div class="ni admin-only" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
@@ -3836,7 +3835,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-reset-elab1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-drive-archive1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4043,7 +4042,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-reset-elab1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-drive-archive1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4066,6 +4065,13 @@ function _evaPlanStatsFromDB(d){
   const minFecha=hojas.map(h=>h.fecha).filter(Boolean).sort()[0]||'';
   return {hojas:hojas.length,pendientes,menuTotal,minFecha};
 }
+function _withTimeout(promise,ms,label='operación'){
+  let timer=null;
+  const timeout=new Promise((_,reject)=>{
+    timer=setTimeout(()=>reject(new Error(label+' tardó demasiado')),ms);
+  });
+  return Promise.race([promise,timeout]).finally(()=>{if(timer)clearTimeout(timer);});
+}
 async function _getEvaPlanRecoveryCandidates(){
   const out=[],seen=new Set();
   const add=(source,label,fecha,datos)=>{
@@ -4082,12 +4088,15 @@ async function _getEvaPlanRecoveryCandidates(){
   }
   try{
     if(fbDB&&fbAuth&&fbAuth.currentUser){
-      for(let d=0;d<5;d++){
-        const day=addDays(today(),-d);
-        const snap=await fbDB.ref('albaraba_backups/'+day).once('value');
-        const c=snap.val();
+      const days=Array.from({length:5},(_,d)=>addDays(today(),-d));
+      const reads=days.map(day=>_withTimeout(fbDB.ref('albaraba_backups/'+day).once('value'),2600,'Copia nube '+day).then(snap=>({day,snap})));
+      const results=await Promise.allSettled(reads);
+      results.forEach(res=>{
+        if(res.status!=='fulfilled')return;
+        const {day,snap}=res.value||{};
+        const c=snap&&snap.val?snap.val():null;
         if(c&&c.datos)add('cloud_'+day,'Copia nube '+day,c.creada_en||day,c.datos);
-      }
+      });
     }
   }catch(e){console.warn('No se pudieron leer copias nube:',e);}
   out.sort((a,b)=>String(b.fecha||'').localeCompare(String(a.fecha||'')));
@@ -4097,7 +4106,7 @@ async function openEvaPlanRecovery(){
   const btn=document.querySelector('[onclick="openEvaPlanRecovery()"]');
   if(btn){btn.disabled=true;btn.textContent='Buscando copias...';}
   let candidates=[];
-  try{candidates=await _getEvaPlanRecoveryCandidates();}finally{if(btn){btn.disabled=false;btn.textContent='🛟 Recuperar planificación';}}
+  try{candidates=await _getEvaPlanRecoveryCandidates();}catch(e){console.warn('No se pudieron preparar copias de Planificación EVA:',e);candidates=[];}finally{if(btn){btn.disabled=false;btn.textContent='🛟 Recuperar planificación';}}
   window._evaPlanRecoveryCandidates=candidates;
   const actual=_evaPlanStatsFromDB(DB);
   const rows=candidates.map((c,i)=>{
@@ -5907,7 +5916,7 @@ function driveReportFileName(tipo,fecha=new Date(),extra='',ext='json'){
 function queueDriveReport(tipo,payload={},opts={}){
   if(!Array.isArray(DB.drive_report_queue))DB.drive_report_queue=[];
   const now=new Date();
-  const folder=driveFolderAlbaraba(opts.folderType||_driveFolderTypeForReport(tipo));
+  const folder=opts.folder||driveFolderAlbaraba(opts.folderType||_driveFolderTypeForReport(tipo));
   const periodo=opts.periodo||_driveReportPeriodo(tipo,now);
   const nombreArchivo=opts.nombre_archivo||driveReportFileName(tipo,now,opts.extra||'',opts.ext||'json');
   const key=[tipo,periodo,folder.id,nombreArchivo].join('|');
@@ -5947,6 +5956,64 @@ function _snapshotStockLotes(){
   }));
   return {productos,elaboraciones,total_productos:productos.length,total_elaboraciones:elaboraciones.length};
 }
+function _eventoForElabArchive(r={}){
+  const eid=r.evento_id||r.hoja_id||r.eventoId||'';
+  let h=eid?(DB.hojas||[]).find(x=>sameId(x.id,eid)||sameId(x.eva_id,eid)||sameId(x.id_evento,eid)):null;
+  if(!h&&r.evento_cliente)h=(DB.hojas||[]).find(x=>_etqNorm(x.cliente||x.titulo||'')===_etqNorm(r.evento_cliente||''));
+  return h||null;
+}
+function _driveFolderForElabArchive(r={}){
+  const h=_eventoForElabArchive(r);
+  const url=h?.carpeta_drive_url||h?.drive_folder_url||h?.documentos?.carpeta_drive_url||'';
+  if(url)return {id:h.drive_folder_id||'',url,path:'Carpeta cliente/evento · '+(h.cliente||h.titulo||r.evento_cliente||'evento')};
+  return (r.evento_id||r.evento_cliente)?driveFolderAlbaraba('eventos'):driveFolderAlbaraba('produccion');
+}
+function _buildElabArchivePayload(r={}){
+  const h=_eventoForElabArchive(r);
+  return {
+    schema:'albaraba.elaboracion-archivada.v1',
+    empresa:'ALBARABA SL',
+    generado_en:new Date().toISOString(),
+    generado_por:_auditUsuario(),
+    destino_sugerido:_driveFolderForElabArchive(r),
+    evento:h?{id:h.id,id_evento:h.eva_id||h.id_evento||h.id,cliente:h.cliente||h.titulo||'',fecha:h.fecha||'',hora:h.hora||'',pax:h.pax||'',marca:h.marca||'',carpeta_drive_url:h.carpeta_drive_url||''}:null,
+    resumen:{id:r.id,producto:r.producto||r.nombre||'',lote:r.lote||'',cantidad:r.cantidad||'',unidad:r.unidad||'',destino:r.destino||'',estado:r.estado||'',dlc:r.dlc||'',fecha:r.ts||r.fecha||'',archivada_en:r.archivada_en||new Date().toISOString()},
+    trazabilidad_completa:r,
+    instrucciones_eva:'Guardar este expediente completo en la carpeta indicada. Después la app conserva solo una ficha ligera para no llenar los dispositivos. No inventar datos APPCC.'
+  };
+}
+function _queueAndCompactArchivedElab(r={},motivo='archivado'){
+  const folder=_driveFolderForElabArchive(r);
+  const item=queueDriveReport('expediente_elaboracion_archivada',_buildElabArchivePayload(r),{
+    folder,
+    periodo:String(r.archivada_en||r.ts||new Date().toISOString()).slice(0,10),
+    extra:(r.producto||r.nombre||'elaboracion')+'_'+(r.lote||r.id||'sin_lote'),
+    periodicidad:'al archivar',
+    instrucciones_eva:'Archivar este expediente completo en la carpeta del evento/cliente si existe; si no, en producción APPCC. Confirmar archivo antes de darlo por cerrado.'
+  });
+  return {
+    id:r.id,producto:r.producto||r.nombre||'',nombre:r.nombre||r.producto||'',lote:r.lote||'',
+    cantidad:r.cantidad||'',unidad:r.unidad||'',destino:r.destino||'',estado:r.estado||'archivado',
+    dlc:r.dlc||'',ts:r.ts||r.fecha||'',date:r.date||String(r.ts||r.fecha||'').slice(0,10)||'',
+    evento_id:r.evento_id||'',evento_cliente:r.evento_cliente||r.cliente||'',
+    archivada_en:r.archivada_en||new Date().toISOString(),archivada_por:r.archivada_por||_auditUsuario(),
+    archivo_destino:r.archivo_destino||motivo,pendiente_drive:true,archivo_compactado:true,
+    drive_queue_id:item.id,drive_queue_key:item.queue_key,drive_folder_url:folder.url||'',drive_destino:folder.path||'',
+    resumen_ligero:true,proceso:['📁 Expediente completo enviado a cola Drive/EVA · '+new Date().toLocaleString('es-ES')]
+  };
+}
+function compactarElaboracionesArchivadasParaDrive(){
+  if(typeof K==='undefined'||!K.elab)return 0;
+  const recs=ld(K.elab)||[];
+  let changed=0;
+  const next=recs.map(r=>{
+    if(!_elabArchivada(r)||r.archivo_compactado)return r;
+    changed++;
+    return _queueAndCompactArchivedElab(r,'archivo_automatico_drive');
+  });
+  if(changed)sv(K.elab,next);
+  return changed;
+}
 function autoPrepararPaquetesDrive(motivo='auto',marcarPersistencia=true){
   const now=Date.now();
   const last=parseInt(localStorage.getItem('_albaraba_auto_drive_queue_last')||'0',10)||0;
@@ -5955,6 +6022,7 @@ function autoPrepararPaquetesDrive(motivo='auto',marcarPersistencia=true){
   const generado_en=new Date().toISOString();
   const usuario=_auditUsuario();
   const hoy=_hoy();
+  try{compactarElaboracionesArchivadasParaDrive();}catch(e){console.warn('No se pudieron compactar elaboraciones archivadas:',e);}
   const rows=typeof _movimientosEmpresaRows==='function'?_movimientosEmpresaRows():[];
   queueDriveReport('movimientos_empresa',{
     empresa:'ALBARABA SL',generado_en,generado_por:usuario,motivo,total:rows.length,
@@ -15563,10 +15631,11 @@ function okArchiveElab(id){
   recs[i].pendiente_drive=destino==='carpeta_evento_cliente';
   recs[i].estado='archivado';
   recs[i].proceso=[...(recs[i].proceso||[]),'✅ Archivado/retirado de elaboraciones diarias · '+new Date().toLocaleString('es-ES')];
+  recs[i]=_queueAndCompactArchivedElab(recs[i],destino);
   sv(K.elab,recs);
   saveDB();
   renderElab();renderHomeAlerts();
-  if(typeof toast==='function')toast('Elaboración archivada; trazabilidad conservada.');
+  if(typeof toast==='function')toast('Elaboración archivada: expediente a Drive/EVA y ficha ligera en app.');
 }
 function viewArchivedElabs(){
   const rows=(ld(K.elab)||[]).filter(_elabArchivada).sort((a,b)=>String(b.archivada_en||b.ts||'').localeCompare(String(a.archivada_en||a.ts||''))).slice(0,40);
@@ -21202,7 +21271,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-reset-elab1'
+        source_version:'v20260730-drive-archive1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
