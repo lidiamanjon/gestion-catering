@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-productos-otros1 -->
+<!-- VERSION: v20260730-sync-guard1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-productos-otros1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-sync-guard1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-productos-otros1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-sync-guard1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3927,7 +3927,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-productos-otros1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-sync-guard1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3960,6 +3960,7 @@ function _trySetMainLocalDB(data,reason){
   if(_safeLocalSetItem('albaraba_v2',text))return true;
   try{
     console.warn('No cabe copia local; se continúa con Firebase:',reason);
+    setSyncStatus('error');
     _markPendingMainSync();
     return false;
   }
@@ -4011,14 +4012,18 @@ function saveDB(){
   _saveLocalRecoveryPoint(previous,'antes de guardar');
   _markLocalWriteWindow();
   DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),dispositivo:navigator.userAgent.slice(0,80)};
-  try{if(typeof autoPrepararPaquetesDrive==='function')autoPrepararPaquetesDrive('guardar',false);}catch(e){console.warn('Auto Drive/EVA no disponible:',e);}
+  // No generar informes pesados de Drive/EVA en cada guardado normal.
+  // Eso llenaba localStorage y podía hacer que productos/stock parecieran guardados
+  // pero desaparecieran al recargar. Los paquetes Drive se preparan desde acciones
+  // específicas o cuando EVA los recoja, nunca bloqueando el trabajo diario.
+  try{if(typeof compactDriveReportQueueForStorage==='function')compactDriveReportQueueForStorage();}catch(e){}
   const payload=_protectLocalSaveAgainstLoss(JSON.parse(JSON.stringify(DB)),previous);
   DB=payload;
-  _trySetMainLocalDB(payload,'saveDB principal');
+  const localOk=_trySetMainLocalDB(payload,'saveDB principal');
   _markPendingMainSync();
   if(fbDB&&fbAuth&&fbAuth.currentUser){
     setSyncStatus('saving');clearTimeout(_cloudSaveTimer);
-    _cloudSaveTimer=setTimeout(()=>{
+    const uploadNow=()=>{
       const token=payload._sync.actualizado_en;
       let backupData=payload;try{if(previous)backupData=JSON.parse(previous);}catch(e){}
       _backupCloudOnce(backupData).then(()=>_mergeMainCloudBySections(payload))
@@ -4032,8 +4037,12 @@ function saveDB(){
           setSyncStatus('ok');
         })
         .catch(()=>setSyncStatus('error'));
-    },250);
-  }else setSyncStatus('offline');
+    };
+    _cloudSaveTimer=setTimeout(uploadNow,10);
+  }else{
+    setSyncStatus(localOk?'offline':'error');
+    if(!localOk)setTimeout(()=>alert('⚠️ No se pudo guardar en este dispositivo porque el navegador no tiene espacio local. Entra con usuario de nube o avísame antes de seguir metiendo datos.'),50);
+  }
 }
 
 async function forceUploadLocalMainDBToCloud(){
@@ -4134,7 +4143,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-productos-otros1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-sync-guard1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6030,9 +6039,48 @@ function queueDriveReport(tipo,payload={},opts={}){
     instrucciones_eva:opts.instrucciones_eva||'Crear o actualizar este archivo en la carpeta indicada. No inventar datos; si falta algo, mantenerlo como pendiente de revisión.',
     payload
   };
+  try{
+    const txt=JSON.stringify(item.payload||{});
+    if(txt.length>120000){
+      item.payload_resumen={
+        aviso:'Payload compactado para no llenar la app. Generar informe completo desde el modulo original o pedir a EVA el detalle si lo necesita.',
+        tipo,
+        generado_en:item.fecha,
+        destino:item.destino,
+        claves:Object.keys(item.payload||{}),
+        total:typeof item.payload?.total!=='undefined'?item.payload.total:'',
+        empresa:item.payload?.empresa||'ALBARABA SL'
+      };
+      item.payload_compactado=true;
+      delete item.payload;
+    }
+  }catch(e){}
   DB.drive_report_queue.unshift(item);
-  DB.drive_report_queue=DB.drive_report_queue.slice(0,300);
+  compactDriveReportQueueForStorage();
   return item;
+}
+function compactDriveReportQueueForStorage(){
+  if(!Array.isArray(DB.drive_report_queue))return;
+  DB.drive_report_queue=DB.drive_report_queue.slice(0,50).map(item=>{
+    try{
+      const txt=JSON.stringify(item.payload||{});
+      if(txt.length<=120000)return item;
+      const compact={...item,payload_compactado:true,payload_resumen:{
+        aviso:'Compactado por espacio local. No afecta a productos/stock.',
+        tipo:item.tipo,nombre_archivo:item.nombre_archivo,fecha:item.fecha,destino:item.destino,
+        claves:Object.keys(item.payload||{}),total:typeof item.payload?.total!=='undefined'?item.payload.total:''
+      }};
+      delete compact.payload;
+      return compact;
+    }catch(e){return item;}
+  });
+  try{
+    while(JSON.stringify(DB.drive_report_queue).length>750000&&DB.drive_report_queue.length>10){
+      DB.drive_report_queue.pop();
+    }
+  }catch(e){
+    DB.drive_report_queue=DB.drive_report_queue.slice(0,10).map(x=>({id:x.id,queue_key:x.queue_key,tipo:x.tipo,nombre:x.nombre,nombre_archivo:x.nombre_archivo,fecha:x.fecha,estado:x.estado,destino:x.destino,payload_compactado:true}));
+  }
 }
 function _snapshotStockLotes(){
   const productos=(DB.productos||[]).map(p=>({
@@ -10080,7 +10128,7 @@ function initEvaBridgeSync(){
       }
       snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});return;
     }
-    if(_evaMsgHasEventData(msg)&&(!msg.estado||['pendiente_aplicacion','pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))){
+    if(_evaMsgHasEventData(msg)&&(!msg.estado||['pendiente_aplicacion','pendiente_sincronizacion_app','pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))){
       aplicarEventoEvaDirecto(msg,snap);return;
     }
     if((msg.estado&&!['pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))||!_evaMsgHasEventData(msg))return;
@@ -21363,7 +21411,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-productos-otros1'
+        source_version:'v20260730-sync-guard1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
