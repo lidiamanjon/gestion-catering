@@ -9,7 +9,7 @@ $DbUrl = "https://albaraba-gestion-2026-default-rtdb.firebaseio.com"
 $ConfigDir = Join-Path $env:APPDATA "AlbarabaPrintBridge"
 $ConfigFile = Join-Path $ConfigDir "config.json"
 New-Item -ItemType Directory -Force -Path $ConfigDir | Out-Null
-$BridgeVersion = "20260729-qr-local-codigo1"
+$BridgeVersion = "20260730-code39-etiquetas1"
 
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName System.Windows.Forms
@@ -229,6 +229,48 @@ function Fit-Font($g,$text,$maxPt,$minPt,$style,$maxWidthMm) {
   return New-Object System.Drawing.Font('Arial',$minPt,$style,[System.Drawing.GraphicsUnit]::Point)
 }
 
+function Clean-Code39($text) {
+  if(!$text){ return "" }
+  $t = ([string]$text).ToUpper()
+  $t = [regex]::Replace($t,'[^A-Z0-9 \.\$/\+%\-]','-')
+  if($t.Length -gt 38){ $t = $t.Substring(0,38) }
+  return $t
+}
+
+function Draw-Code39($g,$text,[double]$x,[double]$y,[double]$w,[double]$h) {
+  $patterns = @{
+    '0'='nnnwwnwnn';'1'='wnnwnnnnw';'2'='nnwwnnnnw';'3'='wnwwnnnnn';'4'='nnnwwnnnw';'5'='wnnwwnnnn';'6'='nnwwwnnnn';'7'='nnnwnnwnw';'8'='wnnwnnwnn';'9'='nnwwnnwnn';
+    'A'='wnnnnwnnw';'B'='nnwnnwnnw';'C'='wnwnnwnnn';'D'='nnnnwwnnw';'E'='wnnnwwnnn';'F'='nnwnwwnnn';'G'='nnnnnwwnw';'H'='wnnnnwwnn';'I'='nnwnnwwnn';'J'='nnnnwwwnn';
+    'K'='wnnnnnnww';'L'='nnwnnnnww';'M'='wnwnnnnwn';'N'='nnnnwnnww';'O'='wnnnwnnwn';'P'='nnwnwnnwn';'Q'='nnnnnnwww';'R'='wnnnnnwwn';'S'='nnwnnnwwn';'T'='nnnnwnwwn';
+    'U'='wwnnnnnnw';'V'='nwwnnnnnw';'W'='wwwnnnnnn';'X'='nwnnwnnnw';'Y'='wwnnwnnnn';'Z'='nwwnwnnnn';'-'='nwnnnnwnw';'.'='wwnnnnwnn';' '='nwwnnnwnn';
+    '$'='nwnwnwnnn';'/'='nwnwnnnwn';'+'='nwnnnwnwn';'%'='nnnwnwnwn';'*'='nwnnwnwnn'
+  }
+  $clean = Clean-Code39 $text
+  if(!$clean){ return }
+  $full = "*" + $clean + "*"
+  [double]$units = 0
+  foreach($ch in $full.ToCharArray()){
+    $pat = $patterns[[string]$ch]; if(!$pat){ $pat = $patterns['-'] }
+    foreach($c in $pat.ToCharArray()){ $units += $(if($c -eq 'w'){2.7}else{1}) }
+    $units += 1
+  }
+  if($units -le 0){ return }
+  $narrow = $w / $units
+  $wide = $narrow * 2.7
+  $gap = $narrow
+  [double]$cx = $x
+  $brush = [System.Drawing.Brushes]::Black
+  foreach($ch in $full.ToCharArray()){
+    $pat = $patterns[[string]$ch]; if(!$pat){ $pat = $patterns['-'] }
+    for($i=0;$i -lt $pat.Length;$i++){
+      $bw = $(if($pat[$i] -eq 'w'){$wide}else{$narrow})
+      if(($i % 2) -eq 0){ $g.FillRectangle($brush,[single]$cx,[single]$y,[single]$bw,[single]$h) }
+      $cx += $bw
+    }
+    $cx += $gap
+  }
+}
+
 function Print-LabelsDirect($job,$token,$printerName) {
   $id = $job.id
   $labels = @(Labels-FromJob $job)
@@ -269,11 +311,14 @@ function Print-LabelsDirect($job,$token,$printerName) {
     $g.DrawString($l.producto,$titleFont,$black,2.5,4.4)
     $g.DrawString(($l.destino).ToUpper(),$mid,$blue,2.5,13.2)
     if($l.lote){ $g.DrawString(('LOTE: ' + $l.lote),$mid,$black,2.5,18.2) }
-    $g.DrawString(('CREADA: ' + $l.creada),$small,$gray,2.5,23.2)
-    if($l.hecha){ $g.DrawString(('HECHA POR: ' + $l.hecha),$small,$gray,2.5,26.2) }
-    $g.DrawString('CONSUMIR ANTES:',$small,$gray,2.5,30.2)
-    $g.DrawString($l.cad,$cadFont,$red,24,28.4)
-    if($l.codigo){ $g.DrawString(([string]$l.codigo),$small,$black,2.5,38.0) }
+    $g.DrawString(('CREADA: ' + $l.creada),$small,$gray,2.5,22.6)
+    if($l.hecha){ $g.DrawString(('HECHA POR: ' + $l.hecha),$small,$gray,2.5,25.2) }
+    $g.DrawString('CONSUMIR ANTES:',$small,$gray,2.5,28.6)
+    $g.DrawString($l.cad,$cadFont,$red,24,27.2)
+    if($l.codigo){
+      Draw-Code39 $g ([string]$l.codigo) 2.5 34.2 42 5.6
+      $g.DrawString(([string]$l.codigo),$small,$black,2.5,39.7)
+    }
     if($hasQr){
       try{
         $b64 = [regex]::Replace([string]$l.qr,'^data:image\/[^;]+;base64,','')

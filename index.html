@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260729-reset-elaboraciones-sinboton1 -->
+<!-- VERSION: v20260730-code39-etiquetas1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260729-reset-elaboraciones-sinboton1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-code39-etiquetas1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3793,7 +3793,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260729-reset-elaboraciones-sinboton1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-code39-etiquetas1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3929,7 +3929,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260729-reset-elaboraciones-sinboton1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-code39-etiquetas1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -20217,6 +20217,33 @@ function _etqShortScanCode(r){
   const safe=raw.replace(/[^A-Z0-9._/-]/g,'').slice(0,42);
   return safe ? ('ALB-'+safe) : ('ALB-'+new Date().toISOString().slice(2,10).replace(/-/g,''));
 }
+const CODE39_PATTERNS={
+  '0':'nnnwwnwnn','1':'wnnwnnnnw','2':'nnwwnnnnw','3':'wnwwnnnnn','4':'nnnwwnnnw','5':'wnnwwnnnn','6':'nnwwwnnnn','7':'nnnwnnwnw','8':'wnnwnnwnn','9':'nnwwnnwnn',
+  'A':'wnnnnwnnw','B':'nnwnnwnnw','C':'wnwnnwnnn','D':'nnnnwwnnw','E':'wnnnwwnnn','F':'nnwnwwnnn','G':'nnnnnwwnw','H':'wnnnnwwnn','I':'nnwnnwwnn','J':'nnnnwwwnn',
+  'K':'wnnnnnnww','L':'nnwnnnnww','M':'wnwnnnnwn','N':'nnnnwnnww','O':'wnnnwnnwn','P':'nnwnwnnwn','Q':'nnnnnnwww','R':'wnnnnnwwn','S':'nnwnnnwwn','T':'nnnnwnwwn',
+  'U':'wwnnnnnnw','V':'nwwnnnnnw','W':'wwwnnnnnn','X':'nwnnwnnnw','Y':'wwnnwnnnn','Z':'nwwnwnnnn','-':'nwnnnnwnw','.':'wwnnnnwnn',' ':'nwwnnnwnn',
+  '$':'nwnwnwnnn','/':'nwnwnnnwn','+':'nwnnnwnwn','%':'nnnwnwnwn','*':'nwnnwnwnn'
+};
+function _code39Clean(text){
+  return String(text||'').toUpperCase().replace(/[^A-Z0-9 .$/+%-]/g,'-').replace(/\s+/g,' ').slice(0,38);
+}
+function _code39SvgDataURL(text,wMm=40,hMm=8){
+  const clean=_code39Clean(text);
+  const full='*'+clean+'*';
+  const narrow=1,wide=2.7,gap=1;
+  let x=0,rects='';
+  for(const ch of full){
+    const pat=CODE39_PATTERNS[ch]||CODE39_PATTERNS['-'];
+    for(let i=0;i<pat.length;i++){
+      const unit=pat[i]==='w'?wide:narrow;
+      if(i%2===0)rects+=`<rect x="${x.toFixed(2)}" y="0" width="${unit.toFixed(2)}" height="26"/>`;
+      x+=unit;
+    }
+    x+=gap;
+  }
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${x.toFixed(2)} 26" width="${wMm}mm" height="${hMm}mm" preserveAspectRatio="none"><rect width="100%" height="100%" fill="#fff"/>${rects}</svg>`;
+  return 'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent(svg);
+}
 function _buildEtiquetaProductRows(){
   const productos=(DB.productos||[]).slice().sort((a,b)=>(a.nombre||'').localeCompare(b.nombre||''));
   const receps=(ld(K.recep)||[]).slice().sort((a,b)=>new Date(b.ts||b.date)-new Date(a.ts||a.date));
@@ -20592,6 +20619,7 @@ async function _batchPrint(items, orient){
     const emp      = r.etqEmp || _etqCurrentWorker();
     const dlcFmt   = dlc ? fmtDate(dlc) : '—';
     const scanCode = _etqShortScanCode(r);
+    const barcodeUrl = _code39SvgDataURL(scanCode, isLand?38:46, isLand?7.5:8.5);
     const hasQr    = !!needsTraceQr;
     const qrImg    = hasQr ? (qrUrl ? `<img src="${qrUrl}" width="${QR_MM}mm" height="${QR_MM}mm" alt="QR trazabilidad">` : `<div class="qr-fallback">QR</div>`) : '';
     for(let i=0;i<cop;i++){
@@ -20602,7 +20630,7 @@ async function _batchPrint(items, orient){
           <div class="dest" style="background:${ds.bg};color:${ds.col}">${ds.icon} ${ds.label}</div>
           ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
           <div class="small-lbl">CREADA: ${fecha} · ${emp}${r.proveedor?' · '+r.proveedor:''}</div>
-          <div class="scan-code">${scanCode}</div>
+          <div class="barcode-wrap"><img class="barcode-img" src="${barcodeUrl}" alt="Código de barras ${scanCode}"><div class="scan-code">${scanCode}</div></div>
           <div class="cad-lbl">CONSUMIR ANTES DE:</div>
           <div class="cad">${dlcFmt}</div>
         </div>${hasQr?`<div class="col-right">${qrImg}
@@ -20618,7 +20646,7 @@ async function _batchPrint(items, orient){
           ${lote?`<div class="lote">LOTE: ${lote}</div>`:''}
           <div class="small-lbl">CREADA: ${fecha}</div>
           <div class="small-lbl">HECHA POR: ${emp}</div>
-          <div class="scan-code">${scanCode}</div>
+          <div class="barcode-wrap"><img class="barcode-img" src="${barcodeUrl}" alt="Código de barras ${scanCode}"><div class="scan-code">${scanCode}</div></div>
           <div class="sep"></div>
           <div class="cad-lbl">CONSUMIR ANTES DE:</div>
           <div class="cad">${dlcFmt}</div>
@@ -20661,6 +20689,8 @@ async function _batchPrint(items, orient){
     .dest{font-size:${isLand?'2.65mm':'3.5mm'};font-weight:900;padding:.35mm 1mm;border-radius:1.1mm;text-align:center;letter-spacing:.2px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .lote{font-size:${isLand?'2.15mm':'2.5mm'};font-family:monospace;font-weight:900;color:#111;background:#f0f0f0;padding:.25mm .8mm;border-radius:.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .small-lbl{font-size:${isLand?'1.65mm':'2mm'};color:#555;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .barcode-wrap{display:flex;flex-direction:column;gap:.15mm;align-items:flex-start;justify-content:center;background:#fff;max-width:100%;overflow:hidden;flex-shrink:0}
+    .barcode-img{width:${isLand?'38mm':'46mm'};height:${isLand?'7.5mm':'8.5mm'};object-fit:fill;display:block;background:#fff}
     .scan-code{font-size:${isLand?'1.65mm':'1.9mm'};font-family:monospace;font-weight:900;color:#111;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .cad-lbl{font-size:${isLand?'1.45mm':'2mm'};color:#777;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap}
     .cad{font-size:${isLand?'5.45mm':'7.5mm'};font-weight:900;color:#c0392b;line-height:.9;letter-spacing:.05mm;white-space:nowrap;overflow:hidden}
@@ -20691,6 +20721,7 @@ async function _batchPrint(items, orient){
         hecha:emp,
         qr:qrUrl||'',
         codigo:_etqShortScanCode(r),
+        barcode:_code39SvgDataURL(_etqShortScanCode(r),40,8),
         trace:qrText||'',
         tipo:needsTraceQr?'elab':tipo
       });
@@ -20734,7 +20765,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260729-reset-elaboraciones-sinboton1'
+        source_version:'v20260730-code39-etiquetas1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
