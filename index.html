@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-drive-archive1 -->
+<!-- VERSION: v20260730-plan-xlsx1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-drive-archive1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-plan-xlsx1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-drive-archive1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-plan-xlsx1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3443,12 +3443,104 @@ function descargarStock(){
   _downloadCSV(rows, 'stock_'+_hoy()+'.csv');
 }
 
+function _hojaTitulo(h={}){
+  return h.titulo||h.nombre||h.evento||h.servicio||h.cliente||h.id_evento||h.eva_id||h.id||'Evento';
+}
+function _hojaFechaHora(h={}){
+  const fecha=h.fecha||h.fecha_evento||h.date||'';
+  const hora=h.hora||h.hora_evento||h.time||'';
+  return {fecha,hora,fecha_hora:[fecha,hora].filter(Boolean).join(' ')};
+}
+function _hojaEstadoAPPCC(h={}){
+  const menu=Array.isArray(h.menu)?h.menu:[];
+  const total=menu.length;
+  const done=menu.filter(m=>m.appcc_realizado||m.realizado||m.estado_appcc==='realizado'||m.estado==='realizado').length;
+  if(!total)return h.estado_appcc||h.appcc_estado||'Sin elaboraciones';
+  return done+'/'+total;
+}
+function _hojaDocUrl(h={},k){
+  const d=h.documentos||{};
+  return h[k]||d[k]||d[(k||'').replace('_url','')]||'';
+}
+function _hojaImporte(h={}){
+  return h.total||h.importe||h.presupuesto_total||h.precio_total||h.base_imponible||'';
+}
 function descargarHojas(){
-  const rows = [_csvLine(['Evento','Fecha','Cliente','Raciones','Total €','Estado'])];
-  (DB.hojas||[]).forEach(h=>{
-    rows.push(_csvLine([h.nombre||h.evento||'',h.fecha||'',h.cliente||'',h.raciones||'',h.total||'',h.estado||'']));
+  const hojas=(DB.hojas||[]).slice().sort((a,b)=>{
+    const af=(_hojaFechaHora(a).fecha_hora||'9999-99-99');
+    const bf=(_hojaFechaHora(b).fecha_hora||'9999-99-99');
+    return String(af).localeCompare(String(bf));
   });
-  _downloadCSV(rows, 'hojas_servicio_'+_hoy()+'.csv');
+  const generado=new Date().toLocaleString('es-ES');
+  const resumen=[
+    ['PLANIFICACION EVA - ALBARABA'],
+    ['Generado',generado],
+    ['Total eventos',hojas.length],
+    ['Pendientes',hojas.filter(h=>!h.realizado).length],
+    ['Realizados',hojas.filter(h=>h.realizado).length],
+    ['Elaboraciones previstas',hojas.reduce((s,h)=>s+(Array.isArray(h.menu)?h.menu.length:0),0)],
+    [''],
+    ['Nota','Archivo informativo. La trazabilidad APPCC solo queda completa con registros reales de recepcion, lotes, produccion, abatidor/regeneracion y servicio.']
+  ];
+  const eventos=[['ID','ID EVA','Cliente / evento','Marca','Fecha','Hora','PAX','Servicio / notas','Estado comercial','Realizado','Facturado','Cobrado','APPCC','Importe EUR','Carpeta Drive','Hoja servicio','Presupuesto','Factura','Ultima actualizacion']];
+  const elaboraciones=[['Evento ID','Cliente / evento','Fecha','Hora','PAX','Marca','Elaboracion','Raciones','Cantidad','Unidad','Precio unitario','Total EUR','Estado APPCC','Catalogo vinculado','Notas']];
+  const documentos=[['Evento ID','Cliente / evento','Tipo','URL / referencia']];
+  hojas.forEach(h=>{
+    const fh=_hojaFechaHora(h);
+    const id=h.id||h.eva_id||h.id_evento||'';
+    const titulo=_hojaTitulo(h);
+    eventos.push([
+      h.id||'',h.eva_id||h.id_evento||'',titulo,h.marca||h.fuente||'',fh.fecha,fh.hora,h.pax||h.raciones||'',
+      h.descripcion||h.notas||h.servicio||'',
+      h.estado||h.estado_comercial||'',h.realizado?'Si':'No',h.facturado?'Si':(h.estado_factura||h.factura_estado||''),
+      h.cobrado?'Si':(h.estado_cobro||h.cobro_estado||''),_hojaEstadoAPPCC(h),_hojaImporte(h),
+      h.carpeta_drive_url||h.drive_folder_url||'',_hojaDocUrl(h,'hoja_servicio_url'),_hojaDocUrl(h,'presupuesto_url'),_hojaDocUrl(h,'factura_url'),
+      h.updated_at||h.actualizado_en||h.created_at||''
+    ]);
+    (Array.isArray(h.menu)?h.menu:[]).forEach(m=>{
+      const raciones=m.raciones||m.pax||h.pax||'';
+      const precio=m.precio||m.precio_unitario||m.pvp||'';
+      const nPrecio=parseFloat(String(precio).replace(',','.'))||0;
+      const nRaciones=parseFloat(String(raciones).replace(',','.'))||0;
+      const total=m.total||m.importe||(nPrecio&&nRaciones?nPrecio*nRaciones:'');
+      elaboraciones.push([
+        id,titulo,fh.fecha,fh.hora,h.pax||'',h.marca||h.fuente||'',m.nombre||m.elaboracion||m.producto||'',
+        raciones,m.cantidad||'',m.unidad||'',precio,total,
+        m.estado_appcc||m.estado||(_hojaEstadoAPPCC({menu:[m]})),(m.catalogo_id||m.elaboracion_id||m.id_catalogo)?'Si':'No',m.notas||m.observaciones||''
+      ]);
+    });
+    const docs=[
+      ['Carpeta Drive',h.carpeta_drive_url||h.drive_folder_url||''],
+      ['Hoja servicio',_hojaDocUrl(h,'hoja_servicio_url')],
+      ['Presupuesto',_hojaDocUrl(h,'presupuesto_url')],
+      ['Factura',_hojaDocUrl(h,'factura_url')],
+      ['PDF EVA',_hojaDocUrl(h,'pdf_eva_url')]
+    ].filter(x=>x[1]);
+    docs.forEach(d=>documentos.push([id,titulo,d[0],d[1]]));
+  });
+  const alertas=[['Evento ID','Cliente / evento','Fecha','Alerta']];
+  hojas.forEach(h=>{
+    const fh=_hojaFechaHora(h),id=h.id||h.eva_id||h.id_evento||'',titulo=_hojaTitulo(h),appcc=_hojaEstadoAPPCC(h);
+    if(!fh.fecha)alertas.push([id,titulo,'','Falta fecha']);
+    if(!h.pax&&!h.raciones)alertas.push([id,titulo,fh.fecha,'Faltan PAX/raciones']);
+    if(!Array.isArray(h.menu)||!h.menu.length)alertas.push([id,titulo,fh.fecha,'Sin elaboraciones previstas']);
+    if(!h.carpeta_drive_url&&!h.drive_folder_url)alertas.push([id,titulo,fh.fecha,'Sin carpeta Drive enlazada']);
+    if(String(appcc).includes('/')&&String(appcc).split('/')[0]!==String(appcc).split('/')[1])alertas.push([id,titulo,fh.fecha,'APPCC pendiente o incompleto: '+appcc]);
+  });
+  const raw=[['JSON_PLANIFICACION_EVA'],[JSON.stringify({generado_en:new Date().toISOString(),hojas},null,2)]];
+  if(window.XLSX){
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(resumen),'Resumen');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(eventos),'Eventos');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(elaboraciones),'Elaboraciones');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(documentos),'Documentos');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(alertas),'Alertas APPCC');
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(raw),'JSON EVA');
+    XLSX.writeFile(wb,'planificacion_eva_completa_'+_hoy()+'.xlsx');
+    return;
+  }
+  const rows=[...eventos.map(_csvLine),[],...elaboraciones.map(_csvLine),[],...documentos.map(_csvLine),[],...alertas.map(_csvLine)];
+  _downloadCSV(rows,'planificacion_eva_completa_'+_hoy()+'.csv');
 }
 
 function imprimirTodasFichas(){
@@ -3835,7 +3927,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-drive-archive1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-plan-xlsx1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4042,7 +4134,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-drive-archive1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-plan-xlsx1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -21271,7 +21363,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-drive-archive1'
+        source_version:'v20260730-plan-xlsx1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
