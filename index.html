@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-rescate1 -->
+<!-- VERSION: v20260730-elab-save1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-rescate1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-elab-save1'+extra);
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3793,7 +3793,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-rescate1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-elab-save1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3851,7 +3851,19 @@ function saveDB(){
   try{if(typeof autoPrepararPaquetesDrive==='function')autoPrepararPaquetesDrive('guardar',false);}catch(e){console.warn('Auto Drive/EVA no disponible:',e);}
   const payload=_protectLocalSaveAgainstLoss(JSON.parse(JSON.stringify(DB)),previous);
   DB=payload;
-  localStorage.setItem('albaraba_v2',JSON.stringify(payload));
+  try{
+    localStorage.setItem('albaraba_v2',JSON.stringify(payload));
+  }catch(e){
+    try{
+      for(let i=2;i<=8;i++)localStorage.removeItem('_albaraba_backup_'+i);
+      localStorage.removeItem('_albaraba_backup_at');
+      localStorage.setItem('albaraba_v2',JSON.stringify(payload));
+    }catch(e2){
+      setSyncStatus('error');
+      console.error('No se pudo guardar localmente:',e2);
+      throw e2;
+    }
+  }
   localStorage.setItem('_albaraba_pending_sync','1');
   if(fbDB&&fbAuth&&fbAuth.currentUser){
     setSyncStatus('saving');clearTimeout(_cloudSaveTimer);
@@ -3971,7 +3983,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-rescate1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-elab-save1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -6048,11 +6060,36 @@ function saveElaboracion(){
   const nombre=document.getElementById('elab-nombre').value.trim();
   if(!nombre){alert('El nombre es obligatorio');return}
   const id=document.getElementById('elab-id').value||uid();
-  const obj={id,nombre,categoria:document.getElementById('elab-cat').value,raciones_base:parseInt(document.getElementById('elab-raciones').value)||10,ingredientes:getIngredientes(),proceso:document.getElementById('elab-proceso').value,notas:document.getElementById('elab-notas').value,foto:document.getElementById('elab-foto-data').value};
   const idx=DB.elaboraciones.findIndex(x=>x.id===id);
+  const anterior=idx>=0?(DB.elaboraciones[idx]||{}):{};
+  let foto=document.getElementById('elab-foto-data').value||anterior.foto||'';
+  if(typeof foto==='string'&&foto.length>350000){
+    foto='';
+    alert('La foto era demasiado grande y no se guardará dentro de la app para no bloquear la sincronización. La elaboración sí se guardará.');
+  }
+  const obj={
+    ...anterior,
+    id,nombre,
+    categoria:document.getElementById('elab-cat').value,
+    raciones_base:parseInt(document.getElementById('elab-raciones').value)||10,
+    ingredientes:getIngredientes(),
+    proceso:document.getElementById('elab-proceso').value,
+    notas:document.getElementById('elab-notas').value,
+    foto,
+    actualizado_en:new Date().toISOString(),
+    actualizado_por:currentUserEmail||((fbAuth&&fbAuth.currentUser&&fbAuth.currentUser.email)||'')
+  };
   if(idx>=0)DB.elaboraciones[idx]=obj;else DB.elaboraciones.push(obj);
-  marcarPedidosParaRecalcular('Receta modificada: '+nombre,p=>(p.elaboraciones||[]).some(e=>e.id===id));
-  saveDB();closeModal('modal-elab');renderElabTable();
+  try{marcarPedidosParaRecalcular('Receta modificada: '+nombre,p=>(p.elaboraciones||[]).some(e=>e.id===id));}catch(e){console.warn('No se pudieron marcar pedidos para recalcular:',e);}
+  try{
+    saveDB();
+    closeModal('modal-elab');
+    renderElabTable();
+    if(typeof toast==='function')toast('✅ Elaboración guardada');
+  }catch(e){
+    console.error('Error guardando elaboración:',e);
+    alert('No se pudo guardar la elaboración. Detalle: '+(e&&e.message?e.message:e));
+  }
 }
 function deleteElaboracion(id){
   if(!confirm('¿Eliminar esta elaboración?'))return;
@@ -20807,7 +20844,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-rescate1'
+        source_version:'v20260730-elab-save1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
