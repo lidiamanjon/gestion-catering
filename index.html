@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-guardado-nube1 -->
+<!-- VERSION: v20260730-receta-aprende1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-guardado-nube1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260730-receta-aprende1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-guardado-nube1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260730-receta-aprende1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3811,7 +3811,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-guardado-nube1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-receta-aprende1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4007,7 +4007,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-guardado-nube1';};
+  const go=()=>{location.href=location.pathname+'?v=20260730-receta-aprende1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -15881,6 +15881,70 @@ function _cambiarLoteIngrediente(ingIdx){
     _renderFIFOIngredientes();
   });
 }
+function _syncDailyElabIngredientsToMasterRecipe(nombreElab,ingredientes,racionesHechas){
+  const recetaActual=window._elabReceta||null;
+  const lista=Array.isArray(ingredientes)?ingredientes:[];
+  if(!nombreElab||!lista.length)return false;
+  if(!DB.elaboraciones)DB.elaboraciones=[];
+  const norm=_normIngr||((v)=>String(v||'').toLowerCase().trim());
+  const receta=(recetaActual&&recetaActual.id
+      ? DB.elaboraciones.find(e=>e.id===recetaActual.id)
+      : null)
+    || DB.elaboraciones.find(e=>norm(e.nombre)===norm(nombreElab))
+    || null;
+  if(!receta)return false;
+  if(!Array.isArray(receta.ingredientes))receta.ingredientes=[];
+  const base=Math.max(1,parseFloat(receta.raciones_base)||parseFloat(racionesHechas)||10);
+  const hechas=Math.max(1,parseFloat(racionesHechas)||base);
+  let changed=false;
+  lista.forEach(ing=>{
+    const nombre=(ing.producto||ing.nombre||'').trim();
+    if(!nombre)return;
+    const prod=ing.producto_id
+      ? (DB.productos||[]).find(p=>p.id===ing.producto_id)
+      : buscarProductoCatalogo(nombre);
+    const nombreReal=prod?.nombre||nombre;
+    const idReal=prod?.id||ing.producto_id||'';
+    const existente=receta.ingredientes.find(x=>{
+      if(idReal&&x.producto_id===idReal)return true;
+      const xn=norm(x.nombre||x.producto||(typeof prodNombre==='function'?prodNombre(x.producto_id):'')||'');
+      return xn&&xn===norm(nombreReal);
+    });
+    const cantidadDiaria=parseFloat(ing.cantidad);
+    const cantidadBase=Number.isFinite(cantidadDiaria)&&cantidadDiaria>0
+      ? Math.round((cantidadDiaria*(base/hechas))*1000)/1000
+      : 0;
+    const unidad=ing.unidad||prod?.unidad||'';
+    if(existente){
+      if(!existente.producto_id&&idReal){existente.producto_id=idReal;changed=true;}
+      if(!existente.nombre&&nombreReal){existente.nombre=nombreReal;changed=true;}
+      if((!existente.unidad||existente.unidad==='ud')&&unidad&&existente.unidad!==unidad){existente.unidad=unidad;changed=true;}
+      if((!parseFloat(existente.cantidad))&&cantidadBase>0){existente.cantidad=cantidadBase;changed=true;}
+      if(!existente.modo_cantidad){existente.modo_cantidad='total_receta';changed=true;}
+      if(ing.lote&&!existente.lote_sugerido_fifo){existente.lote_sugerido_fifo=ing.lote;changed=true;}
+      return;
+    }
+    receta.ingredientes.push({
+      producto_id:idReal,
+      nombre:nombreReal,
+      cantidad:cantidadBase,
+      unidad,
+      modo_cantidad:'total_receta',
+      lote_sugerido_fifo:ing.lote||'',
+      añadido_desde_elaboracion_diaria:true,
+      añadido_en:new Date().toISOString()
+    });
+    changed=true;
+  });
+  if(changed){
+    receta.actualizada_desde_elaboracion_diaria_en=new Date().toISOString();
+    receta.actualizada_desde_elaboracion_diaria_por=localStorage.getItem(K.wActive)||'';
+    const aviso='Actualizada automáticamente desde elaboraciones diarias.';
+    if(!String(receta.notas||'').includes(aviso))receta.notas=((receta.notas||'')+'\n'+aviso).trim();
+    marcarPedidosParaRecalcular('Receta aprendida durante producción: '+(receta.nombre||nombreElab),p=>(p.elaboraciones||[]).some(e=>e.id===receta.id));
+  }
+  return changed;
+}
 function saveElab(){
   const prod=document.getElementById('el-prod').value;if(!prod){alert('Selecciona una elaboración');return}
   const cant=document.getElementById('el-cant').value;if(!cant){alert('Introduce la cantidad');return}
@@ -15899,6 +15963,7 @@ function saveElab(){
       .map(c=>({producto:c.nombre,lote:(c.selectedMatch||c.matches[0]||{}).lote||'',cantidad:String(c.needed),unidad:c.unidad}));
   }
   const ingredientes=window._elabIngredientes||[];
+  const recetaMaestraActualizada=_syncDailyElabIngredientsToMasterRecipe(prod,ingredientes,cant);
   // Enlazar recepción de origen
   const _lr=window._lastRecepData;
   const recepOrigen=(_lr&&_lr.date===today()&&(prod.toLowerCase().includes((_lr.producto||'').toLowerCase().split(' ')[0])||(_lr.producto||'').toLowerCase().includes(prod.toLowerCase().split(' ')[0])))?_lr:null;
@@ -15915,6 +15980,7 @@ function saveElab(){
     if(item){item.appcc_estado='elaborada';item.appcc_rec_id=rec.id;item.appcc_elaborada_en=rec.ts;item.appcc_empleado=emp;saveDB();}
     window._evaPendingContext=null;
   }
+  if(recetaMaestraActualizada&&!evaCtx)saveDB();
   // Descontar del stock de materias primas (K.recep)
   if(window._elabRacionesData&&window._elabRacionesData.calcs){
     const stockArr=ld(K.recep)||[];
@@ -20843,7 +20909,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-guardado-nube1'
+        source_version:'v20260730-receta-aprende1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
