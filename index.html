@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260730-eva-pending1 -->
+<!-- VERSION: v20260731-eva-apply1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260730-eva-pending1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260731-eva-apply1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260730-eva-pending1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-eva-apply1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3927,7 +3927,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260730-eva-pending1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-eva-apply1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4133,6 +4133,7 @@ function openSyncRescuePanel(){
         </p>
         <div style="display:grid;gap:9px">
           <button onclick="closeSyncRescuePanel();forceUploadLocalMainDBToCloud()" style="border:0;background:#16a34a;color:white;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:900;cursor:pointer">☁️ Subir/fusionar este dispositivo a nube</button>
+          <button onclick="rescanEvaBridgePending(true)" style="border:0;background:#d49b13;color:#101225;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:900;cursor:pointer">✨ Aplicar pendientes de EVA ahora</button>
           <button onclick="showSyncDiagnostic()" style="border:1px solid #bfd0ee;background:#eef5ff;color:#10224a;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🔎 Ver diagnóstico de nube/local</button>
           <button onclick="forceAppRefresh()" style="border:1px solid #f3c15e;background:#fff7df;color:#6b4500;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🔄 Actualizar app sin borrar datos</button>
           <button onclick="forceLogoutAndAskLogin()" style="border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🚪 Salir y volver a pedir usuario</button>
@@ -4143,7 +4144,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260730-eva-pending1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-eva-apply1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -10113,9 +10114,10 @@ function aplicarEventoEvaDirecto(msg,snap){
   if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
 }
 function _processEvaBridgeMessageSnap(snap){
+    if(!snap||!snap.exists||!snap.exists())return false;
     const msg=snap.val()||{};
     if(msg.tipo==='actualizar_estado_evento_directo'&&['pendiente_aplicacion','pendiente_sincronizacion_app'].includes(msg.estado)){
-      aplicarEstadoDirectoEva(msg,snap);return;
+      aplicarEstadoDirectoEva(msg,snap);return true;
     }
     if(msg.tipo==='documento_proveedor'&&msg.estado==='pendiente_revision'&&msg.documento){
       if(!(DB.albaranesLog||[]).some(x=>x.eva_bridge_message_id===snap.key)){
@@ -10123,12 +10125,12 @@ function _processEvaBridgeMessageSnap(snap){
         DB.albaranesLog.push({id:d.id_documento||('eva_'+snap.key),eva_bridge_message_id:snap.key,origen:'EVA_CHATGPT',proveedor:d.proveedor||'',fecha:d.fecha||'',numero_documento:d.numero_documento||'',tipo_documento:d.tipo_documento||'albaran',base_imponible:d.base_imponible||0,iva:d.iva||0,total:d.total||0,nLineas:(d.productos||[]).length,actualizados:0,lineas:d.productos||[],documento_url:d.archivo_origen||'',estado_revision:'pendiente',id_evento:msg.id_evento||'',ts:Date.now()});
         saveDB();if(currentSection==='albaranes')renderAlbaranes();
       }
-      snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});return;
+      snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});return true;
     }
     if(_evaMsgHasEventData(msg)&&(!msg.estado||['pendiente_aplicacion','pendiente_sincronizacion_app','pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))){
-      aplicarEventoEvaDirecto(msg,snap);return;
+      aplicarEventoEvaDirecto(msg,snap);return true;
     }
-    if((msg.estado&&!['pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))||!_evaMsgHasEventData(msg))return;
+    if((msg.estado&&!['pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))||!_evaMsgHasEventData(msg))return false;
     const hoja=normalizarHojaEva(_evaPayloadFromMsg(msg));if(!hoja.cliente&&!(hoja.menu||[]).length){snap.ref.update({estado:'error_payload_incompleto',error:'No se leyeron cliente ni elaboraciones del mensaje EVA',error_en:new Date().toISOString()});return;}hoja.eva_id=msg.id_evento||hoja.eva_id||hoja.id;hoja.id=hoja.eva_id;
     hoja.eva_bridge_message_id=snap.key;hoja.eva_recibido_en=msg.recibido_en||new Date().toISOString();
     hoja.eva_campos_pendientes=Array.isArray(msg.campos_pendientes)?msg.campos_pendientes:[];
@@ -10142,10 +10144,42 @@ function _processEvaBridgeMessageSnap(snap){
     saveDB();
     snap.ref.update({estado:hoja.eva_campos_pendientes.length?'pendiente_datos_revision_humana':'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});
     if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
+    return true;
+}
+async function rescanEvaBridgePending(manual=false){
+  if(!fbDB||!fbAuth||!fbAuth.currentUser){
+    if(manual)alert('No hay sesión de nube activa. Entra con usuario y contraseña y vuelve a intentarlo.');
+    return 0;
+  }
+  try{
+    setSyncStatus('saving');
+    const snap=await fbDB.ref('eva_bridge_v1/inbox').limitToLast(500).once('value');
+    let applied=0,seen=0;
+    snap.forEach(child=>{
+      seen++;
+      const msg=child.val()||{};
+      const estado=String(msg.estado||'');
+      const candidato=!estado||['pendiente_aplicacion','pendiente_sincronizacion_app','pendiente_revision','pendiente_datos','recibido'].includes(estado);
+      if(candidato){
+        try{if(_processEvaBridgeMessageSnap(child))applied++;}catch(e){console.error('Revisión EVA pendiente:',child.key,e);}
+      }
+    });
+    setSyncStatus('ok');
+    if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
+    else if(manual)nav('hojas');
+    if(manual)alert('✅ Revisión EVA terminada.\n\nMensajes revisados: '+seen+'\nAplicados o enviados a revisión: '+applied+'\n\nSi EVA acababa de mandar algo, ya debería aparecer en Planificación EVA.');
+    return applied;
+  }catch(e){
+    console.error('Rescan EVA:',e);
+    setSyncStatus('error');
+    if(manual)alert('No pude revisar pendientes de EVA.\n\nDetalle: '+(e&&e.message?e.message:e));
+    return 0;
+  }
 }
 function initEvaBridgeSync(){
   if(_evaBridgeRef||!fbDB||!fbAuth||!fbAuth.currentUser)return;
   _evaBridgeRef=fbDB.ref('eva_bridge_v1/inbox');
+  setTimeout(()=>rescanEvaBridgePending(false),900);
   _evaBridgeRef.on('child_added',snap=>{
     try{_processEvaBridgeMessageSnap(snap);}catch(e){console.error('Puente Eva child_added:',e);}
   },e=>console.error('Puente Eva:',e));
@@ -21417,7 +21451,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260730-eva-pending1'
+        source_version:'v20260731-eva-apply1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
