@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-eva-visible1 -->
+<!-- VERSION: v20260731-eva-control1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-eva-visible1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260731-eva-control1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-eva-visible1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-eva-control1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3860,17 +3860,28 @@ function _mergeArrayByIdSafe(remoteArr,localArr){
   (Array.isArray(localArr)?localArr:[]).forEach(x=>{const k=(x&&typeof x==='object'&&x.id)?String(x.id):JSON.stringify(x);map.set(k,_mergeRecordSafe(map.get(k),x));});
   return[...map.values()];
 }
+function _deletedEventIdsForMerge(...dbs){
+  const ids=new Set();
+  dbs.forEach(db=>(db?.eva_deleted_events||[]).forEach(x=>[x?.id,x?.eva_id,x?.id_evento].forEach(v=>{if(v!==undefined&&v!==null&&String(v).trim())ids.add(String(v));})));
+  return ids;
+}
+function _filterDeletedHojasForMerge(rows,deletedIds){
+  if(!deletedIds||!deletedIds.size)return rows;
+  return (rows||[]).filter(h=>!_hojaLinkedIds(h).some(id=>deletedIds.has(String(id))));
+}
 function _mergeDBPreservingRecords(remote,local){
-  const merge=(a,b)=>{
+  const deletedEventIds=_deletedEventIdsForMerge(remote,local);
+  const merge=(a,b,key='')=>{
     if(Array.isArray(a)||Array.isArray(b)){
       const aa=Array.isArray(a)?a:[],bb=Array.isArray(b)?b:[];
+      if(key==='hojas')return _filterDeletedHojasForMerge(_mergeArrayByIdSafe(aa,bb),deletedEventIds);
       if([...aa,...bb].some(x=>x&&typeof x==='object'&&x.id)){
         return _mergeArrayByIdSafe(aa,bb);
       }
       return [...new Map([...aa,...bb].map(x=>[JSON.stringify(x),x])).values()];
     }
     if(a&&typeof a==='object'&&b&&typeof b==='object'){
-      const out={...a};Object.keys(b).forEach(k=>out[k]=k in a?merge(a[k],b[k]):b[k]);return out;
+      const out={...a};Object.keys(b).forEach(k=>out[k]=k in a?merge(a[k],b[k],k):b[k]);return out;
     }
     return _isEmptyValueForMerge(b)?a:b;
   };
@@ -3927,7 +3938,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-eva-visible1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-eva-control1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4144,7 +4155,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-eva-visible1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-eva-control1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -8504,6 +8515,17 @@ function saveHoja(){
 function _hojaLinkedIds(h,idExtra){
   return [idExtra,h?.id,h?.eva_id,h?.id_evento].filter(v=>v!==undefined&&v!==null&&String(v).trim()).map(v=>String(v));
 }
+function _rememberDeletedEventForMerge(hoja,reason){
+  DB.eva_deleted_events=Array.isArray(DB.eva_deleted_events)?DB.eva_deleted_events:[];
+  const ids=_hojaLinkedIds(hoja);
+  if(!ids.length)return;
+  const now=new Date().toISOString();
+  const exists=x=>ids.some(id=>sameId(x.id,id)||sameId(x.eva_id,id)||sameId(x.id_evento,id));
+  if(!DB.eva_deleted_events.some(exists)){
+    DB.eva_deleted_events.push({id:hoja?.id||ids[0],eva_id:hoja?.eva_id||'',id_evento:hoja?.id_evento||'',cliente:hoja?.cliente||'',fecha:hoja?.fecha||'',deleted_at:now,reason:reason||'evento_retirado'});
+  }
+  DB.eva_deleted_events=DB.eva_deleted_events.slice(-500);
+}
 function _syncAPPCCElabsForDeletedHoja(hoja,idExtra){
   const ids=_hojaLinkedIds(hoja,idExtra);
   if(!ids.length)return 0;
@@ -8578,7 +8600,7 @@ function deleteHoja(id){
   if(!confirm('¿Eliminar esta hoja de servicio?'))return;
   const borradas=(DB.hojas||[]).filter(x=>sameId(x.id,id)||sameId(x.eva_id,id)||sameId(x.id_evento,id));
   let appccRetiradas=0;
-  borradas.forEach(h=>{appccRetiradas+=_syncAPPCCElabsForDeletedHoja(h,id);});
+  borradas.forEach(h=>{_rememberDeletedEventForMerge(h,'borrado_manual');appccRetiradas+=_syncAPPCCElabsForDeletedHoja(h,id);});
   DB.hojas=DB.hojas.filter(x=>!sameId(x.id,id)&&!sameId(x.eva_id,id)&&!sameId(x.id_evento,id));saveDB();renderHojasTable();
   if(appccRetiradas&&typeof toast==='function')toast('Evento borrado: '+appccRetiradas+' elaboración/es APPCC retiradas de pantalla diaria.');
 }
@@ -10007,8 +10029,68 @@ function abrirDocumentoAlbaran(idx){
 }
 let _evaBridgeRef=null;
 const EVA_APPLY_STATES=['pendiente_aplicacion','pendiente_sincronizacion_app','pendiente_revision','pendiente_datos','recibido','pendiente_edicion','edicion_pendiente','actualizacion_pendiente'];
-const EVA_EVENT_TYPES=['evento','hoja_servicio','planificacion_eva','crear_evento','actualizar_evento','editar_evento','corregir_evento','actualizar_evento_directo','editar_evento_directo','reemplazar_evento'];
+const EVA_DELETE_TYPES=['eliminar_evento','borrar_evento','cancelar_evento','retirar_evento','eliminar_evento_directo','borrar_evento_directo','cancelar_evento_directo','retirar_evento_directo'];
+const EVA_EVENT_TYPES=['evento','hoja_servicio','planificacion_eva','crear_evento','actualizar_evento','editar_evento','corregir_evento','actualizar_evento_directo','editar_evento_directo','reemplazar_evento',...EVA_DELETE_TYPES];
 const EVA_REAPPLY_STATES=['aplicado','aplicado_con_avisos','aprobado','pendiente_revision_humana','pendiente_datos_revision_humana'];
+function _evaMsgWantsDelete(msg){
+  const tipo=String(msg?.tipo||msg?.accion||msg?.action||'').toLowerCase();
+  const c=msg?.cambios_estado||msg?.cambios||msg?.payload||msg?.data||{};
+  return EVA_DELETE_TYPES.includes(tipo)||c.eliminar===true||c.borrar===true||c.cancelar===true||c.retirar===true||msg?.eliminar===true||msg?.borrar===true||msg?.cancelar===true||msg?.retirar===true;
+}
+function _evaDeleteCriteria(msg){
+  const p=_evaPayloadFromMsg(msg)||{};
+  const id=String(msg.id_evento||p.id_evento||p.id||msg.event_id||p.event_id||'').trim();
+  return {
+    id,
+    cliente:String(msg.cliente||p.cliente||p.customer||p.clientName||'').trim(),
+    fecha:String(msg.fecha||p.fecha||p.fecha_evento||p.fecha_servicio||'').trim(),
+    hora:String(msg.hora||p.hora||p.hora_evento||p.hora_servicio||'').trim(),
+    motivo:String(msg.motivo||p.motivo||msg.razon||p.razon||'Retirado por EVA').trim()
+  };
+}
+function _evaFindEventsForDelete(msg){
+  const c=_evaDeleteCriteria(msg);
+  if(c.id){
+    const matches=(DB.hojas||[]).filter(h=>sameId(h.id,c.id)||sameId(h.eva_id,c.id)||sameId(h.id_evento,c.id));
+    return {criteria:c,matches,mode:'id'};
+  }
+  const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+  let matches=(DB.hojas||[]).filter(h=>{
+    if(c.cliente&&norm(h.cliente)!==norm(c.cliente)&&norm(h.empresa)!==norm(c.cliente))return false;
+    if(c.fecha&&String(h.fecha||'')!==c.fecha&&!((h.fechas_servicio||[]).some(f=>String(f.fecha||'')===c.fecha)))return false;
+    if(c.hora&&String(h.hora||'')!==c.hora&&!((h.fechas_servicio||[]).some(f=>String(f.hora||'')===c.hora)))return false;
+    return Boolean(c.cliente||c.fecha||c.hora);
+  });
+  return {criteria:c,matches,mode:'criteria'};
+}
+function aplicarEliminarEventoEva(msg,snap){
+  const {criteria,matches,mode}=_evaFindEventsForDelete(msg);
+  const ahora=new Date().toISOString();
+  if(!matches.length){
+    snap.ref.update({estado:'evento_no_encontrado',error:'No se encontró evento para retirar',criterios:criteria,error_en:ahora});
+    return false;
+  }
+  if(mode!=='id'&&matches.length!==1){
+    snap.ref.update({estado:'error_criterios_ambiguos',error:'EVA debe indicar id_evento para borrar sin riesgo',coincidencias:matches.map(h=>({id:h.id,eva_id:h.eva_id,cliente:h.cliente,fecha:h.fecha,hora:h.hora})).slice(0,20),error_en:ahora});
+    return false;
+  }
+  let appccRetiradas=0;
+  const deletedIds=[];
+  matches.forEach(h=>{
+    deletedIds.push(h.id||h.eva_id||h.id_evento);
+    h.retirado_por_eva_en=ahora;
+    h.retirado_por_eva_motivo=criteria.motivo;
+    _rememberDeletedEventForMerge(h,'retirado_por_eva: '+criteria.motivo);
+    appccRetiradas+=_syncAPPCCElabsForDeletedHoja(h,criteria.id);
+  });
+  const ids=new Set(matches.flatMap(h=>_hojaLinkedIds(h,criteria.id)));
+  DB.hojas=(DB.hojas||[]).filter(h=>!_hojaLinkedIds(h).some(id=>ids.has(id)));
+  (DB.pedidos||[]).forEach(p=>{if((p.eventos||[]).some(id=>ids.has(String(id)))){p.desactualizado=true;p.motivo_desactualizacion='Evento retirado por EVA';p.actualizado_en=ahora;}});
+  saveDB();
+  snap.ref.update({estado:'aplicado',aplicado_en:ahora,accion:'evento_retirado',eventos_retirados:deletedIds,appcc_elaboraciones_retiradas:appccRetiradas});
+  if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
+  return true;
+}
 function aplicarEstadoDirectoEva(msg,snap){
   const id=String(msg.id_evento||''),c=msg.cambios_estado||{};
   const h=(DB.hojas||[]).find(x=>String(x.id||'')===id||String(x.eva_id||x.id_evento||'')===id);
@@ -10170,6 +10252,9 @@ function _processEvaBridgeMessageSnap(snap,opts={}){
     const msg=snap.val()||{};
     const estado=String(msg.estado||'');
     const tipo=String(msg.tipo||'');
+    if(_evaMsgWantsDelete(msg)&&(!estado||EVA_APPLY_STATES.includes(estado)||EVA_EVENT_TYPES.includes(tipo))){
+      aplicarEliminarEventoEva(msg,snap);return true;
+    }
     if(msg.tipo==='actualizar_estado_evento_directo'&&EVA_APPLY_STATES.includes(estado)){
       aplicarEstadoDirectoEva(msg,snap);return true;
     }
@@ -21506,7 +21591,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-eva-visible1'
+        source_version:'v20260731-eva-control1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
