@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260731-eva-control1';
+﻿const CACHE_NAME = 'albaraba-appcc-v20260731-cloud-rescue1';
 const APP_SHELL = [
   './',
   './index.html',
