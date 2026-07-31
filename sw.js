@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260731-realcloud3';
+const CACHE_NAME = 'albaraba-appcc-v20260731-realcloud4';
 const APP_SHELL = [
   './',
   './index.html',

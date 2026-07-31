@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-realcloud3 -->
+<!-- VERSION: v20260731-realcloud4 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud3'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-realcloud4'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud3&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-realcloud4&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -548,7 +548,7 @@ html,body{height:100%;color-scheme:light!important}
     <button class="sw-tab active" id="sw-gestion" onclick="switchApp('gestion')">📋 GESTIÓN</button>
     <button class="sw-tab" id="sw-appcc"   onclick="switchApp('appcc')">🛡 APPCC FOOD SAFETY</button>
   </div>
-  <button class="sw-sync" onclick="showSyncDiagnostic()" title="Ver estado de nube/local sin forzar subida">☁️ <span class="sync-text">Sync</span></button>
+  <button class="sw-sync" id="sync-now-btn" onclick="syncFromCloudNow()" title="Recargar datos reales desde la nube">☁️ <span class="sync-text">Sync</span></button>
   <button class="sw-reload" onclick="forceAppRefresh()" title="Actualizar app sin borrar datos">🔄</button>
   <button class="sw-logout" onclick="forceLogoutAndAskLogin()" title="Salir y volver a pedir usuario">🚪</button>
 </div>
@@ -3978,7 +3978,48 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-realcloud3');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-realcloud4');
+}
+async function syncFromCloudNow(){
+  if(!fbDB||!fbAuth||!fbAuth.currentUser){
+    alert('No hay sesión de nube activa. Pulsa salir 🚪 y vuelve a entrar con usuario.');
+    return;
+  }
+  if(_uiIsEditingNow()){
+    alert('Cierra primero la ventana o formulario que estás editando y vuelve a pulsar Sync. Así no pisamos nada a medias.');
+    return;
+  }
+  try{
+    setSyncStatus('saving');
+    const btn=document.getElementById('sync-now-btn');
+    if(btn){btn.disabled=true;btn.style.opacity='.65';}
+    const snap=await _firebaseOpWithRetry('sync manual desde nube',()=>fbDB.ref('albaraba_v2').once('value'),4);
+    const cloud=snap.val();
+    if(!cloud||_productionDBLooksTooSmall(cloud)){
+      setSyncStatus('error');
+      alert('La nube no ha devuelto datos suficientes. Por seguridad NO cambio esta pantalla.');
+      return;
+    }
+    const previous=localStorage.getItem('albaraba_v2');
+    _saveLocalRecoveryPoint(previous,'antes de sync manual desde nube',true);
+    DB=cloud;
+    applyMigrations();
+    _installBidfoodFichas();
+    _installAlbarabaRecetasBase();
+    _trySetMainLocalDB(DB,'sync manual desde nube');
+    _clearPendingMainSync();
+    setSyncStatus('ok');
+    if(fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
+    _refreshCurrentSectionFromCloud('sync manual');
+    if(typeof toast==='function')toast('☁️ Datos actualizados desde la nube');
+  }catch(e){
+    _rememberSyncError(e,'sync manual desde nube');
+    setSyncStatus('error');
+    alert('No se pudo actualizar desde la nube.\n\nDetalle: '+(e&&e.message?e.message:e));
+  }finally{
+    const btn=document.getElementById('sync-now-btn');
+    if(btn){btn.disabled=false;btn.style.opacity='';}
+  }
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4247,7 +4288,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud3&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud4&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -21820,7 +21861,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-realcloud3'
+        source_version:'v20260731-realcloud4'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
