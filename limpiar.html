@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Limpiar ALBARABA</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#111827;color:#fff;font-family:Arial,sans-serif}
+    .box{max-width:420px;padding:28px;text-align:center}
+    .logo{font-size:44px;margin-bottom:12px}
+    h1{font-size:22px;margin:0 0 10px}
+    p{color:#cbd5e1;line-height:1.45}
+    button{margin-top:18px;background:#d6aa1f;color:#111827;border:0;border-radius:14px;padding:14px 20px;font-weight:900;font-size:16px}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="logo">🍽</div>
+    <h1>Preparando ALBARABA</h1>
+    <p id="msg">Limpiando caché del dispositivo y entrando con nube primero...</p>
+    <button id="btn" hidden>Entrar en la app</button>
+  </div>
+  <script>
+  const TARGET='./?v=20260731-realcloud2&cloudFirst=1&rescueCloudOnly=1';
+  async function limpiar(){
+    try{
+      try{
+        ['albaraba_v2','_albaraba_pending_sync','_albaraba_pending_sync_at','_albaraba_device_merge_v20260723','_albaraba_ignore_cloud_until','_albaraba_v2_cloud_only'].forEach(k=>localStorage.removeItem(k));
+        for(let i=1;i<=12;i++)localStorage.removeItem('_albaraba_backup_'+i);
+        localStorage.removeItem('_albaraba_backup_at');
+      }catch(e){}
+      if('serviceWorker' in navigator){
+        const regs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r=>r.unregister()));
+      }
+      if(window.caches){
+        const keys=await caches.keys();
+        await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
+      }
+      location.replace(TARGET);
+    }catch(e){
+      document.getElementById('msg').textContent='No se pudo limpiar automáticamente. Pulsa el botón para entrar igualmente.';
+      const btn=document.getElementById('btn');
+      btn.hidden=false;
+      btn.onclick=()=>location.replace(TARGET);
+    }
+  }
+  limpiar();
+  </script>
+</body>
+</html>

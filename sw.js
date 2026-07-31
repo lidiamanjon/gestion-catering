@@ -1,7 +1,8 @@
-const CACHE_NAME = 'albaraba-appcc-v20260731-realcloud1';
+const CACHE_NAME = 'albaraba-appcc-v20260731-realcloud2';
 const APP_SHELL = [
   './',
   './index.html',
+  './limpiar.html',
   './manifest.json',
   './vendor/qrcode.min.js',
   './icon-192.png',

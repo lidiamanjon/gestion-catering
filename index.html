@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-realcloud1 -->
+<!-- VERSION: v20260731-realcloud2 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud1'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-realcloud2'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud1&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-realcloud2&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3941,7 +3941,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-realcloud1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-realcloud2');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4205,7 +4205,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud1&cloudFirst=1&rescueCloudOnly=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud2&cloudFirst=1&rescueCloudOnly=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4535,11 +4535,15 @@ function loadDB(){
   if(fbDB&&fbAuth&&fbAuth.currentUser){
     const localRawForMerge=(rescueCloudOnly||rawIsCloudCache||cloudFirst)?'':raw;
     setSyncStatus('saving');
-    return fbDB.ref('albaraba_v2').once('value').then(async snap=>{
+    return _firebaseOpWithRetry('leer nube inicial',()=>fbDB.ref('albaraba_v2').once('value'),4).then(async snap=>{
       let data=snap.val();
       const recovered=await _restoreBestCloudBackupIfNeeded(data,'lectura inicial de nube');
       if(recovered)data=recovered;
       if(data){
+        if(_productionDBLooksTooSmall(data)&&!localRawForMerge){
+          setSyncStatus('error');
+          throw new Error('La nube ha devuelto pocos datos. No se muestra una app vacía por seguridad.');
+        }
         if(cloudFirst){
           if(localRawForMerge&&localRawForMerge!==JSON.stringify(data))_saveLocalRecoveryPoint(localRawForMerge,'antes de forzar descarga de nube',true);
           if(localRawForMerge&&_cloudLooksDangerous(data,DB)){
@@ -4592,7 +4596,7 @@ function loadDB(){
         // Firebase vacío pero tenemos datos locales reales → fusionarlos sin usar set destructivo
         _saveLocalRecoveryPoint(raw,'nube vacía antes de recuperar desde local',true);
         DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),recuperado_desde_local:true};
-        fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,DB)).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
+        _firebaseOpWithRetry('recuperar nube desde local',()=>fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,DB)),3).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
       } else {
         // Empresa en producción: nunca inicializar una nube vacía desde un dispositivo vacío.
         // Evita que una tablet/móvil nuevo machaque el trabajo real con datos de arranque.
@@ -13611,17 +13615,21 @@ window.addEventListener('DOMContentLoaded',()=>{
     fbAuth.onAuthStateChanged(user=>{
       const overlay=document.getElementById('login-overlay');
       if(user){
-        if(overlay)overlay.style.display='none';
+        const err=document.getElementById('login-error');
+        if(overlay)overlay.style.display='flex';
+        if(err){err.textContent='Cargando datos reales de la nube...';err.style.color='#64748b';}
         setSyncStatus('saving');
         Promise.resolve(loadDB()).then(()=>{
           if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
           setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
           applyRole(user.email);
           if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+          if(overlay)overlay.style.display='none';
         }).catch(e=>{
           console.error('Arranque nube:',e);
           setSyncStatus('error');
-          alert('No se pudo cargar la nube. Por seguridad no se mostrará una app vacía. Cierra sesión y vuelve a entrar, o abre el enlace de limpieza que te pase Codex.');
+          if(err){err.textContent='No se pudo cargar la nube. No trabajes en pantalla vacía; usa el enlace LIMPIAR TABLET.';err.style.color='#dc2626';}
+          alert('No se pudo cargar la nube. Por seguridad no se mostrará una app vacía. Abre el enlace LIMPIAR TABLET que te pase Codex.');
         });
       } else {
         if(overlay)overlay.style.display='flex';
@@ -21770,7 +21778,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-realcloud1'
+        source_version:'v20260731-realcloud2'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
