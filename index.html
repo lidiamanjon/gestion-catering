@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-realcloud4 -->
+<!-- VERSION: v20260731-emergencia1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud4'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-emergencia1'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud4&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-emergencia1&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3978,7 +3978,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-realcloud4');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-emergencia1');
 }
 async function syncFromCloudNow(){
   if(!fbDB||!fbAuth||!fbAuth.currentUser){
@@ -4179,7 +4179,7 @@ function saveDB(){
     };
     // Agrupar cambios evita que una edición grande dispare decenas de escrituras
     // seguidas y deje la app congelada en tablets o portátiles modestos.
-    _cloudSaveTimer=setTimeout(uploadNow,900);
+    _cloudSaveTimer=setTimeout(uploadNow,1800);
   }else{
     setSyncStatus(localOk?'offline':'error');
     if(!localOk)setTimeout(()=>alert('⚠️ No se pudo guardar en este dispositivo porque el navegador no tiene espacio local. Entra con usuario de nube o avísame antes de seguir metiendo datos.'),50);
@@ -4288,7 +4288,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud4&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-emergencia1&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4484,6 +4484,7 @@ function setSyncStatus(s){
   else if(s==='ok'){ic.textContent='✅';if(lb)lb.textContent='Sincronizado';setTimeout(()=>{ic.textContent='☁️';if(lb)lb.textContent='Sincronizado';},2000);}
   else if(s==='error'){ic.textContent='⚠️';if(lb)lb.textContent='Error sync';}
   else if(s==='offline'){ic.textContent='💾';if(lb)lb.textContent='Solo local';}
+  else if(s==='manual'){ic.textContent='☁️';if(lb)lb.textContent='Sync manual';}
 }
 
 function applyMigrations(){
@@ -4505,6 +4506,18 @@ function applyMigrations(){
 }
 
 function initMainCloudRealtime(){
+  // Modo emergencia: el realtime completo se desactiva por defecto porque en
+  // tablets/TPV estaba bloqueando la app y mezclando cachés locales. La app
+  // sigue guardando en nube; para traer cambios se usa el botón Sync.
+  const realtimeEnabled=new URLSearchParams(location.search).get('realtime')==='1';
+  if(!realtimeEnabled){
+    if(!_mainCloudListening){
+      _mainCloudListening=true;
+      setSyncStatus('manual');
+      console.warn('Sync realtime desactivado en modo emergencia. Usa el botón Sync para traer cambios de nube.');
+    }
+    return;
+  }
   if(_mainCloudListening||!fbDB||!fbAuth||!fbAuth.currentUser)return;
   _mainCloudRef=fbDB.ref('albaraba_v2');
   _mainCloudListening=true;
@@ -21861,7 +21874,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-realcloud4'
+        source_version:'v20260731-emergencia1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
