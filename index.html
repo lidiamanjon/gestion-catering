@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-rescate-operativo1 -->
+<!-- VERSION: v20260731-backend1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-rescate-operativo1'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-backend1'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-rescate-operativo1&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-backend1&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3959,6 +3959,68 @@ function _dbRecordScore(d){
   const keys=['hojas','productos','elaboraciones','pedidos','recetas','proveedores','fichasProveedor','albaranesLog','tareas','mejoras'];
   return keys.reduce((s,k)=>s+(Array.isArray(d[k])?d[k].length:0),0);
 }
+const ALB_BACKEND_ROOT='albaraba_backend_v1';
+const ALB_LEGACY_ROOT='albaraba_v2';
+function _backendValue(v){
+  if(Array.isArray(v))return v;
+  if(v&&typeof v==='object'){
+    const ks=Object.keys(v);
+    if(ks.length&&ks.every(k=>/^\d+$/.test(k)))return ks.sort((a,b)=>Number(a)-Number(b)).map(k=>v[k]);
+  }
+  return v;
+}
+function _dbFromBackendPayload(payload){
+  if(!payload||typeof payload!=='object')return null;
+  const out={};
+  Object.keys(payload).forEach(k=>{
+    if(k==='_backend'||k==='_meta')return;
+    out[k]=_backendValue(payload[k]);
+  });
+  out._sync={...((payload._meta&&payload._meta._sync)||payload._sync||{}),backend_root:ALB_BACKEND_ROOT};
+  return out;
+}
+function _backendPayloadFromDB(data){
+  const payload={};
+  Object.keys(data||{}).forEach(k=>{
+    if(k.startsWith('_'))return;
+    if(typeof data[k]==='function')return;
+    payload[k]=data[k];
+  });
+  payload._meta={
+    _sync:{...((data&&data._sync)||{}),actualizado_en:new Date().toISOString(),backend_root:ALB_BACKEND_ROOT},
+    version:'backend_v1',
+    actualizado_por:(fbAuth&&fbAuth.currentUser&&fbAuth.currentUser.email)||'',
+    actualizado_dispositivo:navigator.userAgent.slice(0,80),
+    resumen:{
+      score:_dbRecordScore(data),
+      productos:(data.productos||[]).length,
+      proveedores:(data.proveedores||[]).length,
+      eventos:(data.hojas||[]).length,
+      elaboraciones:(data.elaboraciones||[]).length,
+      pedidos:(data.pedidos||[]).length
+    }
+  };
+  return payload;
+}
+async function _readMainCloudDB(label='leer backend'){
+  if(!fbDB)throw new Error('Firebase no disponible');
+  const backendSnap=await _firebaseOpWithRetry(label+' backend',()=>fbDB.ref(ALB_BACKEND_ROOT).once('value'),3);
+  const backendDB=_dbFromBackendPayload(backendSnap.val());
+  if(backendDB&&_dbRecordScore(backendDB)>0)return backendDB;
+  const legacySnap=await _firebaseOpWithRetry(label+' legado',()=>fbDB.ref(ALB_LEGACY_ROOT).once('value'),3);
+  const legacy=legacySnap.val();
+  if(legacy&&_dbRecordScore(legacy)>0){
+    setTimeout(()=>_writeMainCloudDB(legacy,'sembrar backend desde legado').catch(e=>console.warn('No se pudo sembrar backend:',e)),1200);
+    return legacy;
+  }
+  return backendDB||legacy||null;
+}
+async function _writeMainCloudDB(data,label='guardar backend'){
+  if(!fbDB)throw new Error('Firebase no disponible');
+  const payload=_backendPayloadFromDB(data);
+  await _firebaseOpWithRetry(label,()=>fbDB.ref(ALB_BACKEND_ROOT).update(payload),3);
+  return _dbFromBackendPayload(payload);
+}
 async function showSyncDiagnostic(){
   const localRaw=localStorage.getItem('albaraba_v2');
   let local={};try{if(localRaw)local=JSON.parse(localRaw)}catch(e){}
@@ -3967,8 +4029,7 @@ async function showSyncDiagnostic(){
   let cloudText='No comprobada';
   try{
     if(fbDB&&fbAuth&&fbAuth.currentUser){
-      const snap=await fbDB.ref('albaraba_v2').once('value');
-      const cloud=snap.val()||{};
+      const cloud=(await _readMainCloudDB('diagnóstico'))||{};
       cloudText=[
         _dbRecordScore(cloud)+' registros totales',
         (cloud.hojas||[]).length+' eventos',
@@ -3978,7 +4039,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-rescate-operativo1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-backend1');
 }
 async function syncFromCloudNow(){
   if(!fbDB||!fbAuth||!fbAuth.currentUser){
@@ -3993,8 +4054,7 @@ async function syncFromCloudNow(){
     setSyncStatus('saving');
     const btn=document.getElementById('sync-now-btn');
     if(btn){btn.disabled=true;btn.style.opacity='.65';}
-    const snap=await _firebaseOpWithRetry('sync manual desde nube',()=>fbDB.ref('albaraba_v2').once('value'),4);
-    const cloud=snap.val();
+    const cloud=await _readMainCloudDB('sync manual desde nube');
     if(!cloud||_productionDBLooksTooSmall(cloud)){
       setSyncStatus('error');
       alert('La nube no ha devuelto datos suficientes. Por seguridad NO cambio esta pantalla.');
@@ -4113,9 +4173,7 @@ async function _firebaseOpWithRetry(label,fn,tries=3){
 }
 async function _mergeMainCloudBySections(local,opts={}){
   if(!fbDB)throw new Error('Firebase no disponible');
-  const root=fbDB.ref('albaraba_v2');
-  const snap=await _firebaseOpWithRetry('leer nube antes de fusionar',()=>root.once('value'),3);
-  const remote=snap.val()||{};
+  const remote=(await _readMainCloudDB('leer nube antes de fusionar'))||{};
   if(!opts.manual&&_cloudLooksDangerous(local,remote)){
     try{
       console.warn('Guardado bloqueado: este dispositivo tiene muchos menos datos que la nube.');
@@ -4134,10 +4192,7 @@ async function _mergeMainCloudBySections(local,opts={}){
   };
   const lb=document.getElementById('sync-label');
   if(lb)lb.textContent='Subiendo nube segura...';
-  // Escribir todo el bloque principal en una sola operación evita que otros
-  // dispositivos vean la nube "a medias" durante unos segundos y parezca que
-  // se han borrado productos/eventos.
-  await _firebaseOpWithRetry('subir nube completa fusionada',()=>root.update(merged),3);
+  await _writeMainCloudDB(merged,'subir backend por secciones');
   return merged;
 }
 function saveDB(){
@@ -4295,7 +4350,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-rescate-operativo1&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-backend1&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4517,7 +4572,7 @@ function initMainCloudRealtime(){
     return;
   }
   if(_mainCloudListening||!fbDB||!fbAuth||!fbAuth.currentUser)return;
-  _mainCloudRef=fbDB.ref('albaraba_v2');
+  _mainCloudRef=fbDB.ref(ALB_BACKEND_ROOT);
   _mainCloudListening=true;
   _mainCloudRef.on('value',async snap=>{
     const data=snap.val();
@@ -4626,8 +4681,7 @@ function loadDB(){
   if(fbDB&&fbAuth&&fbAuth.currentUser){
     const localRawForMerge=(rescueCloudOnly||rawIsCloudCache||cloudFirst)?'':raw;
     setSyncStatus('saving');
-    return _firebaseOpWithRetry('leer nube inicial',()=>fbDB.ref('albaraba_v2').once('value'),4).then(async snap=>{
-      let data=snap.val();
+    return _readMainCloudDB('leer nube inicial').then(async data=>{
       const recovered=await _restoreBestCloudBackupIfNeeded(data,'lectura inicial de nube');
       if(recovered)data=recovered;
       if(data){
@@ -4640,11 +4694,11 @@ function loadDB(){
           if(localRawForMerge&&_cloudLooksDangerous(data,DB)){
             DB=_mergeDBPreservingRecords(data,DB);
             setSyncStatus('saving');
-            fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,DB)).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
+            _writeMainCloudDB(DB,'fusion cloudFirst').then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
           }else{
             DB=localRawForMerge?_mergeDBPreservingRecords(data,DB):data;
             if(localRawForMerge&&JSON.stringify(DB)!==JSON.stringify(data)){
-              fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,DB)).catch(()=>setSyncStatus('error'));
+              _writeMainCloudDB(DB,'actualizar backend fusionado').catch(()=>setSyncStatus('error'));
             }
           }
           applyMigrations();
@@ -4685,7 +4739,7 @@ function loadDB(){
         // Firebase vacío pero tenemos datos locales reales → fusionarlos sin usar set destructivo
         _saveLocalRecoveryPoint(raw,'nube vacía antes de recuperar desde local',true);
         DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),recuperado_desde_local:true};
-        _firebaseOpWithRetry('recuperar nube desde local',()=>fbDB.ref('albaraba_v2').transaction(current=>_mergeDBPreservingRecords(current,DB)),3).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
+        _writeMainCloudDB(DB,'recuperar backend desde local').then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
       } else {
         // Empresa en producción: nunca inicializar una nube vacía desde un dispositivo vacío.
         // Evita que una tablet/móvil nuevo machaque el trabajo real con datos de arranque.
@@ -19731,7 +19785,7 @@ async function resetElaboracionesRealesSolo(){
   try{
     if(fbDB&&fbAuth&&fbAuth.currentUser){
       await Promise.all(keys.map(k=>fbDB.ref('appcc_v1/'+k).set([])));
-      await fbDB.ref('albaraba_v2/hojas').transaction(current=>_resetEvaMenuToPending(current||DB.hojas||[]));
+      await _writeMainCloudDB(DB,'reset elaboraciones backend');
       setSyncStatus('ok');
     }else{
       setSyncStatus('local');
@@ -21867,7 +21921,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-rescate-operativo1'
+        source_version:'v20260731-backend1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
