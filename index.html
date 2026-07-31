@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-empty-guard1 -->
+<!-- VERSION: v20260731-recovery1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -592,6 +592,7 @@ html,body{height:100%;color-scheme:light!important}
     <div class="ni admin-only" onclick="showSyncDiagnostic()"><span class="ic">🔎</span> Diagnóstico sync</div>
     <div class="ni admin-only" onclick="exportData()"><span class="ic">💾</span> Exportar backup</div>
     <div class="ni admin-only" onclick="restoreLatestAutoBackup()"><span class="ic">🛟</span> Recuperar copia automática</div>
+    <div class="ni admin-only" onclick="openFullCloudRecovery()"><span class="ic">☁️</span> Recuperar copia nube</div>
     <div class="ni admin-only" onclick="document.getElementById('importFile').click()"><span class="ic">📥</span> Importar backup</div>
     <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
   </div>
@@ -3940,7 +3941,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-empty-guard1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-recovery1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4206,6 +4207,68 @@ function restoreLatestAutoBackup(){
     _saveLocalRecoveryPoint(localStorage.getItem('albaraba_v2'),'antes de recuperar',true);
     DB=copia.datos;applyMigrations();saveDB();nav('dashboard');alert('✅ Copia recuperada y enviada para sincronizar.');
   }catch(e){alert('No se pudo leer la copia automática.');}
+}
+
+async function _getFullCloudRecoveryCandidates(){
+  const out=[];
+  if(!fbDB||!fbAuth||!fbAuth.currentUser)return out;
+  const days=[];
+  const base=new Date();
+  for(let i=0;i<14;i++){
+    const d=new Date(base);d.setDate(base.getDate()-i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  const reads=days.map(day=>_withTimeout(fbDB.ref('albaraba_backups/'+day).once('value'),3200,'Copia nube '+day).then(snap=>({day,snap})));
+  const results=await Promise.allSettled(reads);
+  results.forEach(res=>{
+    if(res.status!=='fulfilled')return;
+    const {day,snap}=res.value||{};
+    const v=snap&&snap.val&&snap.val();
+    const datos=v&&v.datos;
+    if(!datos||typeof datos!=='object')return;
+    const stats={
+      total:_dbRecordScore(datos),
+      hojas:(datos.hojas||[]).length,
+      productos:(datos.productos||[]).length,
+      elaboraciones:(datos.elaboraciones||[]).length,
+      pedidos:(datos.pedidos||[]).length,
+      proveedores:(datos.proveedores||[]).length
+    };
+    out.push({day,fecha:v.creada_en||day,datos,stats});
+  });
+  return out.sort((a,b)=>(b.stats.total-a.stats.total)||String(b.fecha).localeCompare(String(a.fecha)));
+}
+async function openFullCloudRecovery(){
+  if(!fbDB||!fbAuth||!fbAuth.currentUser){alert('Primero entra con tu usuario de nube.');return;}
+  const btnText='Buscando copias de nube...';
+  try{setSyncStatus('saving');}catch(e){}
+  let candidates=[];
+  try{candidates=await _getFullCloudRecoveryCandidates();}catch(e){console.warn('No se pudieron leer copias nube:',e);}
+  setSyncStatus('ok');
+  window._fullCloudRecoveryCandidates=candidates;
+  const actual={total:_dbRecordScore(DB),hojas:(DB.hojas||[]).length,productos:(DB.productos||[]).length,elaboraciones:(DB.elaboraciones||[]).length,pedidos:(DB.pedidos||[]).length};
+  const rows=candidates.map((c,i)=>`<div style="display:flex;gap:10px;align-items:center;justify-content:space-between;border:1px solid #e5e7eb;border-radius:12px;padding:10px;margin-bottom:8px;background:#fff">
+      <div><strong>${esc(c.day)}</strong><div style="font-size:12px;color:#64748b">${esc(new Date(c.fecha).toLocaleString('es-ES'))}</div>
+      <div style="font-size:12px;margin-top:4px">${c.stats.total} registros · ${c.stats.productos} productos · ${c.stats.elaboraciones} elaboraciones · ${c.stats.hojas} eventos · ${c.stats.pedidos} pedidos</div></div>
+      <button class="btn btn-green" onclick="restoreFullCloudCandidate(${i})">Restaurar esta</button>
+    </div>`).join('');
+  openModal(`<div class="mh"><h2>☁️ Recuperar copia completa de nube</h2><button class="mclose" onclick="closeModal('modal-universal')">×</button></div>
+    <div class="notice warn" style="margin-bottom:12px">Usar solo si la app se ha quedado vacía o con datos claramente malos. Antes de restaurar se guarda copia del estado actual.</div>
+    <div style="font-size:13px;margin-bottom:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px">Estado actual: <strong>${actual.total} registros</strong> · ${actual.productos} productos · ${actual.elaboraciones} elaboraciones · ${actual.hojas} eventos · ${actual.pedidos} pedidos</div>
+    <div style="max-height:430px;overflow:auto">${rows||'<div style="padding:18px;color:#991b1b;background:#fef2f2;border-radius:10px">No encuentro copias de nube de los últimos 14 días.</div>'}</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn btn-outline" onclick="closeModal('modal-universal')">Cerrar</button></div>`,'lg');
+}
+function restoreFullCloudCandidate(i){
+  const c=(window._fullCloudRecoveryCandidates||[])[i];if(!c||!c.datos)return;
+  if(!confirm('RESTAURAR COPIA COMPLETA\n\nCopia: '+c.day+'\nRegistros: '+c.stats.total+'\nProductos: '+c.stats.productos+'\nElaboraciones: '+c.stats.elaboraciones+'\nEventos: '+c.stats.hojas+'\nPedidos: '+c.stats.pedidos+'\n\nSe guardará copia del estado actual antes de restaurar. ¿Continuar?'))return;
+  _saveLocalRecoveryPoint(localStorage.getItem('albaraba_v2'),'antes de restaurar copia nube completa',true);
+  DB=JSON.parse(JSON.stringify(c.datos));
+  DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),restaurado_desde_copia_nube:c.day,restaurado_por:(fbAuth&&fbAuth.currentUser&&fbAuth.currentUser.email)||''};
+  applyMigrations();
+  saveDB();
+  closeModal('modal-universal');
+  nav('dashboard');
+  alert('✅ Copia completa restaurada y enviada a nube.\n\nProductos: '+c.stats.productos+'\nElaboraciones: '+c.stats.elaboraciones+'\nEventos: '+c.stats.hojas+'\nPedidos: '+c.stats.pedidos);
 }
 
 function _evaPlanStatsFromDB(d){
@@ -21638,7 +21701,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-empty-guard1'
+        source_version:'v20260731-recovery1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
