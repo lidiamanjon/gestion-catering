@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-completa-lite1 -->
+<!-- VERSION: v20260731-pistola-nube1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-completa-lite1'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-pistola-nube1'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-completa-lite1&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-pistola-nube1&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -4090,6 +4090,50 @@ async function _writeMainCloudDB(data,label='guardar backend'){
   }
   return _dbFromBackendPayload(payload);
 }
+let _criticalCloudTimer=null;
+function _syncCriticalMainSectionsNow(reason='cambio crítico'){
+  if(!fbDB||!fbAuth||!fbAuth.currentUser)return;
+  if(!DB||!Array.isArray(DB.productos))return;
+  // Protección: una tablet vacía jamás debe subir un catálogo mini y pisar la nube.
+  if(DB.productos.length<300){
+    console.warn('Sync crítico omitido por catálogo incompleto:',reason,DB.productos.length);
+    return;
+  }
+  clearTimeout(_criticalCloudTimer);
+  _criticalCloudTimer=setTimeout(()=>{
+    const patch={
+      productos:DB.productos||[],
+      movimientos_stock:DB.movimientos_stock||[],
+      lotes_stock_ajustes:DB.lotes_stock_ajustes||[],
+      proveedores:DB.proveedores||[],
+      _meta:{
+        _sync:{...((DB&&DB._sync)||{}),actualizado_en:new Date().toISOString(),sync_critico:true,motivo:reason,backend_root:ALB_BACKEND_ROOT},
+        version:'backend_v1',
+        actualizado_por:(fbAuth.currentUser&&fbAuth.currentUser.email)||'',
+        actualizado_dispositivo:navigator.userAgent.slice(0,80),
+        resumen:{
+          score:_dbRecordScore(DB),
+          productos:(DB.productos||[]).length,
+          proveedores:(DB.proveedores||[]).length,
+          eventos:(DB.hojas||[]).length,
+          elaboraciones:(DB.elaboraciones||[]).length,
+          pedidos:(DB.pedidos||[]).length
+        }
+      }
+    };
+    setSyncStatus('saving');
+    _firebaseRestUpdate(ALB_BACKEND_ROOT,patch,'sync crítico '+reason)
+      .then(()=>setSyncStatus('ok'))
+      .catch(e=>{_rememberSyncError(e,'sync crítico '+reason);setSyncStatus('error');});
+  },120);
+}
+function _syncAPPCCKeyNow(k,v,reason='appcc crítico'){
+  if(!fbDB||!fbAuth||!fbAuth.currentUser||!k)return;
+  setSyncStatus('saving');
+  _firebaseRestUpdate('appcc_v1',{[k]:v},reason)
+    .then(()=>setSyncStatus('ok'))
+    .catch(e=>{_rememberSyncError(e,reason);setSyncStatus('error');});
+}
 async function showSyncDiagnostic(){
   const localRaw=localStorage.getItem('albaraba_v2');
   let local={};try{if(localRaw)local=JSON.parse(localRaw)}catch(e){}
@@ -4108,7 +4152,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-completa-lite1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-pistola-nube1');
 }
 async function syncFromCloudNow(){
   if(!fbDB||!fbAuth||!fbAuth.currentUser){
@@ -4430,7 +4474,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-completa-lite1&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-pistola-nube1&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5733,7 +5777,7 @@ function renderDashboardLite(){
           <div style="font-weight:800">Modo seguro anti-bloqueo</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">Si un móvil o tablet va justo de memoria, usa esta entrada. No borra datos.</div>
         </div>
-        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-completa-lite1&cloudFirst=1&rescueCloudOnly=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
+        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-pistola-nube1&cloudFirst=1&rescueCloudOnly=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
       </div>
     </div>`;
 }
@@ -7513,10 +7557,24 @@ function _pistolFindProduct(parsedOrRaw){
   const gtin=String(parsed.gtin||'').trim();
   const candidates=[gtin,raw].filter(Boolean).map(_pistolNorm);
   if(!candidates.length)return null;
-  return (DB.productos||[]).find(p=>{
+  const found=(DB.productos||[]).find(p=>{
     const fields=[p.gtin,p.ean,p.barcode,p.codigo,p.cod,p.referencia,p.ref].filter(Boolean).map(_pistolNorm);
     return candidates.some(c=>fields.some(f=>f===c));
-  }) || null;
+  });
+  if(found)return found;
+  // Compatibilidad con lecturas antiguas: si la tablet aprendió en la base GTIN local,
+  // úsala para localizar el producto por nombre y consolidar el código en Productos.
+  try{
+    const known=gtin?lookupGTIN(gtin):null;
+    if(known&&known.nombre){
+      const byKnown=buscarProductoCatalogo(known.nombre);
+      if(byKnown){
+        if(gtin&&!byKnown.gtin){byKnown.gtin=gtin;byKnown.ean=gtin;byKnown.barcode=gtin;if(!byKnown.referencia)byKnown.referencia=gtin;byKnown.actualizado_en=new Date().toISOString();saveDB();_syncCriticalMainSectionsNow('consolidar GTIN local');}
+        return byKnown;
+      }
+    }
+  }catch(e){}
+  return null;
 }
 function _pistolAssociateCode(productId,parsed){
   const p=(DB.productos||[]).find(x=>x.id===productId);
@@ -7527,6 +7585,7 @@ function _pistolAssociateCode(productId,parsed){
   if(parsed?.lot)_rememberProductLot(p,parsed.lot,'pistola_stock');
   p.actualizado_en=new Date().toISOString();
   saveDB();
+  _syncCriticalMainSectionsNow('asociar código pistola');
   try{if(typeof registerGTIN==='function')registerGTIN(gtin,{nombre:p.nombre,proveedor:provNombre(p.proveedor_id)||p.proveedor||''});}catch(e){}
   return p;
 }
@@ -7855,6 +7914,7 @@ function saveEditStockLot(){
   _recalcularStockProductoDesdeLotes(p.id);
   marcarPedidosParaRecalcular('Stock/lote ajustado: '+p.nombre,r=>!r.totales||Boolean(r.totales[p.id]));
   saveDB();
+  _syncCriticalMainSectionsNow('ajuste lote stock');
   refreshStockViews();
   showPistolStockLots(p.id,{lot:e.lote});
 }
@@ -7923,10 +7983,12 @@ function quickPistolRecepAdd(productId,parsed,prod,opts={}){
   const emp=localStorage.getItem(K.wActive)||ld(K.emp)[0]||_etqCurrentWorker();
   const rec={id:genId(),ts:new Date().toISOString(),date:today(),proveedor:prov,producto:p.nombre||'',producto_id:p.id||'',cantidad:qty,unidad:unit,cajas:undefined,temp:undefined,lote,caducidad:cad,emp,obs:'Recepción rápida con pistola',conforme:true};
   const recs=ld(K.recep)||[];recs.push(rec);sv(K.recep,recs);
+  _syncAPPCCKeyNow(K.recep,recs,'recepción pistola directa');
   registrarEntradaStockGestion({producto:p.nombre,cantidad:qty,unidad:unit,lote,recepcionId:rec.id});
   p.actualizado_en=new Date().toISOString();p.stock_actualizado_en=p.actualizado_en;
   _checkProdPendiente(p.nombre,prov);
   saveDB();
+  _syncCriticalMainSectionsNow('recepción pistola directa');
   refreshStockViews();
   try{renderRecep();}catch(e){}
   const inp=document.getElementById('pistol-input');
@@ -8017,6 +8079,7 @@ function quickPistolStockAdd(productId,parsed,opts={}){
   });
   marcarPedidosParaRecalcular('Stock actualizado con pistola: '+p.nombre,r=>!r.totales||Boolean(r.totales[p.id]));
   saveDB();
+  _syncCriticalMainSectionsNow('stock rápido con pistola');
   refreshStockViews();
   if(st)st.innerHTML=`✅ ${esc(p.nombre||'Producto')}: ${action==='sub'?'-':'+'}${qty} ${esc(p.unidad||'')} · stock ahora <strong>${esc(p.stock_actual)} ${esc(p.unidad||'')}</strong>${loteUsado?' · lote <strong>'+esc(loteUsado)+'</strong>':''}`;
   if(inp){inp.value='';setTimeout(()=>inp.focus(),80);}
@@ -8075,6 +8138,7 @@ function savePistolUnknownProduct(context=window._pistolUnknownContext,parsed=wi
     DB.productos.push(prod);
   }
   saveDB();
+  _syncCriticalMainSectionsNow('producto asociado desde pistola');
   try{if(gtin&&typeof registerGTIN==='function')registerGTIN(gtin,{nombre:prod.nombre,proveedor:provNombre(prod.proveedor_id)||''});}catch(e){}
   refreshStockViews();
   closeModal('modal-universal');
@@ -8139,7 +8203,7 @@ function savePistolStockAdjust(productId,opts={}){
     accion:'Stock descontado mediante pistola lectora.'
   });
   marcarPedidosParaRecalcular('Stock actualizado con pistola: '+p.nombre,r=>!r.totales||Boolean(r.totales[productId]));
-  saveDB();closeModal('modal-universal');refreshStockViews();
+  saveDB();_syncCriticalMainSectionsNow('ajuste stock pistola');closeModal('modal-universal');refreshStockViews();
 }
 
 // ═══════════════════════════════════════════════════
@@ -20412,6 +20476,7 @@ function registerGTIN(gtin, entry) {
   const db = getGtinDB();
   db[gtin] = { ...entry, ts: new Date().toISOString() };
   saveGtinDB(db);
+  try{_syncAPPCCKeyNow(K.gtindb,db,'GTIN pistola directa');}catch(e){}
   // Also register in ALBARABA_GESTION catalog if loaded, keeping the live DB in memory.
   try {
     const liveDB=(typeof DB!=='undefined'&&DB&&Array.isArray(DB.productos))?DB:null;
@@ -20436,8 +20501,10 @@ function registerGTIN(gtin, entry) {
           rendimiento: 0
         });
       }
-      if(liveDB)saveDB();
-      else _trySetMainLocalDB(gDB,'registrar GTIN desde esc?ner');
+      if(liveDB){
+        saveDB();
+        _syncCriticalMainSectionsNow('registrar GTIN desde escáner');
+      }else _trySetMainLocalDB(gDB,'registrar GTIN desde escáner');
     }
   } catch(e) {}
 }
@@ -22058,7 +22125,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-completa-lite1'
+        source_version:'v20260731-pistola-nube1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
