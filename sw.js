@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260731-backend1';
+﻿const CACHE_NAME = 'albaraba-appcc-v20260731-login-timeout1';
 const APP_SHELL = [
   './',
   './index.html',
@@ -69,3 +69,4 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
+
