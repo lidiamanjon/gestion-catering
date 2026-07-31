@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-pistola-rescate-ean1 -->
+<!-- VERSION: v20260731-estable-nube1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,13 +14,13 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-pistola-rescate-ean1'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-estable-nube1'+extra+'&rescueCloudOnly=1&stableCloud=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
   (async function(){
     try{
-      ['albaraba_v2','_albaraba_pending_sync','_albaraba_pending_sync_at','_albaraba_device_merge_v20260723','_albaraba_ignore_cloud_until','_albaraba_v2_cloud_only'].forEach(k=>localStorage.removeItem(k));
+      ['albaraba_v2','_albaraba_cloud_cache_info','_albaraba_pending_sync','_albaraba_pending_sync_at','_albaraba_device_merge_v20260723','_albaraba_ignore_cloud_until','_albaraba_v2_cloud_only'].forEach(k=>localStorage.removeItem(k));
       for(let i=1;i<=8;i++)localStorage.removeItem('_albaraba_backup_'+i);
       localStorage.removeItem('_albaraba_backup_at');
       if('serviceWorker' in navigator){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-pistola-rescate-ean1&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-estable-nube1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3753,6 +3753,7 @@ const MAIN_DEVICE_MERGE_KEY='_albaraba_device_merge_v20260723';
 const MAIN_CLOUD_IGNORE_UNTIL_KEY='_albaraba_ignore_cloud_until';
 const MAIN_PENDING_SYNC_KEY='_albaraba_pending_sync';
 const MAIN_PENDING_SYNC_AT_KEY='_albaraba_pending_sync_at';
+const APP_STABLE_CLOUD_VERSION='v20260731-estable-nube1';
 let _mainCloudRepairAt=0;
 function _rememberSyncError(error,context='sync'){
   const msg=(error&&error.message)?error.message:String(error||'error desconocido');
@@ -3838,6 +3839,10 @@ function _repairCloudWithLocal(reason){
   }catch(e){console.warn('Reparación de nube no disponible:',e);}
 }
 function _saveLocalRecoveryPoint(raw,reason,force=false){
+  // En modo empresa real la copia grande vive en Firebase/backups de nube.
+  // Guardar copias completas en el navegador ha llenado tablets/PCs y ha
+  // provocado pantallas bloqueadas o datos antiguos reapareciendo.
+  if(_cloudSessionActive())return;
   if(!raw)return;
   const now=Date.now(),last=parseInt(localStorage.getItem('_albaraba_backup_at')||'0');
   if(!force&&now-last<5*60*1000)return;
@@ -4172,7 +4177,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-pistola-rescate-ean1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: '+APP_STABLE_CLOUD_VERSION);
 }
 async function syncFromCloudNow(){
   if(!fbDB||!fbAuth||!fbAuth.currentUser){
@@ -4222,8 +4227,8 @@ function _backupCloudOnce(data){
 }
 function _cleanupLocalStoragePressure(){
   try{
-    const killPrefixes=['_albaraba_backup_','_appcc_recovery_','_albaraba_cloud_backup_'];
-    const killExact=['_albaraba_backup_at','catering_presup_preload_v1'];
+    const killPrefixes=['_albaraba_backup_','_appcc_recovery_','_albaraba_cloud_backup_','_albaraba_drive_report_','_albaraba_auto_drive_'];
+    const killExact=['_albaraba_backup_at','catering_presup_preload_v1','albaraba_v2'];
     killExact.forEach(k=>localStorage.removeItem(k));
     for(let i=localStorage.length-1;i>=0;i--){
       const k=localStorage.key(i)||'';
@@ -4271,8 +4276,9 @@ function _safeLocalSetItem(k,v){
 function _trySetMainLocalDB(data,reason){
   if(_cloudRescueOnlyMode())return true;
   if(_cloudSessionActive()){
+    try{localStorage.removeItem('albaraba_v2');}catch(e){}
     const compact=JSON.stringify(_compactLocalCloudCache(data,reason));
-    if(_safeLocalSetItem('albaraba_v2',compact))return true;
+    if(_safeLocalSetItem('_albaraba_cloud_cache_info',compact))return true;
     try{localStorage.removeItem('albaraba_v2');}catch(e){}
     return false;
   }
@@ -4325,11 +4331,15 @@ async function _mergeMainCloudBySections(local,opts={}){
     }catch(e){}
     return _normalizeUserRolesInDB(remote);
   }
+  // Guardado estable y seguro: se fusiona con la nube actual para no pisar
+  // cambios de otro dispositivo. Los borrados se respetan mediante tombstones
+  // en _mergeDBPreservingRecords.
   const merged=_mergeDBPreservingRecords(remote,local);
   merged._sync={
     ...(merged._sync||{}),
     actualizado_en:new Date().toISOString(),
     escritura_por_bloques:true,
+    modo_estable_nube:true,
     subido_manual:!!opts.manual,
     subido_por:(fbAuth&&fbAuth.currentUser&&fbAuth.currentUser.email)||'',
     dispositivo:navigator.userAgent.slice(0,80)
@@ -4494,7 +4504,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-pistola-rescate-ean1&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-estable-nube1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5797,7 +5807,7 @@ function renderDashboardLite(){
           <div style="font-weight:800">Modo seguro anti-bloqueo</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">Si un móvil o tablet va justo de memoria, usa esta entrada. No borra datos.</div>
         </div>
-        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-pistola-rescate-ean1&cloudFirst=1&rescueCloudOnly=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
+        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-estable-nube1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
       </div>
     </div>`;
 }
@@ -22215,7 +22225,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-pistola-rescate-ean1'
+        source_version:APP_STABLE_CLOUD_VERSION
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');

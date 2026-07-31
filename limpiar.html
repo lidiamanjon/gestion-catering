@@ -24,11 +24,11 @@
     <button id="btn" hidden>Entrar en la app</button>
   </div>
   <script>
-  const TARGET='./?v=20260731-pistola-rescate-ean1&cloudFirst=1&rescueCloudOnly=1&restFirst=1';
+  const TARGET='./?v=20260731-estable-nube1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&restFirst=1';
   async function limpiar(){
     try{
       try{
-        ['albaraba_v2','_albaraba_pending_sync','_albaraba_pending_sync_at','_albaraba_device_merge_v20260723','_albaraba_ignore_cloud_until','_albaraba_v2_cloud_only'].forEach(k=>localStorage.removeItem(k));
+        ['albaraba_v2','_albaraba_cloud_cache_info','_albaraba_pending_sync','_albaraba_pending_sync_at','_albaraba_device_merge_v20260723','_albaraba_ignore_cloud_until','_albaraba_v2_cloud_only'].forEach(k=>localStorage.removeItem(k));
         for(let i=1;i<=12;i++)localStorage.removeItem('_albaraba_backup_'+i);
         localStorage.removeItem('_albaraba_backup_at');
       }catch(e){}
