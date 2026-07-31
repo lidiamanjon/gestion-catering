@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-tablet-rest2 -->
+<!-- VERSION: v20260731-completa-lite1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-tablet-rest2'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-completa-lite1'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-tablet-rest2&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-completa-lite1&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -4108,7 +4108,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-tablet-rest2');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-completa-lite1');
 }
 async function syncFromCloudNow(){
   if(!fbDB||!fbAuth||!fbAuth.currentUser){
@@ -4430,7 +4430,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-tablet-rest2&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-completa-lite1&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5639,7 +5639,7 @@ window.addEventListener('storage',function(e){
       const d=JSON.parse(e.newValue||'{}');
       if(d.hojas)d.hojas.forEach(h=>{if(!DB.hojas.find(x=>x.id===h.id))DB.hojas.push(h);});
       if(currentSection==='hojas')renderHojasTable();
-      if(currentSection==='dashboard')renderDashboard();
+      if(currentSection==='dashboard')renderDashboardSafe();
     }catch(err){}
   }
 });
@@ -5663,7 +5663,7 @@ function nav(s,opts={}){
   const ni=document.getElementById('ni-'+s);if(ni)ni.classList.add('active');
   const mn=document.getElementById('mn-'+s);if(mn)mn.classList.add('active');
   currentSection=s;
-  if(s==='dashboard')renderDashboard();
+  if(s==='dashboard')renderDashboardSafe();
   else if(s==='proveedores')renderProvTable();
   else if(s==='productos')renderProdTable();
   else if(s==='elaboraciones')renderElabTable();
@@ -5688,6 +5688,55 @@ function nav(s,opts={}){
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('mobOvl').classList.toggle('open')}
 function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('mobOvl').classList.remove('open')}
 function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('mobOvl').classList.add('open');_applyRoleDOM();}
+function _lightDashboardMode(){
+  const p=new URLSearchParams(location.search);
+  return p.get('fullDashboard')!=='1';
+}
+function renderDashboardSafe(){
+  if(_lightDashboardMode())return renderDashboardLite();
+  return renderDashboard();
+}
+function renderDashboardLite(){
+  const stats={
+    hojas:Array.isArray(DB.hojas)?DB.hojas.length:0,
+    productos:Array.isArray(DB.productos)?DB.productos.length:0,
+    elaboraciones:Array.isArray(DB.elaboraciones)?DB.elaboraciones.length:0,
+    pedidos:Array.isArray(DB.pedidos)?DB.pedidos.length:0
+  };
+  const dashStats=document.getElementById('dash-stats');
+  const dashGrids=document.getElementById('dash-grids');
+  if(dashStats)dashStats.innerHTML=`
+    <div class="sc" style="cursor:pointer" onclick="nav('hojas')"><div class="sc-ic" style="background:rgba(245,158,11,.14)">📅</div><div><div class="sc-v">${stats.hojas}</div><div class="sc-l">Eventos en nube</div></div></div>
+    <div class="sc" style="cursor:pointer" onclick="nav('productos')"><div class="sc-ic b">📦</div><div><div class="sc-v">${stats.productos}</div><div class="sc-l">Productos</div></div></div>
+    <div class="sc" style="cursor:pointer" onclick="nav('elaboraciones')"><div class="sc-ic" style="background:rgba(245,158,11,.14)">👨‍🍳</div><div><div class="sc-v">${stats.elaboraciones}</div><div class="sc-l">Recetas / fichas</div></div></div>`;
+  if(dashGrids)dashGrids.innerHTML=`
+    <div class="card" style="grid-column:span 2;border-left:4px solid #16a34a">
+      <div style="padding:18px 20px">
+        <div style="font-size:18px;font-weight:900;color:#14532d">✅ App completa cargada en modo ligero</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:7px;line-height:1.45">
+          Para que no se bloquee la tablet, la pantalla inicial no carga todos los resúmenes pesados.
+          Los datos están en la nube y cada apartado se abre cuando lo necesitas.
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px">
+          <button class="btn btn-gold" onclick="nav('hojas')">✨ Planificación Eva</button>
+          <button class="btn btn-light" onclick="nav('productos')">📦 Productos</button>
+          <button class="btn btn-light" onclick="nav('stock')">📦 Stock</button>
+          <button class="btn btn-light" onclick="nav('elaboraciones')">👨‍🍳 Elaboraciones</button>
+          <button class="btn btn-light" onclick="switchApp('appcc')">🧪 APPCC</button>
+          <button class="btn btn-light" onclick="nav('pedidos')">🛒 Pedidos</button>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="grid-column:span 2">
+      <div style="padding:16px 20px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:800">Modo seguro anti-bloqueo</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px">Si un móvil o tablet va justo de memoria, usa esta entrada. No borra datos.</div>
+        </div>
+        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-completa-lite1&cloudFirst=1&rescueCloudOnly=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
+      </div>
+    </div>`;
+}
 function openModal(idOrHtml,size){
   if(typeof idOrHtml==='string'&&(idOrHtml.startsWith('<')||idOrHtml.includes('<div'))){
     // Dynamic HTML content
@@ -7484,7 +7533,7 @@ function _pistolAssociateCode(productId,parsed){
 function refreshStockViews(){
   try{if(currentSection==='productos')renderProdTable();}catch(e){}
   try{if(currentSection==='stock')renderStockTable();}catch(e){}
-  try{if(currentSection==='dashboard')renderDashboard();}catch(e){}
+  try{if(currentSection==='dashboard')renderDashboardSafe();}catch(e){}
   try{updateEvaPlanSummary&&updateEvaPlanSummary();}catch(e){}
 }
 function _pistolNameSuggestions(q){
@@ -10235,7 +10284,7 @@ function saveHojaFromExternal(hoja, nuevasElab){
     saveDB();
     if(typeof setHojasTab==='function')setHojasTab('pendientes');
     else if(typeof renderHojasTable==='function')renderHojasTable();
-    try{renderDashboard&&renderDashboard();}catch(e){}
+    try{renderDashboardSafe&&renderDashboardSafe();}catch(e){}
   }catch(e){console.error('saveHojaFromExternal:',e);}
 }
 
@@ -22009,7 +22058,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-tablet-rest2'
+        source_version:'v20260731-completa-lite1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
