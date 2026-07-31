@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-eva-edit1 -->
+<!-- VERSION: v20260731-eva-visible1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-eva-edit1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260731-eva-visible1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-eva-edit1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-eva-visible1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3927,7 +3927,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-eva-edit1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-eva-visible1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4133,7 +4133,7 @@ function openSyncRescuePanel(){
         </p>
         <div style="display:grid;gap:9px">
           <button onclick="closeSyncRescuePanel();forceUploadLocalMainDBToCloud()" style="border:0;background:#16a34a;color:white;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:900;cursor:pointer">☁️ Subir/fusionar este dispositivo a nube</button>
-          <button onclick="rescanEvaBridgePending(true)" style="border:0;background:#d49b13;color:#101225;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:900;cursor:pointer">✨ Aplicar pendientes de EVA ahora</button>
+          <button onclick="rescanEvaBridgePending(true)" style="border:0;background:#d49b13;color:#101225;border-radius:12px;padding:12px 14px;font-size:15px;font-weight:900;cursor:pointer">✨ Buscar y aplicar eventos de EVA</button>
           <button onclick="showSyncDiagnostic()" style="border:1px solid #bfd0ee;background:#eef5ff;color:#10224a;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🔎 Ver diagnóstico de nube/local</button>
           <button onclick="forceAppRefresh()" style="border:1px solid #f3c15e;background:#fff7df;color:#6b4500;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🔄 Actualizar app sin borrar datos</button>
           <button onclick="forceLogoutAndAskLogin()" style="border:1px solid #fecaca;background:#fff1f2;color:#991b1b;border-radius:12px;padding:11px 14px;font-size:14px;font-weight:800;cursor:pointer">🚪 Salir y volver a pedir usuario</button>
@@ -4144,7 +4144,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-eva-edit1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-eva-visible1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -8145,10 +8145,19 @@ function setHojasTab(tab){
 }
 function renderHojasTable(q=''){
   const hojas=Array.isArray(DB.hojas)?DB.hojas:[];
+  const nq=String(q||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const hayBusca=nq.length>0;
+  const textHoja=h=>[
+    h.cliente,h.empresa,h.fecha,h.hora,h.lugar,h.servicio,h.marca,h.eva_id,h.id_evento,h.id,
+    h.carpeta_drive_url,h.archivado_cliente_en,
+    h.documentos?.presupuesto_url,h.documentos?.hoja_servicio_url,h.documentos?.factura_url,
+    ...(h.fechas_servicio||[]).flatMap(f=>[f.dia,f.fecha,f.hora,f.estado_fecha]),
+    ...(h.menu||[]).flatMap(m=>[m.nombre,m.fecha_servicio,m.hora_servicio,m.dia_servicio,m.observaciones])
+  ].filter(Boolean).join(' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   const list=hojas.filter(h=>{
-    if(_hojasTab==='pendientes'&&h.realizado)return false;
-    if(_hojasTab==='realizados'&&!h.realizado)return false;
-    if(q&&!String(h.cliente||'').toLowerCase().includes(q.toLowerCase())&&!((h.empresa||'').toLowerCase().includes(q.toLowerCase())))return false;
+    if(!hayBusca&&_hojasTab==='pendientes'&&h.realizado)return false;
+    if(!hayBusca&&_hojasTab==='realizados'&&!h.realizado)return false;
+    if(hayBusca&&!textHoja(h).includes(nq))return false;
     return true;
   });
   const cont=document.getElementById('hojas-list');
@@ -9999,6 +10008,7 @@ function abrirDocumentoAlbaran(idx){
 let _evaBridgeRef=null;
 const EVA_APPLY_STATES=['pendiente_aplicacion','pendiente_sincronizacion_app','pendiente_revision','pendiente_datos','recibido','pendiente_edicion','edicion_pendiente','actualizacion_pendiente'];
 const EVA_EVENT_TYPES=['evento','hoja_servicio','planificacion_eva','crear_evento','actualizar_evento','editar_evento','corregir_evento','actualizar_evento_directo','editar_evento_directo','reemplazar_evento'];
+const EVA_REAPPLY_STATES=['aplicado','aplicado_con_avisos','aprobado','pendiente_revision_humana','pendiente_datos_revision_humana'];
 function aplicarEstadoDirectoEva(msg,snap){
   const id=String(msg.id_evento||''),c=msg.cambios_estado||{};
   const h=(DB.hojas||[]).find(x=>String(x.id||'')===id||String(x.eva_id||x.id_evento||'')===id);
@@ -10155,7 +10165,7 @@ function aplicarEventoEvaDirecto(msg,snap){
   snap.ref.update({estado:hoja.eva_campos_pendientes.length?'aplicado_con_avisos':'aplicado',aplicado_en:hoja.eva_auto_aplicado_en});
   if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
 }
-function _processEvaBridgeMessageSnap(snap){
+function _processEvaBridgeMessageSnap(snap,opts={}){
     if(!snap||!snap.exists||!snap.exists())return false;
     const msg=snap.val()||{};
     const estado=String(msg.estado||'');
@@ -10171,7 +10181,7 @@ function _processEvaBridgeMessageSnap(snap){
       }
       snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});return true;
     }
-    if(_evaMsgHasEventData(msg)&&(!estado||EVA_APPLY_STATES.includes(estado)||EVA_EVENT_TYPES.includes(tipo))){
+    if(_evaMsgHasEventData(msg)&&(!estado||EVA_APPLY_STATES.includes(estado)||EVA_EVENT_TYPES.includes(tipo)||(opts.reapplyApplied&&EVA_REAPPLY_STATES.includes(estado)))){
       aplicarEventoEvaDirecto(msg,snap);return true;
     }
     if((estado&&!EVA_APPLY_STATES.includes(estado))||!_evaMsgHasEventData(msg))return false;
@@ -10204,15 +10214,15 @@ async function rescanEvaBridgePending(manual=false){
       const msg=child.val()||{};
       const estado=String(msg.estado||'');
       const tipo=String(msg.tipo||'');
-      const candidato=!estado||EVA_APPLY_STATES.includes(estado)||EVA_EVENT_TYPES.includes(tipo);
+      const candidato=!estado||EVA_APPLY_STATES.includes(estado)||EVA_EVENT_TYPES.includes(tipo)||(manual&&EVA_REAPPLY_STATES.includes(estado)&&_evaMsgHasEventData(msg));
       if(candidato){
-        try{if(_processEvaBridgeMessageSnap(child))applied++;}catch(e){console.error('Revisión EVA pendiente:',child.key,e);}
+        try{if(_processEvaBridgeMessageSnap(child,{reapplyApplied:manual}))applied++;}catch(e){console.error('Revisión EVA pendiente:',child.key,e);}
       }
     });
     setSyncStatus('ok');
     if(currentSection==='hojas'){updateEvaPlanSummary();renderHojasTable();}
     else if(manual)nav('hojas');
-    if(manual)alert('✅ Revisión EVA terminada.\n\nMensajes revisados: '+seen+'\nAplicados o enviados a revisión: '+applied+'\n\nSi EVA acababa de mandar algo, ya debería aparecer en Planificación EVA.');
+    if(manual)alert('✅ Revisión EVA terminada.\n\nMensajes revisados: '+seen+'\nAplicados o enviados a revisión: '+applied+'\n\nTambién he reintentado eventos que EVA ya hubiera marcado como aplicados. Si EVA acababa de mandar algo, ya debería aparecer en Planificación EVA.');
     return applied;
   }catch(e){
     console.error('Rescan EVA:',e);
@@ -21496,7 +21506,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-eva-edit1'
+        source_version:'v20260731-eva-visible1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
