@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-cloud-rescue1 -->
+<!-- VERSION: v20260731-empty-guard1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -3940,7 +3940,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-cloud-rescue1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-empty-guard1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -3962,6 +3962,9 @@ function _cleanupLocalStoragePressure(){
 }
 function _cloudSessionActive(){
   return !!(fbDB&&fbAuth&&fbAuth.currentUser);
+}
+function _cloudRescueOnlyMode(){
+  return new URLSearchParams(location.search).get('rescueCloudOnly')==='1';
 }
 function _compactLocalCloudCache(data,reason){
   const count=k=>Array.isArray(data&&data[k])?data[k].length:0;
@@ -3987,6 +3990,7 @@ function _safeLocalSetItem(k,v){
   }
 }
 function _trySetMainLocalDB(data,reason){
+  if(_cloudRescueOnlyMode())return true;
   if(_cloudSessionActive()){
     const compact=JSON.stringify(_compactLocalCloudCache(data,reason));
     if(_safeLocalSetItem('albaraba_v2',compact))return true;
@@ -4026,6 +4030,13 @@ async function _mergeMainCloudBySections(local,opts={}){
   const root=fbDB.ref('albaraba_v2');
   const snap=await _firebaseOpWithRetry('leer nube antes de fusionar',()=>root.once('value'),3);
   const remote=snap.val()||{};
+  if(!opts.manual&&_cloudLooksDangerous(local,remote)){
+    try{
+      console.warn('Guardado bloqueado: este dispositivo tiene muchos menos datos que la nube.');
+      setTimeout(()=>alert('⚠️ Protección activada: este dispositivo intentó guardar una base casi vacía, pero la nube tiene más datos. No se ha sobrescrito la nube; se recarga la información de la nube.'),50);
+    }catch(e){}
+    return _normalizeUserRolesInDB(remote);
+  }
   const merged=_mergeDBPreservingRecords(remote,local);
   merged._sync={
     ...(merged._sync||{}),
@@ -4383,10 +4394,11 @@ function initMainCloudRealtime(){
 
 function loadDB(){
   const cloudFirst=new URLSearchParams(location.search).get('cloudFirst')==='1';
+  const rescueCloudOnly=_cloudRescueOnlyMode();
   // 1. Cargar desde localStorage (instantáneo)
   const raw=localStorage.getItem('albaraba_v2');
   let rawIsCloudCache=false;
-  if(raw){
+  if(raw&&!rescueCloudOnly){
     try{
       const localParsed=JSON.parse(raw);
       rawIsCloudCache=!!(localParsed&&localParsed._cloudOnlyCache);
@@ -4410,7 +4422,7 @@ function loadDB(){
 
   // 2. Sincronizar desde Firebase
   if(fbDB&&fbAuth&&fbAuth.currentUser){
-    const localRawForMerge=rawIsCloudCache?'':raw;
+    const localRawForMerge=(rescueCloudOnly||rawIsCloudCache)?'':raw;
     setSyncStatus('saving');
     fbDB.ref('albaraba_v2').once('value').then(snap=>{
       const data=snap.val();
@@ -21626,7 +21638,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-cloud-rescue1'
+        source_version:'v20260731-empty-guard1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
