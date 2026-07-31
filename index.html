@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-realcloud2 -->
+<!-- VERSION: v20260731-realcloud3 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud2'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-realcloud3'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud2&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-realcloud3&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3747,11 +3747,46 @@ let _cloudSaveTimer=null;
 let _mainCloudRef=null;
 let _mainCloudListening=false;
 let _mainCloudApplying=false;
+let _deferredCloudScreenRefresh=false;
+let _lastSyncError='';
 const MAIN_DEVICE_MERGE_KEY='_albaraba_device_merge_v20260723';
 const MAIN_CLOUD_IGNORE_UNTIL_KEY='_albaraba_ignore_cloud_until';
 const MAIN_PENDING_SYNC_KEY='_albaraba_pending_sync';
 const MAIN_PENDING_SYNC_AT_KEY='_albaraba_pending_sync_at';
 let _mainCloudRepairAt=0;
+function _rememberSyncError(error,context='sync'){
+  const msg=(error&&error.message)?error.message:String(error||'error desconocido');
+  _lastSyncError=context+': '+msg;
+  console.error(_lastSyncError,error);
+}
+function _uiIsEditingNow(){
+  const active=document.activeElement;
+  if(active&&['INPUT','TEXTAREA','SELECT'].includes(active.tagName))return true;
+  if(active&&active.isContentEditable)return true;
+  const openModal=document.querySelector('.modal.show,.modal[style*="display: block"],.modal[style*="display:block"],#modal-universal[style*="display: block"],#modal-universal[style*="display:block"],#hoja-overlay[style*="display: block"],#hoja-overlay[style*="display:block"]');
+  return !!openModal;
+}
+function _refreshCurrentSectionFromCloud(reason='nube'){
+  if(_uiIsEditingNow()){
+    _deferredCloudScreenRefresh=true;
+    const lb=document.getElementById('sync-label');
+    if(lb)lb.textContent='Nube recibida · se aplicará al cerrar edición';
+    return;
+  }
+  _deferredCloudScreenRefresh=false;
+  try{
+    if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+  }catch(e){
+    _rememberSyncError(e,'refresco '+reason);
+    setSyncStatus('error');
+  }
+}
+document.addEventListener('focusout',()=>{
+  if(_deferredCloudScreenRefresh)setTimeout(()=>_refreshCurrentSectionFromCloud('pendiente'),350);
+},true);
+document.addEventListener('click',()=>{
+  if(_deferredCloudScreenRefresh&&!_uiIsEditingNow())setTimeout(()=>_refreshCurrentSectionFromCloud('pendiente'),80);
+},true);
 function _markLocalWriteWindow(ms=30000){
   try{localStorage.setItem(MAIN_CLOUD_IGNORE_UNTIL_KEY,String(Date.now()+ms));}catch(e){}
 }
@@ -3943,7 +3978,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-realcloud2');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-realcloud3');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4099,9 +4134,11 @@ function saveDB(){
           if(actual?._sync?.actualizado_en===token||server)_clearPendingMainSync();
           setSyncStatus('ok');
         })
-        .catch(()=>setSyncStatus('error'));
+        .catch(e=>{_rememberSyncError(e,'guardar en nube');setSyncStatus('error');});
     };
-    _cloudSaveTimer=setTimeout(uploadNow,10);
+    // Agrupar cambios evita que una edición grande dispare decenas de escrituras
+    // seguidas y deje la app congelada en tablets o portátiles modestos.
+    _cloudSaveTimer=setTimeout(uploadNow,900);
   }else{
     setSyncStatus(localOk?'offline':'error');
     if(!localOk)setTimeout(()=>alert('⚠️ No se pudo guardar en este dispositivo porque el navegador no tiene espacio local. Entra con usuario de nube o avísame antes de seguir metiendo datos.'),50);
@@ -4210,7 +4247,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud2&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud3&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4471,7 +4508,7 @@ function initMainCloudRealtime(){
           setSyncStatus('saving');
           _repairCloudWithLocal(localNewer?'local mas reciente':'fusion segura');
           if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
-          if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+          _refreshCurrentSectionFromCloud('fusion segura');
         }finally{_mainCloudApplying=false;}
         return;
       }
@@ -4484,8 +4521,8 @@ function initMainCloudRealtime(){
         applyMigrations();
         _trySetMainLocalDB(DB,'sync local');
         setSyncStatus('saving');
-        _mainCloudRef.transaction(current=>_mergeDBPreservingRecords(current,DB)).then(()=>setSyncStatus('ok')).catch(()=>setSyncStatus('error'));
-        if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+        _mainCloudRef.transaction(current=>_mergeDBPreservingRecords(current,DB)).then(()=>setSyncStatus('ok')).catch(e=>{_rememberSyncError(e,'reparar nube');setSyncStatus('error');});
+        _refreshCurrentSectionFromCloud('nube pobre fusionada');
       }finally{_mainCloudApplying=false;}
       return;
     }
@@ -4499,7 +4536,7 @@ function initMainCloudRealtime(){
       _trySetMainLocalDB(DB,'sync local');
       setSyncStatus('ok');
       if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
-      if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+      _refreshCurrentSectionFromCloud('cambio de nube');
     }finally{
       _mainCloudApplying=false;
     }
@@ -21783,7 +21820,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-realcloud2'
+        source_version:'v20260731-realcloud3'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
