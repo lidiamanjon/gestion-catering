@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-rescate3 -->
+<!-- VERSION: v20260731-realcloud1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-rescate3'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-realcloud1'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-rescate3&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-realcloud1&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -547,7 +547,7 @@ html,body{height:100%;color-scheme:light!important}
     <button class="sw-tab active" id="sw-gestion" onclick="switchApp('gestion')">📋 GESTIÓN</button>
     <button class="sw-tab" id="sw-appcc"   onclick="switchApp('appcc')">🛡 APPCC FOOD SAFETY</button>
   </div>
-  <button class="sw-sync" onclick="openSyncRescuePanel()" title="Sincronizar datos entre ordenador, móvil y tablet">☁️ <span class="sync-text">Sync</span></button>
+  <button class="sw-sync" onclick="showSyncDiagnostic()" title="Ver estado de nube/local sin forzar subida">☁️ <span class="sync-text">Sync</span></button>
   <button class="sw-reload" onclick="forceAppRefresh()" title="Actualizar app sin borrar datos">🔄</button>
 </div>
 
@@ -3941,7 +3941,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-rescate3');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-realcloud1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4205,7 +4205,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-rescate3&cloudFirst=1&rescueCloudOnly=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud1&cloudFirst=1&rescueCloudOnly=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4502,12 +4502,14 @@ function initMainCloudRealtime(){
 }
 
 function loadDB(){
-  const cloudFirst=new URLSearchParams(location.search).get('cloudFirst')==='1';
+  const params=new URLSearchParams(location.search);
+  const cloudFirst=params.get('cloudFirst')!=='0';
+  const allowLocalFallback=params.get('localFallback')==='1'||!FB_READY;
   const rescueCloudOnly=_cloudRescueOnlyMode();
   // 1. Cargar desde localStorage (instantáneo)
   const raw=localStorage.getItem('albaraba_v2');
   let rawIsCloudCache=false;
-  if(raw&&!rescueCloudOnly){
+  if(raw&&!rescueCloudOnly&&allowLocalFallback){
     try{
       const localParsed=JSON.parse(raw);
       rawIsCloudCache=!!(localParsed&&localParsed._cloudOnlyCache);
@@ -4531,9 +4533,9 @@ function loadDB(){
 
   // 2. Sincronizar desde Firebase
   if(fbDB&&fbAuth&&fbAuth.currentUser){
-    const localRawForMerge=(rescueCloudOnly||rawIsCloudCache)?'':raw;
+    const localRawForMerge=(rescueCloudOnly||rawIsCloudCache||cloudFirst)?'':raw;
     setSyncStatus('saving');
-    fbDB.ref('albaraba_v2').once('value').then(async snap=>{
+    return fbDB.ref('albaraba_v2').once('value').then(async snap=>{
       let data=snap.val();
       const recovered=await _restoreBestCloudBackupIfNeeded(data,'lectura inicial de nube');
       if(recovered)data=recovered;
@@ -4597,10 +4599,12 @@ function loadDB(){
         setSyncStatus('error');
         alert('⚠️ Nube vacía o no disponible. Por seguridad esta app NO va a crear datos vacíos. Abre primero el ordenador principal y usa “Subir/fusionar este dispositivo a nube”.');
       }
-    }).then(()=>initMainCloudRealtime()).catch(()=>setSyncStatus('error'));
+    }).then(()=>{initMainCloudRealtime();return DB;}).catch(e=>{setSyncStatus('error');throw e;});
   } else if(!FB_READY){
     setSyncStatus('offline');
+    return Promise.resolve(DB);
   }
+  return Promise.resolve(DB);
 }
 
 // ═══════════════════════════════════════════════════
@@ -13599,19 +13603,26 @@ function abrirPresupuesto(preloadData){
 function cerrarHojaOverlay(){}
 
 window.addEventListener('DOMContentLoaded',()=>{
-  setTimeout(()=>{try{if(autoPrepararPaquetesDrive('arranque',true))saveDB();}catch(e){console.warn('No se pudo preparar cola Drive/EVA al arrancar',e);}},6000);
-  setInterval(()=>{try{if(autoPrepararPaquetesDrive('intervalo',true))saveDB();}catch(e){console.warn('No se pudo preparar cola Drive/EVA automática',e);}},60*60*1000);
+  // Modo app real: nunca guardar ni fusionar en el arranque antes de tener la nube cargada.
+  // Los paquetes Drive/EVA se preparan manualmente desde su pantalla, para no disparar escrituras
+  // mientras un móvil/tablet aún está cargando datos.
   if(FB_READY&&fbAuth){
     // Con Firebase: esperar a que el estado de auth esté listo
     fbAuth.onAuthStateChanged(user=>{
       const overlay=document.getElementById('login-overlay');
       if(user){
         if(overlay)overlay.style.display='none';
-        loadDB();
-        if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
-        setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
-        applyRole(user.email);
-        nav('dashboard');
+        setSyncStatus('saving');
+        Promise.resolve(loadDB()).then(()=>{
+          if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
+          setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
+          applyRole(user.email);
+          if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+        }).catch(e=>{
+          console.error('Arranque nube:',e);
+          setSyncStatus('error');
+          alert('No se pudo cargar la nube. Por seguridad no se mostrará una app vacía. Cierra sesión y vuelve a entrar, o abre el enlace de limpieza que te pase Codex.');
+        });
       } else {
         if(overlay)overlay.style.display='flex';
       }
@@ -13624,10 +13635,11 @@ window.addEventListener('DOMContentLoaded',()=>{
     // Sin Firebase configurado: entrar directamente (modo local)
     const overlay=document.getElementById('login-overlay');
     if(overlay)overlay.style.display='none';
-    loadDB();
-    if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
-    setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
-    nav('dashboard');
+    Promise.resolve(loadDB()).then(()=>{
+      if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
+      setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
+      nav('dashboard');
+    });
   }
 });
 </script>
@@ -21758,7 +21770,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-rescate3'
+        source_version:'v20260731-realcloud1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
