@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-sync-nube2 -->
+<!-- VERSION: v20260731-backend-first1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-sync-nube2'+extra+'&rescueCloudOnly=1&stableCloud=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-backend-first1'+extra+'&rescueCloudOnly=1&stableCloud=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-sync-nube2&cloudFirst=1&rescueCloudOnly=1&stableCloud=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-backend-first1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3753,7 +3753,7 @@ const MAIN_DEVICE_MERGE_KEY='_albaraba_device_merge_v20260723';
 const MAIN_CLOUD_IGNORE_UNTIL_KEY='_albaraba_ignore_cloud_until';
 const MAIN_PENDING_SYNC_KEY='_albaraba_pending_sync';
 const MAIN_PENDING_SYNC_AT_KEY='_albaraba_pending_sync_at';
-const APP_STABLE_CLOUD_VERSION='v20260731-sync-nube2';
+const APP_STABLE_CLOUD_VERSION='v20260731-backend-first1';
 let _mainCloudRepairAt=0;
 function _rememberSyncError(error,context='sync'){
   const msg=(error&&error.message)?error.message:String(error||'error desconocido');
@@ -4243,7 +4243,7 @@ function _backupCloudOnce(data){
 function _cleanupLocalStoragePressure(){
   try{
     const killPrefixes=['_albaraba_backup_','_appcc_recovery_','_albaraba_cloud_backup_','_albaraba_drive_report_','_albaraba_auto_drive_'];
-    const killExact=['_albaraba_backup_at','catering_presup_preload_v1','albaraba_v2'];
+    const killExact=['_albaraba_backup_at','catering_presup_preload_v1'];
     killExact.forEach(k=>localStorage.removeItem(k));
     for(let i=localStorage.length-1;i>=0;i--){
       const k=localStorage.key(i)||'';
@@ -4293,12 +4293,9 @@ function _safeLocalSetItem(k,v){
   }
 }
 function _trySetMainLocalDB(data,reason){
-  if(_cloudRescueOnlyMode())return true;
-  if(_cloudSessionActive()){
-    try{localStorage.removeItem('albaraba_v2');}catch(e){}
+  if(_cloudOnlyModeEnabled()||_cloudSessionActive()){
     const compact=JSON.stringify(_compactLocalCloudCache(data,reason));
     if(_safeLocalSetItem('_albaraba_cloud_cache_info',compact))return true;
-    try{localStorage.removeItem('albaraba_v2');}catch(e){}
     return false;
   }
   const text=typeof data==='string'?data:JSON.stringify(data||{});
@@ -4369,7 +4366,7 @@ async function _mergeMainCloudBySections(local,opts={}){
   return merged;
 }
 function saveDB(){
-  const previous=localStorage.getItem('albaraba_v2');
+  const previous=(_cloudOnlyModeEnabled()||_cloudSessionActive())?null:localStorage.getItem('albaraba_v2');
   _saveLocalRecoveryPoint(previous,'antes de guardar');
   _markLocalWriteWindow();
   DB._sync={...(DB._sync||{}),actualizado_en:new Date().toISOString(),dispositivo:navigator.userAgent.slice(0,80)};
@@ -4406,7 +4403,7 @@ function saveDB(){
             DB=_mergeDBPreservingRecords(server,payload);
             _trySetMainLocalDB(DB,'saveDB tras Firebase');
           }
-          const actual=JSON.parse(localStorage.getItem('albaraba_v2')||'{}');
+          const actual=(_cloudOnlyModeEnabled()||_cloudSessionActive())?{_sync:{actualizado_en:token}}:JSON.parse(localStorage.getItem('albaraba_v2')||'{}');
           if(actual?._sync?.actualizado_en===token||server)_clearPendingMainSync();
           setSyncStatus('ok');
         })
@@ -4523,7 +4520,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-sync-nube2&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-backend-first1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4740,7 +4737,8 @@ function applyMigrations(){
 }
 
 function initMainCloudRealtime(){
-  if(new URLSearchParams(location.search).get('realtime')!=='1'){
+  const realtimeParam=new URLSearchParams(location.search).get('realtime');
+  if(realtimeParam==='0'||(realtimeParam!=='1'&&!_cloudOnlyModeEnabled())){
     setSyncStatus('ok');
     return;
   }
@@ -4748,7 +4746,7 @@ function initMainCloudRealtime(){
   _mainCloudRef=fbDB.ref(ALB_BACKEND_ROOT);
   _mainCloudListening=true;
   _mainCloudRef.on('value',async snap=>{
-    const data=snap.val();
+    const data=_dbFromBackendPayload(snap.val())||snap.val();
     if(!data||_mainCloudApplying)return;
     if(_productionDBLooksTooSmall(data)){
       if(!_productionDBLooksTooSmall(DB)){
@@ -4767,7 +4765,7 @@ function initMainCloudRealtime(){
     // trabajo local. La transacción de saveDB fusionará ambos lados.
     if(_pendingMainSyncActive()||_localWriteWindowActive())return;
     const next=JSON.stringify(data);
-    const previous=localStorage.getItem('albaraba_v2');
+    const previous=(_cloudOnlyModeEnabled()||_cloudSessionActive())?null:localStorage.getItem('albaraba_v2');
     if(previous===next){setSyncStatus('ok');return;}
     let previousObj=null;try{if(previous)previousObj=JSON.parse(previous)}catch(e){}
     if(previousObj&&previousObj._cloudOnlyCache)previousObj=null;
@@ -4877,7 +4875,7 @@ function loadDB(){
           applyMigrations();
           _maybeInstallBaseCatalogs();
           _trySetMainLocalDB(DB,'sync local');
-          localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
+          try{localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');}catch(e){console.warn('No se pudo marcar fusión local:',e);}
           _clearPendingMainSync();
           setSyncStatus('ok');
           if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
@@ -4904,7 +4902,7 @@ function loadDB(){
         applyMigrations();
         _maybeInstallBaseCatalogs();
         _trySetMainLocalDB(DB,'sync local');
-        localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
+        try{localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');}catch(e){console.warn('No se pudo marcar fusión local:',e);}
         if(mergedPending)saveDB();else setSyncStatus('ok');
         if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
         // El arranque principal pintará una sola vez.
@@ -5713,6 +5711,9 @@ function _installBidfoodFichas(){
 // SYNC HOJAS DESDE APPS EXTERNAS (Hoja_Servicio_ALABOCA / PV)
 // ═══════════════════════════════════════════════════
 function syncExternalHojas(){
+  // En producción la fuente real es Firebase. No mezclar con una copia local
+  // antigua evita que reaparezcan eventos borrados o datos de pruebas.
+  if(_cloudOnlyModeEnabled()||_cloudSessionActive())return false;
   try{
     const raw=localStorage.getItem('albaraba_v2');
     if(!raw)return false;
@@ -5826,7 +5827,7 @@ function renderDashboardLite(){
           <div style="font-weight:800">Modo seguro anti-bloqueo</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">Si un móvil o tablet va justo de memoria, usa esta entrada. No borra datos.</div>
         </div>
-        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-sync-nube2&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
+        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-backend-first1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
       </div>
     </div>`;
 }
