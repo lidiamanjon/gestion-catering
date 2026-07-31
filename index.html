@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-estable-nube1 -->
+<!-- VERSION: v20260731-sync-nube2 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-estable-nube1'+extra+'&rescueCloudOnly=1&stableCloud=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-sync-nube2'+extra+'&rescueCloudOnly=1&stableCloud=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-estable-nube1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-sync-nube2&cloudFirst=1&rescueCloudOnly=1&stableCloud=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3753,7 +3753,7 @@ const MAIN_DEVICE_MERGE_KEY='_albaraba_device_merge_v20260723';
 const MAIN_CLOUD_IGNORE_UNTIL_KEY='_albaraba_ignore_cloud_until';
 const MAIN_PENDING_SYNC_KEY='_albaraba_pending_sync';
 const MAIN_PENDING_SYNC_AT_KEY='_albaraba_pending_sync_at';
-const APP_STABLE_CLOUD_VERSION='v20260731-estable-nube1';
+const APP_STABLE_CLOUD_VERSION='v20260731-sync-nube2';
 let _mainCloudRepairAt=0;
 function _rememberSyncError(error,context='sync'){
   const msg=(error&&error.message)?error.message:String(error||'error desconocido');
@@ -4198,12 +4198,27 @@ async function syncFromCloudNow(){
       alert('La nube no ha devuelto datos suficientes. Por seguridad NO cambio esta pantalla.');
       return;
     }
-    const previous=localStorage.getItem('albaraba_v2');
-    _saveLocalRecoveryPoint(previous,'antes de sync manual desde nube',true);
+    const cloudOnlyMode=_cloudOnlyModeEnabled();
+    if(!cloudOnlyMode){
+      const previous=localStorage.getItem('albaraba_v2');
+      _saveLocalRecoveryPoint(previous,'antes de sync manual desde nube',true);
+    }
     DB=cloud;
     applyMigrations();
     _maybeInstallBaseCatalogs();
-    _trySetMainLocalDB(DB,'sync manual desde nube');
+    if(cloudOnlyMode){
+      try{
+        localStorage.removeItem('albaraba_v2');
+        localStorage.setItem('_albaraba_cloud_cache_info',JSON.stringify({
+          actualizado_en:new Date().toISOString(),
+          motivo:'sync manual cloud-only',
+          version:APP_STABLE_CLOUD_VERSION,
+          registros:_dbRecordScore(DB)
+        }));
+      }catch(e){console.warn('No se pudo guardar metadato cloud-only:',e);}
+    }else{
+      _trySetMainLocalDB(DB,'sync manual desde nube');
+    }
     _clearPendingMainSync();
     setSyncStatus('ok');
     if(fbAuth.currentUser)applyRole(fbAuth.currentUser.email);
@@ -4241,6 +4256,10 @@ function _cloudSessionActive(){
 }
 function _cloudRescueOnlyMode(){
   return new URLSearchParams(location.search).get('rescueCloudOnly')==='1';
+}
+function _cloudOnlyModeEnabled(){
+  const params=new URLSearchParams(location.search);
+  return params.get('rescueCloudOnly')==='1'||params.get('stableCloud')==='1'||params.get('cloudFirst')==='1';
 }
 function _safeStartupMode(){
   return new URLSearchParams(location.search).get('fullStart')!=='1';
@@ -4504,7 +4523,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-estable-nube1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-sync-nube2&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5807,7 +5826,7 @@ function renderDashboardLite(){
           <div style="font-weight:800">Modo seguro anti-bloqueo</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">Si un móvil o tablet va justo de memoria, usa esta entrada. No borra datos.</div>
         </div>
-        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-estable-nube1&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
+        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-sync-nube2&cloudFirst=1&rescueCloudOnly=1&stableCloud=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
       </div>
     </div>`;
 }
