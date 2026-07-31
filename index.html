@@ -500,17 +500,18 @@ html,body{height:100%;color-scheme:light!important}
 }
 #app-switcher .sw-tab:hover{color:#fff;background:rgba(255,255,255,.1);}
 #app-switcher .sw-tab.active{color:#fff;border-bottom-color:#7eb3ff;}
-#app-switcher .sw-reload,#app-switcher .sw-sync{
+#app-switcher .sw-reload,#app-switcher .sw-sync,#app-switcher .sw-logout{
   height:32px;margin-right:8px;border:1px solid rgba(255,255,255,.35);
   background:rgba(255,255,255,.14);color:#fff;border-radius:10px;
   font-weight:800;cursor:pointer;padding:0 10px;white-space:nowrap;
 }
 #app-switcher .sw-sync{background:#d49b13;border-color:#f5cf67;color:#101225}
+#app-switcher .sw-logout{background:#fff1f2;border-color:#fecaca;color:#991b1b}
 @media(max-width:640px){
   #app-switcher .sw-logo{font-size:11px;padding:0 8px}
   #app-switcher .sw-tab{font-size:11px}
   #app-switcher .sw-sync .sync-text{display:none}
-  #app-switcher .sw-reload,#app-switcher .sw-sync{padding:0 8px;margin-right:4px}
+  #app-switcher .sw-reload,#app-switcher .sw-sync,#app-switcher .sw-logout{padding:0 8px;margin-right:4px}
 }
 
 /* ── GESTION adjustments ── */
@@ -549,6 +550,7 @@ html,body{height:100%;color-scheme:light!important}
   </div>
   <button class="sw-sync" onclick="showSyncDiagnostic()" title="Ver estado de nube/local sin forzar subida">☁️ <span class="sync-text">Sync</span></button>
   <button class="sw-reload" onclick="forceAppRefresh()" title="Actualizar app sin borrar datos">🔄</button>
+  <button class="sw-logout" onclick="forceLogoutAndAskLogin()" title="Salir y volver a pedir usuario">🚪</button>
 </div>
 
 <div id="app-gestion">
@@ -4204,8 +4206,11 @@ function openSyncRescuePanel(){
   document.body.appendChild(modal);
 }
 function forceLogoutAndAskLogin(){
-  try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud2&cloudFirst=1&rescueCloudOnly=1';};
+  try{
+    localStorage.removeItem('albaraba_v2_user');
+    sessionStorage.clear();
+  }catch(e){}
+  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud2&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
