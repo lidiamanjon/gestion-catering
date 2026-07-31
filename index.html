@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-recovery1 -->
+<!-- VERSION: v20260731-rescate2 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -3941,7 +3941,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-recovery1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-rescate2');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4047,13 +4047,12 @@ async function _mergeMainCloudBySections(local,opts={}){
     subido_por:(fbAuth&&fbAuth.currentUser&&fbAuth.currentUser.email)||'',
     dispositivo:navigator.userAgent.slice(0,80)
   };
-  const keys=Object.keys(merged).sort((a,b)=>(a==='_sync'?1:b==='_sync'?-1:a.localeCompare(b)));
-  for(let i=0;i<keys.length;i++){
-    const k=keys[i];
-    const lb=document.getElementById('sync-label');
-    if(lb)lb.textContent='Subiendo '+(i+1)+'/'+keys.length+' · '+k;
-    await _firebaseOpWithRetry('subir sección '+k,()=>root.child(k).set(merged[k]),3);
-  }
+  const lb=document.getElementById('sync-label');
+  if(lb)lb.textContent='Subiendo nube segura...';
+  // Escribir todo el bloque principal en una sola operación evita que otros
+  // dispositivos vean la nube "a medias" durante unos segundos y parezca que
+  // se han borrado productos/eventos.
+  await _firebaseOpWithRetry('subir nube completa fusionada',()=>root.update(merged),3);
   return merged;
 }
 function saveDB(){
@@ -4069,6 +4068,19 @@ function saveDB(){
   const payload=_protectLocalSaveAgainstLoss(JSON.parse(JSON.stringify(DB)),previous);
   DB=payload;
   const localOk=_trySetMainLocalDB(payload,'saveDB principal');
+  if(_cloudSessionActive()&&_productionDBLooksTooSmall(payload)){
+    try{
+      const prevObj=previous?JSON.parse(previous):null;
+      if(!prevObj||_productionDBLooksTooSmall(prevObj)){
+        setSyncStatus('error');
+        alert('⚠️ Guardado bloqueado: este dispositivo tiene una base demasiado pequeña y no puede pisar la nube.\n\nAbre el enlace de rescate o espera a que cargue la copia de nube.');
+        return;
+      }
+    }catch(e){
+      setSyncStatus('error');
+      return;
+    }
+  }
   _markPendingMainSync();
   if(fbDB&&fbAuth&&fbAuth.currentUser){
     setSyncStatus('saving');clearTimeout(_cloudSaveTimer);
@@ -4238,6 +4250,27 @@ async function _getFullCloudRecoveryCandidates(){
   });
   return out.sort((a,b)=>(b.stats.total-a.stats.total)||String(b.fecha).localeCompare(String(a.fecha)));
 }
+function _productionDBLooksTooSmall(d){
+  const score=_dbRecordScore(d||{});
+  const productos=Array.isArray(d?.productos)?d.productos.length:0;
+  const elaboraciones=Array.isArray(d?.elaboraciones)?d.elaboraciones.length:0;
+  // ALBARABA ya trabaja con cientos de productos/elaboraciones. Si un
+  // dispositivo ve mucho menos, lo tratamos como estado roto, no como verdad.
+  return score<120||productos<80||elaboraciones<80;
+}
+async function _restoreBestCloudBackupIfNeeded(currentData,reason){
+  if(!fbDB||!fbAuth||!fbAuth.currentUser||!_productionDBLooksTooSmall(currentData))return null;
+  let candidates=[];
+  try{candidates=await _getFullCloudRecoveryCandidates();}catch(e){console.warn('No se pudieron leer copias para rescate automático:',e);}
+  const currentScore=_dbRecordScore(currentData||{});
+  const best=candidates.find(c=>c.stats.total>=500&&c.stats.productos>=250&&c.stats.elaboraciones>=180)||candidates[0];
+  if(!best||best.stats.total<Math.max(250,currentScore+80))return null;
+  const restored=JSON.parse(JSON.stringify(best.datos));
+  restored._sync={...(restored._sync||{}),actualizado_en:new Date().toISOString(),cargado_desde_copia_nube:true,copia_nube:best.day,motivo_rescate:reason||'nube pobre',cargado_por:(fbAuth.currentUser.email||'')};
+  setSyncStatus('error');
+  try{alert('✅ Encontré una copia de nube buena y la cargo en esta pantalla para rescate.\n\nCopia: '+best.day+'\n'+best.stats.productos+' productos · '+best.stats.elaboraciones+' elaboraciones · '+best.stats.hojas+' eventos.\n\nPor seguridad NO sobrescribo la nube automáticamente. Si esta copia es la buena, usa el botón “Subir/fusionar este dispositivo a nube”.');}catch(e){}
+  return restored;
+}
 async function openFullCloudRecovery(){
   if(!fbDB||!fbAuth||!fbAuth.currentUser){alert('Primero entra con tu usuario de nube.');return;}
   const btnText='Buscando copias de nube...';
@@ -4392,9 +4425,22 @@ function initMainCloudRealtime(){
   if(_mainCloudListening||!fbDB||!fbAuth||!fbAuth.currentUser)return;
   _mainCloudRef=fbDB.ref('albaraba_v2');
   _mainCloudListening=true;
-  _mainCloudRef.on('value',snap=>{
+  _mainCloudRef.on('value',async snap=>{
     const data=snap.val();
     if(!data||_mainCloudApplying)return;
+    if(_productionDBLooksTooSmall(data)){
+      if(!_productionDBLooksTooSmall(DB)){
+        console.warn('Cambio de nube ignorado por parecer vacío/pobre frente a la copia local activa.');
+        setSyncStatus('error');
+        _repairCloudWithLocal('nube pobre ignorada en tiempo real');
+        return;
+      }
+      const recovered=await _restoreBestCloudBackupIfNeeded(data,'nube pobre en tiempo real');
+      if(recovered)return;
+    }
+    const incomingStamp=String(data?._sync?.actualizado_en||'');
+    const currentStamp=String(DB?._sync?.actualizado_en||'');
+    if(incomingStamp&&currentStamp&&incomingStamp===currentStamp){setSyncStatus('ok');return;}
     // Mientras este dispositivo tiene un guardado pendiente, no se pisa su
     // trabajo local. La transacción de saveDB fusionará ambos lados.
     if(_pendingMainSyncActive()||_localWriteWindowActive())return;
@@ -4487,8 +4533,10 @@ function loadDB(){
   if(fbDB&&fbAuth&&fbAuth.currentUser){
     const localRawForMerge=(rescueCloudOnly||rawIsCloudCache)?'':raw;
     setSyncStatus('saving');
-    fbDB.ref('albaraba_v2').once('value').then(snap=>{
-      const data=snap.val();
+    fbDB.ref('albaraba_v2').once('value').then(async snap=>{
+      let data=snap.val();
+      const recovered=await _restoreBestCloudBackupIfNeeded(data,'lectura inicial de nube');
+      if(recovered)data=recovered;
       if(data){
         if(cloudFirst){
           if(localRawForMerge&&localRawForMerge!==JSON.stringify(data))_saveLocalRecoveryPoint(localRawForMerge,'antes de forzar descarga de nube',true);
@@ -8285,14 +8333,17 @@ function renderHojasTable(q=''){
   if(!list.length){cont.innerHTML='<div class="empty" style="padding:40px"><div class="ic">📋</div><p>Sin hojas de servicio. Crea la primera.</p></div>';return}
   const todayMs=(()=>{const d=new Date();d.setHours(0,0,0,0);return d.getTime();})();
   const eventDateMs=(h)=>_planDateMs(h.fecha)||Math.min(...(h.fechas_servicio||[]).map(f=>_planDateMs(f.fecha)).filter(Boolean),Infinity)||0;
-  const sorted=[...list].sort((a,b)=>{
+  const sortedAll=[...list].sort((a,b)=>{
     const ad=eventDateMs(a),bd=eventDateMs(b);
     const af=ad>=todayMs,bf=bd>=todayMs;
     if(af!==bf)return af?-1:1;      // primero eventos futuros
     if(af&&bf)return ad-bd;         // el más cercano arriba
     return bd-ad;                   // antiguos: los más recientes arriba
   });
-  cont.innerHTML=sorted.map(h=>{
+  const renderLimit=hayBusca?120:60;
+  const sorted=sortedAll.slice(0,renderLimit);
+  const clipped=sortedAll.length>sorted.length;
+  cont.innerHTML=(clipped?`<div class="notice info" style="margin:0 0 12px 0">Mostrando ${sorted.length} de ${sortedAll.length} eventos para que la app no se bloquee. Usa el buscador para encontrar cualquier evento concreto.</div>`:'')+sorted.map(h=>{
     const hid=jsArg(h.id);
     const bodyId=safeDomId('body',h.id);
     const d=h.fecha?new Date(h.fecha+'T00:00:00'):null;
@@ -8324,9 +8375,7 @@ function renderHojasTable(q=''){
         <button class="btn btn-sm btn-light" onclick="event.stopPropagation();editHoja(${hid})">✏️</button>
         <button class="btn btn-sm btn-del" onclick="event.stopPropagation();deleteHoja(${hid})">🗑</button>
       </div>
-      <div class="hoja-body" id="${bodyId}">
-        ${safeRender('evento '+String(h.id||''),()=>renderHojaBody(h),'<div class="notice warn" style="margin:12px">Este evento tiene un dato raro y no se pudo abrir completo. Puedes editarlo o avisarme para limpiarlo.</div>')}
-      </div>
+      <div class="hoja-body" id="${bodyId}" data-loaded="0"></div>
     </div>`;
   }).join('');
 }
@@ -8334,6 +8383,14 @@ function renderHojasTable(q=''){
 function toggleHojaBody(id){
   const el=document.getElementById(safeDomId('body',id));
   if(!el)return;
+  const willOpen=!el.classList.contains('open');
+  if(willOpen&&el.getAttribute('data-loaded')!=='1'){
+    const h=findHojaById(id);
+    if(h){
+      el.innerHTML=safeRender('evento '+String(h.id||''),()=>renderHojaBody(h),'<div class="notice warn" style="margin:12px">Este evento tiene un dato raro y no se pudo abrir completo. Puedes editarlo o avisarme para limpiarlo.</div>');
+      el.setAttribute('data-loaded','1');
+    }
+  }
   el.classList.toggle('open');
 }
 
@@ -21701,7 +21758,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-recovery1'
+        source_version:'v20260731-rescate2'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
