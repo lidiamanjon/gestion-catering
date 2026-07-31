@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-pistola-nube1 -->
+<!-- VERSION: v20260731-pistola-aprende2 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-pistola-nube1'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-pistola-aprende2'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-pistola-nube1&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-pistola-aprende2&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3898,6 +3898,11 @@ function _mergeArrayByIdSafe(remoteArr,localArr){
   (Array.isArray(localArr)?localArr:[]).forEach(x=>{const k=(x&&typeof x==='object'&&x.id)?String(x.id):JSON.stringify(x);map.set(k,_mergeRecordSafe(map.get(k),x));});
   return[...map.values()];
 }
+function _deletedSimpleIdsForMerge(bucket,...dbs){
+  const ids=new Set();
+  dbs.forEach(db=>(db?.[bucket]||[]).forEach(x=>{const id=x&&typeof x==='object'?(x.id||x.producto_id||x.elaboracion_id||x.proveedor_id):x;if(id!==undefined&&id!==null&&String(id).trim())ids.add(String(id));}));
+  return ids;
+}
 function _deletedEventIdsForMerge(...dbs){
   const ids=new Set();
   dbs.forEach(db=>(db?.eva_deleted_events||[]).forEach(x=>[x?.id,x?.eva_id,x?.id_evento].forEach(v=>{if(v!==undefined&&v!==null&&String(v).trim())ids.add(String(v));})));
@@ -3909,10 +3914,16 @@ function _filterDeletedHojasForMerge(rows,deletedIds){
 }
 function _mergeDBPreservingRecords(remote,local){
   const deletedEventIds=_deletedEventIdsForMerge(remote,local);
+  const deletedByKey={
+    productos:_deletedSimpleIdsForMerge('deleted_productos',remote,local),
+    elaboraciones:_deletedSimpleIdsForMerge('deleted_elaboraciones',remote,local),
+    proveedores:_deletedSimpleIdsForMerge('deleted_proveedores',remote,local)
+  };
   const merge=(a,b,key='')=>{
     if(Array.isArray(a)||Array.isArray(b)){
       const aa=Array.isArray(a)?a:[],bb=Array.isArray(b)?b:[];
       if(key==='hojas')return _filterDeletedHojasForMerge(_mergeArrayByIdSafe(aa,bb),deletedEventIds);
+      if(deletedByKey[key]?.size)return _mergeArrayByIdSafe(aa,bb).filter(x=>!x?.id||!deletedByKey[key].has(String(x.id)));
       if([...aa,...bb].some(x=>x&&typeof x==='object'&&x.id)){
         return _mergeArrayByIdSafe(aa,bb);
       }
@@ -3924,6 +3935,15 @@ function _mergeDBPreservingRecords(remote,local){
     return _isEmptyValueForMerge(b)?a:b;
   };
   return _normalizeUserRolesInDB(merge(remote||{},local||{}));
+}
+function _rememberDeletedRecordForMerge(bucket,row,reason='borrado_manual'){
+  if(!row)return;
+  if(!Array.isArray(DB[bucket]))DB[bucket]=[];
+  const id=row.id||row.producto_id||row.elaboracion_id||row.proveedor_id;
+  if(!id)return;
+  DB[bucket]=DB[bucket].filter(x=>String((x&&typeof x==='object'?(x.id||x.producto_id||x.elaboracion_id||x.proveedor_id):x)||'')!==String(id));
+  DB[bucket].push({id:String(id),nombre:row.nombre||row.cliente||row.titulo||'',motivo:reason,ts:new Date().toISOString(),por:currentUserEmail||''});
+  DB[bucket]=DB[bucket].slice(-1000);
 }
 function _cloudLooksDangerous(remote,local){
   if(!remote||!local)return false;
@@ -4152,7 +4172,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-pistola-nube1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-pistola-aprende2');
 }
 async function syncFromCloudNow(){
   if(!fbDB||!fbAuth||!fbAuth.currentUser){
@@ -4474,7 +4494,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-pistola-nube1&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-pistola-aprende2&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -5777,7 +5797,7 @@ function renderDashboardLite(){
           <div style="font-weight:800">Modo seguro anti-bloqueo</div>
           <div style="font-size:12px;color:var(--muted);margin-top:4px">Si un móvil o tablet va justo de memoria, usa esta entrada. No borra datos.</div>
         </div>
-        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-pistola-nube1&cloudFirst=1&rescueCloudOnly=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
+        <button class="btn btn-sm btn-light" onclick="location.href=location.pathname+'?v=20260731-pistola-aprende2&cloudFirst=1&rescueCloudOnly=1&restFirst=1&fullDashboard=1'">Ver dashboard completo</button>
       </div>
     </div>`;
 }
@@ -6096,6 +6116,8 @@ function saveProveedor(){
 }
 function deleteProveedor(id){
   if(!confirm('¿Eliminar este proveedor?'))return;
+  const row=(DB.proveedores||[]).find(x=>x.id===id);
+  _rememberDeletedRecordForMerge('deleted_proveedores',row,'borrado_manual');
   DB.proveedores=DB.proveedores.filter(x=>x.id!==id);saveDB();renderProvTable();
 }
 
@@ -6198,6 +6220,8 @@ function saveProducto(){
 }
 function deleteProducto(id){
   if(!confirm('¿Eliminar este producto?'))return;
+  const row=(DB.productos||[]).find(x=>x.id===id);
+  _rememberDeletedRecordForMerge('deleted_productos',row,'borrado_manual');
   DB.productos=DB.productos.filter(x=>x.id!==id);saveDB();renderProdTable();
 }
 
@@ -6833,22 +6857,25 @@ function _unidadCatalogoARecep(unidad){
 }
 function _ensureProductFromReception({nombre,proveedorId,proveedor,unidad,lote,codigo,categoria}){
   const name=String(nombre||'').trim();if(!name)return null;
+  const cleanCode=String(codigo||'').trim();
   if(!Array.isArray(DB.productos))DB.productos=[];
   const norm=_normNombreCatalogo(name);
   let p=DB.productos.find(x=>_normNombreCatalogo(x.nombre)===norm)||buscarProductoCatalogo(name);
   const now=new Date().toISOString();
   if(!p){
-    p={id:uid(),nombre:name,categoria:categoria||'Otros',proveedor_id:proveedorId||'',proveedor:proveedor||'',unidad:_unidadCatalogoARecep(unidad||'uds'),precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:codigo||'',gtin:codigo||'',ean:codigo||'',barcode:codigo||'',ultimo_lote:'',ultima_caducidad:'',notas:'Creado automáticamente desde recepción/pistola. Revisar ficha técnica, precio y alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
+    p={id:uid(),nombre:name,categoria:categoria||'Otros',proveedor_id:proveedorId||'',proveedor:proveedor||'',unidad:_unidadCatalogoARecep(unidad||'uds'),precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:cleanCode||'',gtin:cleanCode||'',ean:cleanCode||'',barcode:cleanCode||'',codigos_barras:cleanCode?[cleanCode]:[],ultimo_lote:'',ultima_caducidad:'',notas:'Creado automáticamente desde recepción/pistola. Revisar ficha técnica, precio y alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
     DB.productos.push(p);
   }else{
     if(proveedorId&&!p.proveedor_id)p.proveedor_id=proveedorId;
     if(proveedor&&!p.proveedor)p.proveedor=proveedor;
     if(unidad&&!p.unidad)p.unidad=_unidadCatalogoARecep(unidad);
-    if(codigo){
-      if(!p.gtin)p.gtin=codigo;
-      if(!p.ean)p.ean=codigo;
-      if(!p.barcode)p.barcode=codigo;
-      if(!p.referencia)p.referencia=codigo;
+    if(cleanCode){
+      const codes=new Set([...(Array.isArray(p.codigos_barras)?p.codigos_barras:[]),p.gtin,p.ean,p.barcode,p.codigo,p.cod,p.referencia,cleanCode].filter(Boolean).map(x=>String(x).trim()).filter(Boolean));
+      p.codigos_barras=Array.from(codes).slice(-30);
+      if(!p.gtin)p.gtin=cleanCode;
+      if(!p.ean)p.ean=cleanCode;
+      if(!p.barcode)p.barcode=cleanCode;
+      if(!p.referencia)p.referencia=cleanCode;
     }
     p.actualizado_en=now;
   }
@@ -6909,6 +6936,8 @@ function saveElaboracion(){
 }
 function deleteElaboracion(id){
   if(!confirm('¿Eliminar esta elaboración?'))return;
+  const row=(DB.elaboraciones||[]).find(x=>x.id===id);
+  _rememberDeletedRecordForMerge('deleted_elaboraciones',row,'borrado_manual');
   DB.elaboraciones=DB.elaboraciones.filter(x=>x.id!==id);saveDB();renderElabTable();
 }
 
@@ -7558,7 +7587,7 @@ function _pistolFindProduct(parsedOrRaw){
   const candidates=[gtin,raw].filter(Boolean).map(_pistolNorm);
   if(!candidates.length)return null;
   const found=(DB.productos||[]).find(p=>{
-    const fields=[p.gtin,p.ean,p.barcode,p.codigo,p.cod,p.referencia,p.ref].filter(Boolean).map(_pistolNorm);
+    const fields=[p.gtin,p.ean,p.barcode,p.codigo,p.cod,p.referencia,p.ref,...(Array.isArray(p.codigos_barras)?p.codigos_barras:[])].filter(Boolean).map(_pistolNorm);
     return candidates.some(c=>fields.some(f=>f===c));
   });
   if(found)return found;
@@ -7578,15 +7607,19 @@ function _pistolFindProduct(parsedOrRaw){
 }
 function _pistolAssociateCode(productId,parsed){
   const p=(DB.productos||[]).find(x=>x.id===productId);
-  const gtin=String(parsed?.gtin||parsed?.raw||'').trim();
-  if(!p||!gtin)return null;
-  p.gtin=gtin;p.ean=gtin;p.barcode=gtin;
-  if(!p.referencia)p.referencia=gtin;
+  const code=String(parsed?.gtin||parsed?.raw||'').trim();
+  if(!p||!code)return null;
+  const codes=new Set([...(Array.isArray(p.codigos_barras)?p.codigos_barras:[]),p.gtin,p.ean,p.barcode,p.codigo,p.cod,p.referencia,code,parsed?.raw].filter(Boolean).map(x=>String(x).trim()).filter(Boolean));
+  p.codigos_barras=Array.from(codes).slice(-30);
+  if(parsed?.gtin&&!p.gtin)p.gtin=String(parsed.gtin).trim();
+  if(parsed?.gtin&&!p.ean)p.ean=String(parsed.gtin).trim();
+  if(!p.barcode)p.barcode=code;
+  if(!p.referencia)p.referencia=code;
   if(parsed?.lot)_rememberProductLot(p,parsed.lot,'pistola_stock');
   p.actualizado_en=new Date().toISOString();
   saveDB();
   _syncCriticalMainSectionsNow('asociar código pistola');
-  try{if(typeof registerGTIN==='function')registerGTIN(gtin,{nombre:p.nombre,proveedor:provNombre(p.proveedor_id)||p.proveedor||''});}catch(e){}
+  try{if(typeof registerGTIN==='function')registerGTIN(code,{nombre:p.nombre,proveedor:provNombre(p.proveedor_id)||p.proveedor||''});}catch(e){}
   return p;
 }
 function refreshStockViews(){
@@ -7977,6 +8010,7 @@ function quickPistolRecepAdd(productId,parsed,prod,opts={}){
   const cad='';
   if(unit&&!p.unidad)p.unidad=unit;
   if(proveedorId&&String(proveedorId)!==String(p.proveedor_id||''))p.proveedor_id=proveedorId;
+  _pistolAssociateCode(p.id,parsed);
   _ensureProductFromReception({nombre:p.nombre,proveedorId:p.proveedor_id,proveedor:p.proveedor,unidad:p.unidad,lote,codigo:parsed?.gtin||parsed?.raw||'',categoria:p.categoria||'Otros'});
   _rememberProductLot(p,lote,'pistola');
   const prov=provNombre(p.proveedor_id)||p.proveedor||'';
@@ -8126,7 +8160,14 @@ function savePistolUnknownProduct(context=window._pistolUnknownContext,parsed=wi
   const now=new Date().toISOString();
   let prod=existing;
   if(prod){
-    if(gtin){prod.gtin=gtin;prod.ean=gtin;prod.barcode=gtin;if(!prod.referencia)prod.referencia=gtin;}
+    if(gtin){
+      const codes=new Set([...(Array.isArray(prod.codigos_barras)?prod.codigos_barras:[]),prod.gtin,prod.ean,prod.barcode,prod.codigo,prod.cod,prod.referencia,gtin,parsed?.raw].filter(Boolean).map(x=>String(x).trim()).filter(Boolean));
+      prod.codigos_barras=Array.from(codes).slice(-30);
+      if(!prod.gtin)prod.gtin=gtin;
+      if(!prod.ean)prod.ean=gtin;
+      if(!prod.barcode)prod.barcode=gtin;
+      if(!prod.referencia)prod.referencia=gtin;
+    }
     if(parsed?.lot)prod.ultimo_lote=String(parsed.lot).trim().toUpperCase();
     const newProv=document.getElementById('pistol-new-prov')?.value||'';
     const newUnit=document.getElementById('pistol-new-unit')?.value||'';
@@ -8134,7 +8175,7 @@ function savePistolUnknownProduct(context=window._pistolUnknownContext,parsed=wi
     if(newUnit)prod.unidad=newUnit;
     prod.actualizado_en=now;
   }else{
-    prod={id:uid(),nombre:name,categoria:document.getElementById('pistol-new-cat')?.value||'Otros',proveedor_id:document.getElementById('pistol-new-prov')?.value||'',unidad:document.getElementById('pistol-new-unit')?.value||'kg',precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:gtin,gtin,ean:gtin,barcode:gtin,ultimo_lote:parsed?.lot?String(parsed.lot).trim().toUpperCase():'',ultima_caducidad:'',notas:'Añadido desde pistola lectora. Pendiente revisar ficha técnica/alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
+    prod={id:uid(),nombre:name,categoria:document.getElementById('pistol-new-cat')?.value||'Otros',proveedor_id:document.getElementById('pistol-new-prov')?.value||'',unidad:document.getElementById('pistol-new-unit')?.value||'kg',precio:'',precio_compra:'',stock_actual:0,stock_min:0,referencia:gtin,gtin,ean:gtin,barcode:gtin,codigos_barras:gtin?[gtin]:[],ultimo_lote:parsed?.lot?String(parsed.lot).trim().toUpperCase():'',ultima_caducidad:'',notas:'Añadido desde pistola lectora. Pendiente revisar ficha técnica/alérgenos.',foto:'',alergenos:[],rendimiento:0,actualizado_en:now,stock_actualizado_en:now};
     DB.productos.push(prod);
   }
   saveDB();
@@ -14371,7 +14412,15 @@ const sv=(k,v)=>{
   if(!APPCC_DEVICE_LOCAL_KEYS.has(k)&&!_appccCloudApplying&&_appccCloudRef)localStorage.setItem('_appcc_pending_'+k,'1');
   if(_appccCloudRef&&!_appccCloudApplying&&!APPCC_DEVICE_LOCAL_KEYS.has(k)){
     clearTimeout(_appccCloudTimers[k]);setSyncStatus('saving');
-    _appccCloudTimers[k]=setTimeout(()=>_appccCloudRef.child(k).set(v).then(()=>{if(localStorage.getItem(k)===serialized)localStorage.removeItem('_appcc_pending_'+k);setSyncStatus('ok');}).catch(e=>{console.error('APPCC cloud:',e);setSyncStatus('error');}),180);
+    _appccCloudTimers[k]=setTimeout(()=>_appccCloudRef.child(k).transaction(current=>_mergeAPPCCCloudValue(current,v)).then(result=>{
+      const merged=result.snapshot.val();
+      if(merged!==null){
+        const mergedText=JSON.stringify(merged);
+        _safeLocalSetItem(k,mergedText);
+        if(mergedText===localStorage.getItem(k)||localStorage.getItem(k)===serialized)localStorage.removeItem('_appcc_pending_'+k);
+      }else if(localStorage.getItem(k)===serialized)localStorage.removeItem('_appcc_pending_'+k);
+      setSyncStatus('ok');
+    }).catch(e=>{console.error('APPCC cloud:',e);setSyncStatus('error');}),180);
   }
 };
 function initAPPCCCloudSync(){
@@ -20489,6 +20538,7 @@ function registerGTIN(gtin, entry) {
           id: 'gtin_' + gtin,
           nombre: entry.nombre,
           gtin: gtin,
+          codigos_barras: [gtin],
           proveedor_id: provObj ? provObj.id : '',
           categoria: 'Otros',
           unidad: 'kg',
@@ -22125,7 +22175,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-pistola-nube1'
+        source_version:'v20260731-pistola-aprende2'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
