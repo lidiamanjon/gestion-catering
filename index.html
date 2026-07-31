@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-eva-apply1 -->
+<!-- VERSION: v20260731-eva-edit1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-eva-apply1'+extra);
+    location.replace(location.origin+location.pathname+'?v=20260731-eva-edit1'+extra);
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-eva-apply1&cloudFirst=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-eva-edit1&cloudFirst=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3927,7 +3927,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-eva-apply1');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nVersiÃ³n: v20260731-eva-edit1');
 }
 function _backupCloudOnce(data){
   if(!fbDB||!data)return Promise.resolve();
@@ -4144,7 +4144,7 @@ function openSyncRescuePanel(){
 }
 function forceLogoutAndAskLogin(){
   try{localStorage.removeItem('albaraba_v2_user');sessionStorage.clear();}catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-eva-apply1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-eva-edit1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -9997,6 +9997,8 @@ function abrirDocumentoAlbaran(idx){
   window.open(url,'_blank','noopener');
 }
 let _evaBridgeRef=null;
+const EVA_APPLY_STATES=['pendiente_aplicacion','pendiente_sincronizacion_app','pendiente_revision','pendiente_datos','recibido','pendiente_edicion','edicion_pendiente','actualizacion_pendiente'];
+const EVA_EVENT_TYPES=['evento','hoja_servicio','planificacion_eva','crear_evento','actualizar_evento','editar_evento','corregir_evento','actualizar_evento_directo','editar_evento_directo','reemplazar_evento'];
 function aplicarEstadoDirectoEva(msg,snap){
   const id=String(msg.id_evento||''),c=msg.cambios_estado||{};
   const h=(DB.hojas||[]).find(x=>String(x.id||'')===id||String(x.eva_id||x.id_evento||'')===id);
@@ -10068,6 +10070,63 @@ function _evaMsgHasEventData(msg){
   const p=_evaPayloadFromMsg(msg);
   return Boolean(p&&(p.cliente||p.customer||p.clientName||p.nombre_cliente||p.contacto||p.fecha||p.fecha_evento||p.fecha_servicio||p.hora||p.horario||p.fechas_servicio||p.servicios||p.entregas||p.menu||p.elaboraciones||p.elaboraciones_previstas||p.items||p.lineas||p.planificacion_eva||p.hoja_servicio));
 }
+function _evaPayloadHasMenuData(msg){
+  const p=_evaPayloadFromMsg(msg)||{};
+  const keys=['menu','elaboraciones','elaboraciones_previstas','elaboraciones_pendientes','productionItems','items','lineas','platos'];
+  if(keys.some(k=>Array.isArray(p[k])&&p[k].length))return true;
+  const blocks=['fechas_servicio','servicios','entregas','fechas','calendario','agenda','servicios_programados'];
+  return blocks.some(k=>Array.isArray(p[k])&&p[k].some(s=>s&&(s.elaboraciones||s.menu||s.items||s.lineas||s.platos||s.productos)));
+}
+function _evaHasRealAppccOrStock(h){
+  return Boolean(h&&(
+    h.stock_descontado_en||
+    h.fecha_realizado||
+    (h.menu||[]).some(m=>['elaborada','completada','finalizada'].includes(String(m.appcc_estado||'').toLowerCase())||m.appcc_rec_id||m.appcc_elaborada_en||m.appcc_completada_en)
+  ));
+}
+function _evaKeepNonEmptyObject(existing,incoming){
+  const out={...(existing||{})};
+  Object.entries(incoming||{}).forEach(([k,v])=>{
+    if(v!==undefined&&v!==null&&String(v).trim()!=='')out[k]=v;
+  });
+  return out;
+}
+function _evaMergeEventForEdit(existente,hoja,msg){
+  const incomingHasMenu=_evaPayloadHasMenuData(msg);
+  const hasReal=_evaHasRealAppccOrStock(existente);
+  const merged={...existente,...hoja};
+  merged.id=existente.id;
+  merged.eva_id=existente.eva_id||hoja.eva_id||hoja.id;
+  merged.documentos=_evaKeepNonEmptyObject(existente.documentos,hoja.documentos);
+  merged.facturacion=_evaKeepNonEmptyObject(existente.facturacion,hoja.facturacion);
+  if(!hoja.carpeta_drive_url)merged.carpeta_drive_url=existente.carpeta_drive_url||existente.drive_folder_url||'';
+  if(!hoja.archivado_cliente_en)merged.archivado_cliente_en=existente.archivado_cliente_en||'';
+  if(!incomingHasMenu)merged.menu=existente.menu||[];
+  else{
+    const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+    merged.menu=(hoja.menu||[]).map(nuevo=>{
+      const anterior=(existente.menu||[]).find(m=>(nuevo.elab_id&&m.elab_id===nuevo.elab_id)||norm(m.nombre)===norm(nuevo.nombre));
+      if(!anterior)return nuevo;
+      const antes=parseInt(anterior.pax_override)||parseInt(existente.pax)||0;
+      const ahora=parseInt(nuevo.pax_override)||parseInt(hoja.pax)||0;
+      if(antes===ahora)Object.keys(anterior).filter(k=>k.startsWith('appcc_')).forEach(k=>nuevo[k]=anterior[k]);
+      else nuevo.appcc_estado='pendiente';
+      return nuevo;
+    });
+  }
+  if(hasReal){
+    merged.realizado=Boolean(existente.realizado);
+    merged.estado=existente.estado||merged.estado;
+    merged.stock_descontado_en=existente.stock_descontado_en||'';
+    merged.fecha_realizado=existente.fecha_realizado||'';
+  }else{
+    merged.realizado=Boolean(hoja.realizado);
+    merged.estado=merged.realizado?'realizado':'pendiente';
+    merged.stock_descontado_en=hoja.stock_descontado_en||'';
+    merged.fecha_realizado=hoja.fecha_realizado||'';
+  }
+  return merged;
+}
 function aplicarEventoEvaDirecto(msg,snap){
   const hoja=normalizarHojaEva(_evaPayloadFromMsg(msg));
   if(!hoja.cliente&&!(hoja.menu||[]).length){snap.ref.update({estado:'error_payload_incompleto',error:'No se leyeron cliente ni elaboraciones del mensaje EVA',error_en:new Date().toISOString()});return;}
@@ -10083,25 +10142,8 @@ function aplicarEventoEvaDirecto(msg,snap){
   const idx=(DB.hojas||[]).findIndex(h=>h.id===hoja.id||h.eva_id===hoja.eva_id||h.id_evento===hoja.eva_id);
   if(idx>=0){
     const existente=DB.hojas[idx];
-    const norm=v=>String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
-    hoja.menu=(hoja.menu||[]).map(nuevo=>{
-      const anterior=(existente.menu||[]).find(m=>(nuevo.elab_id&&m.elab_id===nuevo.elab_id)||norm(m.nombre)===norm(nuevo.nombre));
-      if(!anterior)return nuevo;
-      const antes=parseInt(anterior.pax_override)||parseInt(existente.pax)||0;
-      const ahora=parseInt(nuevo.pax_override)||parseInt(hoja.pax)||0;
-      if(antes===ahora)Object.keys(anterior).filter(k=>k.startsWith('appcc_')).forEach(k=>nuevo[k]=anterior[k]);
-      else nuevo.appcc_estado='pendiente';
-      return nuevo;
-    });
-    DB.hojas[idx]={
-      ...existente,
-      ...hoja,
-      id:existente.id,
-      eva_id:existente.eva_id||hoja.eva_id,
-      realizado:Boolean(existente.realizado||hoja.realizado),
-      stock_descontado_en:existente.stock_descontado_en||'',
-      revisiones:[...(existente.revisiones||[]),{fecha:hoja.eva_auto_aplicado_en,tipo:'evento_actualizado_por_eva',campos_pendientes:hoja.eva_campos_pendientes}].slice(-20)
-    };
+    DB.hojas[idx]=_evaMergeEventForEdit(existente,hoja,msg);
+    DB.hojas[idx].revisiones=[...(existente.revisiones||[]),{fecha:hoja.eva_auto_aplicado_en,tipo:'evento_editado_por_eva',campos_pendientes:hoja.eva_campos_pendientes,proteccion_appcc:_evaHasRealAppccOrStock(existente)}].slice(-20);
     (DB.pedidos||[]).forEach(p=>{if((p.eventos||[]).includes(existente.id))p.desactualizado=true;});
   }else{
     hoja.realizado=false;
@@ -10116,7 +10158,9 @@ function aplicarEventoEvaDirecto(msg,snap){
 function _processEvaBridgeMessageSnap(snap){
     if(!snap||!snap.exists||!snap.exists())return false;
     const msg=snap.val()||{};
-    if(msg.tipo==='actualizar_estado_evento_directo'&&['pendiente_aplicacion','pendiente_sincronizacion_app'].includes(msg.estado)){
+    const estado=String(msg.estado||'');
+    const tipo=String(msg.tipo||'');
+    if(msg.tipo==='actualizar_estado_evento_directo'&&EVA_APPLY_STATES.includes(estado)){
       aplicarEstadoDirectoEva(msg,snap);return true;
     }
     if(msg.tipo==='documento_proveedor'&&msg.estado==='pendiente_revision'&&msg.documento){
@@ -10127,10 +10171,10 @@ function _processEvaBridgeMessageSnap(snap){
       }
       snap.ref.update({estado:'pendiente_revision_humana',recibido_app_en:new Date().toISOString()});return true;
     }
-    if(_evaMsgHasEventData(msg)&&(!msg.estado||['pendiente_aplicacion','pendiente_sincronizacion_app','pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))){
+    if(_evaMsgHasEventData(msg)&&(!estado||EVA_APPLY_STATES.includes(estado)||EVA_EVENT_TYPES.includes(tipo))){
       aplicarEventoEvaDirecto(msg,snap);return true;
     }
-    if((msg.estado&&!['pendiente_revision','pendiente_datos','recibido'].includes(msg.estado))||!_evaMsgHasEventData(msg))return false;
+    if((estado&&!EVA_APPLY_STATES.includes(estado))||!_evaMsgHasEventData(msg))return false;
     const hoja=normalizarHojaEva(_evaPayloadFromMsg(msg));if(!hoja.cliente&&!(hoja.menu||[]).length){snap.ref.update({estado:'error_payload_incompleto',error:'No se leyeron cliente ni elaboraciones del mensaje EVA',error_en:new Date().toISOString()});return;}hoja.eva_id=msg.id_evento||hoja.eva_id||hoja.id;hoja.id=hoja.eva_id;
     hoja.eva_bridge_message_id=snap.key;hoja.eva_recibido_en=msg.recibido_en||new Date().toISOString();
     hoja.eva_campos_pendientes=Array.isArray(msg.campos_pendientes)?msg.campos_pendientes:[];
@@ -10159,7 +10203,8 @@ async function rescanEvaBridgePending(manual=false){
       seen++;
       const msg=child.val()||{};
       const estado=String(msg.estado||'');
-      const candidato=!estado||['pendiente_aplicacion','pendiente_sincronizacion_app','pendiente_revision','pendiente_datos','recibido'].includes(estado);
+      const tipo=String(msg.tipo||'');
+      const candidato=!estado||EVA_APPLY_STATES.includes(estado)||EVA_EVENT_TYPES.includes(tipo);
       if(candidato){
         try{if(_processEvaBridgeMessageSnap(child))applied++;}catch(e){console.error('Revisión EVA pendiente:',child.key,e);}
       }
@@ -21451,7 +21496,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-eva-apply1'
+        source_version:'v20260731-eva-edit1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
