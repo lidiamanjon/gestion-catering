@@ -1,4 +1,4 @@
-const CACHE_NAME = 'albaraba-appcc-v20260731-pistola-aprende2';
+const CACHE_NAME = 'albaraba-appcc-v20260731-pistola-rescate-ean1';
 const APP_SHELL = [
   './',
   './index.html',
