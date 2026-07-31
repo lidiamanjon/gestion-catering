@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<!-- VERSION: v20260731-realcloud4 -->
+<!-- VERSION: v20260731-rescate-operativo1 -->
 <script>
 if(new URLSearchParams(location.search).get('resetApp')==='1'){
   (async function(){
@@ -14,7 +14,7 @@ if(new URLSearchParams(location.search).get('resetApp')==='1'){
       }
     }catch(e){console.warn('Reset app cache:',e);}
     const extra=new URLSearchParams(location.search).get('cloudFirst')==='1'?'&cloudFirst=1':'';
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud4'+extra+'&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-rescate-operativo1'+extra+'&rescueCloudOnly=1');
   })();
 }
 if(new URLSearchParams(location.search).get('clearLocal')==='1'){
@@ -32,7 +32,7 @@ if(new URLSearchParams(location.search).get('clearLocal')==='1'){
         await Promise.all(keys.filter(k=>k.indexOf('albaraba-appcc-')===0).map(k=>caches.delete(k)));
       }
     }catch(e){console.warn('Clear local app:',e);}
-    location.replace(location.origin+location.pathname+'?v=20260731-realcloud4&cloudFirst=1&rescueCloudOnly=1');
+    location.replace(location.origin+location.pathname+'?v=20260731-rescate-operativo1&cloudFirst=1&rescueCloudOnly=1');
   })();
 }
 // Desregistrar service workers antiguos y limpiar caché
@@ -3978,7 +3978,7 @@ async function showSyncDiagnostic(){
       ].join(' · ');
     }else cloudText='Sin sesiÃ³n de nube activa';
   }catch(e){cloudText='ERROR leyendo nube: '+(e&&e.message?e.message:e);}
-  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-realcloud4');
+  alert('DIAGNÃ“STICO DE SINCRONIZACIÃ“N\n\nUsuario: '+user+'\nEstado: '+((document.getElementById('sync-label')||{}).textContent||'')+'\n\nLOCAL EN ESTE DISPOSITIVO:\n'+localScore+' registros totales · '+((local.hojas||[]).length)+' eventos · '+((local.productos||[]).length)+' productos · '+((local.elaboraciones||[]).length)+' elaboraciones · '+((local.pedidos||[]).length)+' pedidos\n\nNUBE:\n'+cloudText+'\n\nÚltimo error técnico:\n'+(_lastSyncError||'Ninguno registrado en esta sesión')+'\n\nVersiÃ³n: v20260731-rescate-operativo1');
 }
 async function syncFromCloudNow(){
   if(!fbDB||!fbAuth||!fbAuth.currentUser){
@@ -4004,8 +4004,7 @@ async function syncFromCloudNow(){
     _saveLocalRecoveryPoint(previous,'antes de sync manual desde nube',true);
     DB=cloud;
     applyMigrations();
-    _installBidfoodFichas();
-    _installAlbarabaRecetasBase();
+    _maybeInstallBaseCatalogs();
     _trySetMainLocalDB(DB,'sync manual desde nube');
     _clearPendingMainSync();
     setSyncStatus('ok');
@@ -4044,6 +4043,14 @@ function _cloudSessionActive(){
 }
 function _cloudRescueOnlyMode(){
   return new URLSearchParams(location.search).get('rescueCloudOnly')==='1';
+}
+function _safeStartupMode(){
+  return new URLSearchParams(location.search).get('fullStart')!=='1';
+}
+function _maybeInstallBaseCatalogs(){
+  if(_safeStartupMode())return;
+  _installBidfoodFichas();
+  _installAlbarabaRecetasBase();
 }
 function _compactLocalCloudCache(data,reason){
   const count=k=>Array.isArray(data&&data[k])?data[k].length:0;
@@ -4288,7 +4295,7 @@ function forceLogoutAndAskLogin(){
     localStorage.removeItem('albaraba_v2_user');
     sessionStorage.clear();
   }catch(e){}
-  const go=()=>{location.href=location.pathname+'?v=20260731-realcloud4&cloudFirst=1&rescueCloudOnly=1&login=1';};
+  const go=()=>{location.href=location.pathname+'?v=20260731-rescate-operativo1&cloudFirst=1&rescueCloudOnly=1&login=1';};
   if(fbAuth&&fbAuth.currentUser)fbAuth.signOut().then(go).catch(go);
   else go();
 }
@@ -4505,6 +4512,10 @@ function applyMigrations(){
 }
 
 function initMainCloudRealtime(){
+  if(new URLSearchParams(location.search).get('realtime')!=='1'){
+    setSyncStatus('ok');
+    return;
+  }
   if(_mainCloudListening||!fbDB||!fbAuth||!fbAuth.currentUser)return;
   _mainCloudRef=fbDB.ref('albaraba_v2');
   _mainCloudListening=true;
@@ -4543,8 +4554,7 @@ function initMainCloudRealtime(){
         try{
           DB=merged;
           applyMigrations();
-          _installBidfoodFichas();
-          _installAlbarabaRecetasBase();
+          _maybeInstallBaseCatalogs();
           _trySetMainLocalDB(DB,'sync local');
           setSyncStatus('saving');
           _repairCloudWithLocal(localNewer?'local mas reciente':'fusion segura');
@@ -4572,8 +4582,7 @@ function initMainCloudRealtime(){
     try{
       DB=data;
       applyMigrations();
-      _installBidfoodFichas();
-      _installAlbarabaRecetasBase();
+      _maybeInstallBaseCatalogs();
       _trySetMainLocalDB(DB,'sync local');
       setSyncStatus('ok');
       if(fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
@@ -4599,8 +4608,7 @@ function loadDB(){
       if(!rawIsCloudCache){
         DB=localParsed;
         applyMigrations();
-        _installBidfoodFichas();
-        _installAlbarabaRecetasBase();
+        _maybeInstallBaseCatalogs();
       }
     }catch(e){}
   } else {
@@ -4640,14 +4648,13 @@ function loadDB(){
             }
           }
           applyMigrations();
-          _installBidfoodFichas();
-      _installAlbarabaRecetasBase();
+          _maybeInstallBaseCatalogs();
           _trySetMainLocalDB(DB,'sync local');
           localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
           _clearPendingMainSync();
           setSyncStatus('ok');
           if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
-          if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+          // El arranque principal pintará una sola vez.
           return;
         }
         const pending=_pendingMainSyncActive();
@@ -4668,13 +4675,12 @@ function loadDB(){
           if(localRawForMerge&&JSON.stringify(DB)!==JSON.stringify(data))mergedPending=true;
         }
         applyMigrations();
-        _installBidfoodFichas();
-      _installAlbarabaRecetasBase();
+        _maybeInstallBaseCatalogs();
         _trySetMainLocalDB(DB,'sync local');
         localStorage.setItem(MAIN_DEVICE_MERGE_KEY,'1');
         if(mergedPending)saveDB();else setSyncStatus('ok');
         if(fbAuth&&fbAuth.currentUser){applyRole(fbAuth.currentUser.email);_trySetMainLocalDB(DB,'sync local');}
-        if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+        // El arranque principal pintará una sola vez.
       } else if(localRawForMerge&&_dbRecordScore(DB)>0){
         // Firebase vacío pero tenemos datos locales reales → fusionarlos sin usar set destructivo
         _saveLocalRecoveryPoint(raw,'nube vacía antes de recuperar desde local',true);
@@ -13703,10 +13709,10 @@ window.addEventListener('DOMContentLoaded',()=>{
         if(err){err.textContent='Cargando datos reales de la nube...';err.style.color='#64748b';}
         setSyncStatus('saving');
         Promise.resolve(loadDB()).then(()=>{
-          if(typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
-          setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
+          if(!_safeStartupMode()&&typeof initAPPCCCloudSync==='function')initAPPCCCloudSync();
+          if(!_safeStartupMode())setTimeout(()=>{if(typeof initEvaBridgeSync==='function')initEvaBridgeSync();},1200);
           applyRole(user.email);
-          if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');
+          setTimeout(()=>{if(currentSection)nav(currentSection,{preserveScroll:true});else nav('dashboard');},120);
           if(overlay)overlay.style.display='none';
         }).catch(e=>{
           console.error('Arranque nube:',e);
@@ -21861,7 +21867,7 @@ async function _batchPrint(items, orient){
         created_at:new Date().toISOString(),
         created_by:currentUserEmail||fbAuth.currentUser.email||'',
         device:navigator.userAgent.slice(0,120),
-        source_version:'v20260731-realcloud4'
+        source_version:'v20260731-rescate-operativo1'
       };
       await fbDB.ref('print_jobs').push(job);
       if(typeof toast==='function')toast('🖨 Enviado a la cola Brother ('+totalCopies+' etiqueta'+(totalCopies===1?'':'s')+')');
